@@ -5,7 +5,12 @@
       "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__apply_migration",
       "mcp__Claude_Preview__preview_start",
       "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__execute_sql",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\")",
+      "Bash(gh --version)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)"
     ]
   }
 }

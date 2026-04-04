@@ -933,7 +933,7 @@ input[type=file]{display:none}
   </div>
 
   <div style="padding:0 18px 8px">
-    <input class="form-input" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px">
+    <input class="form-input" id="comm-search" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px" oninput="filterPosts()">
   </div>
 
   <div id="post-list">
@@ -1876,6 +1876,23 @@ document.addEventListener('touchstart', function(e) {
 // ══ 프로필 수정 ══
 let _profile = { name: '게코키퍼님', bio: '' };
 
+function _loadProfile() {
+  if (!_currentUser) return;
+  try {
+    const saved = localStorage.getItem('mycre_profile_' + _currentUser.id);
+    if (saved) {
+      const p = JSON.parse(saved);
+      _profile.name = p.name || '게코키퍼님';
+      _profile.bio = p.bio || '';
+    }
+  } catch(e) {}
+}
+
+function _saveProfileLocal() {
+  if (!_currentUser) return;
+  try { localStorage.setItem('mycre_profile_' + _currentUser.id, JSON.stringify(_profile)); } catch(e) {}
+}
+
 function openProfileEdit() {
   document.getElementById('profile-name').value = _profile.name;
   document.getElementById('profile-bio').value = _profile.bio;
@@ -1886,8 +1903,8 @@ function openProfileEdit() {
 function saveProfile() {
   _profile.name = document.getElementById('profile-name').value.trim() || '게코키퍼님';
   _profile.bio  = document.getElementById('profile-bio').value.trim();
+  _saveProfileLocal();
   // 더보기 화면 이름 업데이트
-  const nameEl = document.querySelector('#page-more .more-item-info + div, #page-more div[style*="font-weight:800"]');
   document.querySelectorAll('#page-more [style*="font-weight:800"]').forEach(el => {
     if (el.textContent === '게코키퍼님' || el.textContent === _profile.name) el.textContent = _profile.name;
   });
@@ -2671,6 +2688,10 @@ function saveToMyGecko() {
     currentPhotoData = scanPhotos[0].data;
     document.getElementById('add-photo-preview').src = scanPhotos[0].data;
     document.getElementById('add-photo-zone').classList.add('has-photo');
+    // Storage 업로드를 위해 blob 변환
+    try {
+      fetch(scanPhotos[0].data).then(r => r.blob()).then(b => { _pendingPhotoFile = b; });
+    } catch(e) {}
   }
   updateGeckoGrade();
   showPage('myge');
@@ -2783,8 +2804,46 @@ function openPostDetail(p) {
         <input class="form-input" placeholder="댓글 작성..." style="flex:1;font-size:13px">
         <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="showToast('댓글이 등록되었어요 ✅')">등록</button>
       </div>
+      ${p.isOwn ? '<button class="btn-outline" onclick="deletePost(' + p.id + ')" style="color:var(--coral);border-color:var(--coral);background:var(--co2);margin-top:10px;width:100%">🗑 이 게시글 삭제</button>' : ''}
     </div>`;
   openSheet('sheet-post-detail');
+}
+
+let _deletePostStep = 0;
+let _deletePostTimer = null;
+async function deletePost(postId) {
+  if (_deletePostStep === 0) {
+    _deletePostStep = 1;
+    showToast('⚠️ 정말 삭제하려면 한 번 더 눌러주세요');
+    _deletePostTimer = setTimeout(() => { _deletePostStep = 0; }, 3000);
+    return;
+  }
+  _deletePostStep = 0;
+  clearTimeout(_deletePostTimer);
+  const { error } = await _supabase.from('posts').delete().eq('id', postId).eq('user_id', _currentUser.id);
+  if (error) { showToast('❌ 삭제 실패: ' + error.message); return; }
+  closeSheetDirect('sheet-post-detail');
+  await renderPosts();
+  showToast('🗑 게시글이 삭제되었어요');
+}
+
+function filterPosts() {
+  const q = (document.getElementById('comm-search')?.value || '').toLowerCase();
+  const list = document.getElementById('post-list');
+  list.innerHTML = '';
+  const filtered = state.posts.filter(p => {
+    if (!q) return true;
+    return (p.title||'').toLowerCase().includes(q)
+      || (p.author||'').toLowerCase().includes(q)
+      || (p.morph||'').toLowerCase().includes(q)
+      || (p.body||'').toLowerCase().includes(q)
+      || (p.tags||[]).some(t => t.toLowerCase().includes(q));
+  });
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">검색 결과가 없어요</div></div>`;
+    return;
+  }
+  filtered.forEach(p => list.appendChild(buildPostCard(p, false)));
 }
 
 function openWritePost() {
@@ -2827,7 +2886,24 @@ async function submitPost() {
   const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
 
   // 사진 우선순위: 직접 첨부 > 연결된 개체 사진
-  const photo = _postPhotoData || (linkedGecko && linkedGecko.photo) || null;
+  let photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+
+  // 직접 첨부한 사진이 있으면 Storage에 업로드
+  if (_postPhotoData && _currentUser) {
+    try {
+      const resp = await fetch(_postPhotoData);
+      const blob = await resp.blob();
+      const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
+      const { error: upErr } = await _supabase.storage
+        .from('gecko-photos')
+        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+      if (!upErr) {
+        const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+        photo = urlData.publicUrl;
+      }
+    } catch(e) { console.error('게시글 사진 업로드 실패:', e); }
+  }
+
   const morph = linkedGecko ? linkedGecko.morph : null;
   const tags = ['내글'];
   if (linkedGecko) {
@@ -3357,12 +3433,10 @@ function _openInExternalBrowser(url) {
 // ── Google 로그인 ──
 async function signInWithGoogle() {
   if (_isWebView()) {
-    // WebView에서는 Google이 차단하므로 크롬으로 유도
+    // WebView에서는 Google이 차단하므로 크롬으로 자동 유도
     const url = window.location.origin || 'https://fascinating-biscuit-a1d132.netlify.app';
-    showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요');
-    setTimeout(() => {
-      if (confirm('크롬 브라우저에서 열까요?')) _openInExternalBrowser(url);
-    }, 300);
+    showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬으로 이동합니다...');
+    setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
   }
   const { error } = await _supabase.auth.signInWithOAuth({
@@ -3475,6 +3549,7 @@ async function _onSignedIn() {
   homePage.classList.add('active');
   // 뒤로가기 히스토리 초기화
   history.replaceState({ page: 'home' }, '', '#home');
+  _loadProfile();
   await _loadGeckosFromDB();
   renderHome();
   renderPosts();

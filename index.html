@@ -700,7 +700,7 @@ input[type=file]{display:none}
       <div><div class="logo-text" style="color:var(--tx)">AI 모프 판별</div><div class="logo-sub">MORPH SCANNER</div></div>
     </div>
     <div class="topbar-right">
-      <div class="tb-btn" id="scan-free-badge" style="background:var(--ac2);border-color:var(--ac);color:var(--ac);font-family:'DM Mono',monospace;font-size:10px;width:auto;padding:0 10px">오늘 잔여 3회</div>
+      <div class="tb-btn" id="scan-free-badge" style="background:var(--ac2);border-color:var(--ac);color:var(--ac);font-family:'DM Mono',monospace;font-size:10px;width:auto;padding:0 10px">잔여 2회</div>
     </div>
   </div>
 
@@ -801,16 +801,13 @@ input[type=file]{display:none}
 
   <!-- Result -->
   <div class="result-area" id="result-area">
-    <!-- AI 면책 배너 (강화) -->
-    <div style="background:rgba(255,123,84,.1);border:2px solid rgba(255,123,84,.5);border-radius:16px;padding:14px 15px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-        <span style="font-size:20px">🔬</span>
-        <span style="font-size:13px;font-weight:800;color:var(--coral);font-family:'DM Mono',monospace;letter-spacing:.5px">데모 시뮬레이션 결과</span>
-        <span style="margin-left:auto;background:rgba(255,123,84,.2);border:1px solid rgba(255,123,84,.4);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--coral);font-family:'DM Mono',monospace">BETA</span>
-      </div>
-      <div style="font-size:12px;color:#e8a080;line-height:1.75">
-        이 결과는 <b style="color:var(--coral)">실제 AI가 아닌 모의 시뮬레이션</b>이에요. 아직 사진을 분석하는 진짜 AI 모델은 탑재되지 않았습니다.<br>
-        모프명·등급은 참고용이며, 최종 판단은 <b style="color:#e8a080">브리더에게 직접 확인</b>하세요.
+    <!-- AI 면책 배너 -->
+    <div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.35);border-radius:14px;padding:11px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:18px;flex-shrink:0">⚠️</span>
+      <div style="font-size:12px;color:#c9a850;line-height:1.7">
+        <b style="color:var(--am)">AI 분석 결과는 참고용입니다.</b><br>
+        모프명·등급은 부르는 사람마다 다를 수 있고, 세상에 나와있는 정보 기반이에요.
+        최종 판단은 분양받는 분이 직접 하세요.
       </div>
     </div>
 
@@ -936,7 +933,7 @@ input[type=file]{display:none}
   </div>
 
   <div style="padding:0 18px 8px">
-    <input class="form-input" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px">
+    <input class="form-input" id="comm-search" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px" oninput="filterPosts()">
   </div>
 
   <div id="post-list">
@@ -1109,14 +1106,6 @@ input[type=file]{display:none}
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="add-gecko-title">새 개체 등록</div>
     <div class="sheet-body">
-      <!-- 비로그인 안내 배너 -->
-      <div id="add-gecko-login-banner" style="display:none;background:rgba(90,180,232,.1);border:1.5px solid rgba(90,180,232,.4);border-radius:12px;padding:11px 13px;margin-bottom:14px;gap:10px;align-items:center">
-        <span style="font-size:20px;flex-shrink:0">☁️</span>
-        <div style="font-size:12px;color:var(--blue);line-height:1.6">
-          <b>로그인하면 개체 정보가 클라우드에 저장</b>되고, 어느 기기에서든 볼 수 있어요.<br>
-          <span style="color:var(--tx2)">지금은 이 기기에만 임시 저장됩니다.</span>
-        </div>
-      </div>
       <!-- Photo -->
       <div class="form-group">
         <label class="form-label">📸 사진 (선택)</label>
@@ -1798,7 +1787,7 @@ function showPage(p, pushHistory = true) {
   if (p === 'home') renderHome();
   if (p === 'myge') renderGeckoList();
   if (p === 'comm') renderPosts();
-  if (p === 'scan') { resetScanPage(); updateScanBadge(); }
+  if (p === 'scan') resetScanPage();
   // 뒤로가기 히스토리 등록
   if (pushHistory) history.pushState({ page: p }, '', '#' + p);
 }
@@ -1887,6 +1876,23 @@ document.addEventListener('touchstart', function(e) {
 // ══ 프로필 수정 ══
 let _profile = { name: '게코키퍼님', bio: '' };
 
+function _loadProfile() {
+  if (!_currentUser) return;
+  try {
+    const saved = localStorage.getItem('mycre_profile_' + _currentUser.id);
+    if (saved) {
+      const p = JSON.parse(saved);
+      _profile.name = p.name || '게코키퍼님';
+      _profile.bio = p.bio || '';
+    }
+  } catch(e) {}
+}
+
+function _saveProfileLocal() {
+  if (!_currentUser) return;
+  try { localStorage.setItem('mycre_profile_' + _currentUser.id, JSON.stringify(_profile)); } catch(e) {}
+}
+
 function openProfileEdit() {
   document.getElementById('profile-name').value = _profile.name;
   document.getElementById('profile-bio').value = _profile.bio;
@@ -1897,8 +1903,8 @@ function openProfileEdit() {
 function saveProfile() {
   _profile.name = document.getElementById('profile-name').value.trim() || '게코키퍼님';
   _profile.bio  = document.getElementById('profile-bio').value.trim();
+  _saveProfileLocal();
   // 더보기 화면 이름 업데이트
-  const nameEl = document.querySelector('#page-more .more-item-info + div, #page-more div[style*="font-weight:800"]');
   document.querySelectorAll('#page-more [style*="font-weight:800"]').forEach(el => {
     if (el.textContent === '게코키퍼님' || el.textContent === _profile.name) el.textContent = _profile.name;
   });
@@ -1992,9 +1998,6 @@ function openAddGecko() {
   state.editingGeckoId = null;
   currentPhotoData = null;
   document.getElementById('add-gecko-title').textContent = '새 개체 등록';
-  // 비로그인 안내 배너 표시/숨김
-  const _loginBanner = document.getElementById('add-gecko-login-banner');
-  if (_loginBanner) _loginBanner.style.display = _currentUser ? 'none' : 'flex';
   document.getElementById('gecko-name').value = '';
   document.getElementById('gecko-sex').value = '미판별';
   document.getElementById('gecko-morph').value = '';
@@ -2536,34 +2539,16 @@ function handleScanPhotos(e) {
 
   let loaded = 0;
   toAdd.forEach(file => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      // ── 압축: 최대 600px, JPEG 0.5 품질 ──
-      const MAX = 600;
-      let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) {
-        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-        else { w = Math.round(w * MAX / h); h = MAX; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL('image/jpeg', 0.5);
-      URL.revokeObjectURL(url);
-      scanPhotos.push({data: compressed, name: file.name});
+    const reader = new FileReader();
+    reader.onload = ev => {
+      scanPhotos.push({data: ev.target.result, name: file.name});
       loaded++;
       if (loaded === toAdd.length) {
         document.getElementById('scan-tips').style.display = 'none';
         renderScanGrid();
       }
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      loaded++;
-      if (loaded === toAdd.length) renderScanGrid();
-    };
-    img.src = url;
+    reader.readAsDataURL(file);
   });
   e.target.value = '';
   if (files.length > remaining) showToast(`최대 6장까지 업로드 가능해요 (${remaining}장 추가됨)`);
@@ -2575,33 +2560,10 @@ function removeScanPhoto(idx) {
   renderScanGrid();
 }
 
-// ── localStorage 날짜 기반 무료 스캔 횟수 관리 ──
-const DAILY_SCAN_LIMIT = 3;
-const DAILY_SCAN_KEY = 'mkre_scan_';
-function _todayKey() {
-  return DAILY_SCAN_KEY + new Date().toISOString().slice(0, 10); // e.g. mkre_scan_2026-04-04
-}
-function getScansUsedToday() {
-  return parseInt(localStorage.getItem(_todayKey()) || '0', 10);
-}
-function incrementScansToday() {
-  const k = _todayKey();
-  const n = getScansUsedToday() + 1;
-  localStorage.setItem(k, String(n));
-  return n;
-}
-function getScansLeftToday() {
-  return Math.max(0, DAILY_SCAN_LIMIT - getScansUsedToday());
-}
-function updateScanBadge() {
-  const badge = document.getElementById('scan-free-badge');
-  if (badge) badge.textContent = '오늘 잔여 ' + getScansLeftToday() + '회';
-}
-
 function startAnalysis() {
   if (scanPhotos.length === 0) { showToast('⚠️ 사진을 최소 1장 이상 올려주세요'); return; }
-  if (getScansLeftToday() <= 0) {
-    showToast('🔒 오늘 무료 판별 횟수(3회)를 모두 사용했어요. 내일 다시 시도하세요!');
+  if (state.freeScansLeft <= 0) {
+    showToast('🔒 무료 판별 횟수를 모두 사용했어요');
     openProSheet();
     return;
   }
@@ -2630,8 +2592,8 @@ function startAnalysis() {
   // 사진 많을수록 약간 더 오래 (실제감)
   const delay = 2800 + Math.min(photoCount - 1, 3) * 200;
   setTimeout(() => {
-    incrementScansToday();
-    updateScanBadge();
+    state.freeScansLeft--;
+    document.getElementById('scan-free-badge').textContent = '잔여 ' + state.freeScansLeft + '회';
     showResult(photoCount, fireUp);
   }, delay);
 }
@@ -2726,6 +2688,10 @@ function saveToMyGecko() {
     currentPhotoData = scanPhotos[0].data;
     document.getElementById('add-photo-preview').src = scanPhotos[0].data;
     document.getElementById('add-photo-zone').classList.add('has-photo');
+    // Storage 업로드를 위해 blob 변환
+    try {
+      fetch(scanPhotos[0].data).then(r => r.blob()).then(b => { _pendingPhotoFile = b; });
+    } catch(e) {}
   }
   updateGeckoGrade();
   showPage('myge');
@@ -2838,8 +2804,46 @@ function openPostDetail(p) {
         <input class="form-input" placeholder="댓글 작성..." style="flex:1;font-size:13px">
         <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="showToast('댓글이 등록되었어요 ✅')">등록</button>
       </div>
+      ${p.isOwn ? '<button class="btn-outline" onclick="deletePost(' + p.id + ')" style="color:var(--coral);border-color:var(--coral);background:var(--co2);margin-top:10px;width:100%">🗑 이 게시글 삭제</button>' : ''}
     </div>`;
   openSheet('sheet-post-detail');
+}
+
+let _deletePostStep = 0;
+let _deletePostTimer = null;
+async function deletePost(postId) {
+  if (_deletePostStep === 0) {
+    _deletePostStep = 1;
+    showToast('⚠️ 정말 삭제하려면 한 번 더 눌러주세요');
+    _deletePostTimer = setTimeout(() => { _deletePostStep = 0; }, 3000);
+    return;
+  }
+  _deletePostStep = 0;
+  clearTimeout(_deletePostTimer);
+  const { error } = await _supabase.from('posts').delete().eq('id', postId).eq('user_id', _currentUser.id);
+  if (error) { showToast('❌ 삭제 실패: ' + error.message); return; }
+  closeSheetDirect('sheet-post-detail');
+  await renderPosts();
+  showToast('🗑 게시글이 삭제되었어요');
+}
+
+function filterPosts() {
+  const q = (document.getElementById('comm-search')?.value || '').toLowerCase();
+  const list = document.getElementById('post-list');
+  list.innerHTML = '';
+  const filtered = state.posts.filter(p => {
+    if (!q) return true;
+    return (p.title||'').toLowerCase().includes(q)
+      || (p.author||'').toLowerCase().includes(q)
+      || (p.morph||'').toLowerCase().includes(q)
+      || (p.body||'').toLowerCase().includes(q)
+      || (p.tags||[]).some(t => t.toLowerCase().includes(q));
+  });
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">검색 결과가 없어요</div></div>`;
+    return;
+  }
+  filtered.forEach(p => list.appendChild(buildPostCard(p, false)));
 }
 
 function openWritePost() {
@@ -2882,7 +2886,24 @@ async function submitPost() {
   const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
 
   // 사진 우선순위: 직접 첨부 > 연결된 개체 사진
-  const photo = _postPhotoData || (linkedGecko && linkedGecko.photo) || null;
+  let photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+
+  // 직접 첨부한 사진이 있으면 Storage에 업로드
+  if (_postPhotoData && _currentUser) {
+    try {
+      const resp = await fetch(_postPhotoData);
+      const blob = await resp.blob();
+      const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
+      const { error: upErr } = await _supabase.storage
+        .from('gecko-photos')
+        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+      if (!upErr) {
+        const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+        photo = urlData.publicUrl;
+      }
+    } catch(e) { console.error('게시글 사진 업로드 실패:', e); }
+  }
+
   const morph = linkedGecko ? linkedGecko.morph : null;
   const tags = ['내글'];
   if (linkedGecko) {
@@ -3412,12 +3433,10 @@ function _openInExternalBrowser(url) {
 // ── Google 로그인 ──
 async function signInWithGoogle() {
   if (_isWebView()) {
-    // WebView에서는 Google이 차단하므로 크롬으로 유도
+    // WebView에서는 Google이 차단하므로 크롬으로 자동 유도
     const url = window.location.origin || 'https://fascinating-biscuit-a1d132.netlify.app';
-    showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요');
-    setTimeout(() => {
-      if (confirm('크롬 브라우저에서 열까요?')) _openInExternalBrowser(url);
-    }, 300);
+    showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬으로 이동합니다...');
+    setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
   }
   const { error } = await _supabase.auth.signInWithOAuth({
@@ -3442,111 +3461,265 @@ function showAuthErr(msg) {
   else showToast(msg);
 }
 
-// ── 탭 전환 (로그인 ↔ 회원가입) ──
+// ── 탭 전환 ──
 function switchAuthTab(mode) {
   _authMode = mode;
-  const pw2 = document.getElementById('auth-pw2');
-  const submitBtn = document.getElementById('auth-submit-btn');
-  const tabLogin = document.getElementById('tab-login');
-  const tabSignup = document.getElementById('tab-signup');
-  if (mode === 'signup') {
-    if (pw2) pw2.style.display = 'block';
-    if (submitBtn) submitBtn.textContent = '이메일로 회원가입';
-    if (tabLogin) tabLogin.classList.remove('active');
-    if (tabSignup) tabSignup.classList.add('active');
-  } else {
-    if (pw2) pw2.style.display = 'none';
-    if (submitBtn) submitBtn.textContent = '이메일 로그인';
-    if (tabLogin) tabLogin.classList.add('active');
-    if (tabSignup) tabSignup.classList.remove('active');
-  }
-  showAuthErr('');
+  const isSignup = mode === 'signup';
+  document.getElementById('tab-login').classList.toggle('active', !isSignup);
+  document.getElementById('tab-signup').classList.toggle('active', isSignup);
+  document.getElementById('auth-pw2').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('auth-submit-btn').textContent = isSignup ? '회원가입' : '로그인';
+  document.getElementById('auth-err').textContent = '';
 }
 
-// ── 이메일 로그인 / 회원가입 ──
+// ── 로그인 / 회원가입 버튼 클릭 ──
 async function handleAuthSubmit() {
-  const email = (document.getElementById('auth-email')?.value || '').trim();
-  const pw    = document.getElementById('auth-pw')?.value || '';
-  const pw2   = document.getElementById('auth-pw2')?.value || '';
-  if (!email || !pw) { showAuthErr('이메일과 비밀번호를 입력해주세요.'); return; }
-  if (pw.length < 8) { showAuthErr('비밀번호는 8자 이상이어야 해요.'); return; }
-  const btn = document.getElementById('auth-submit-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '처리 중...'; }
+  const email = document.getElementById('auth-email').value.trim();
+  const pw    = document.getElementById('auth-pw').value;
+  const pw2   = document.getElementById('auth-pw2').value;
+  const errEl = document.getElementById('auth-err');
+  errEl.textContent = '';
+
+  if (!email || !pw) { errEl.textContent = '⚠️ 이메일과 비밀번호를 입력해 주세요'; return; }
+  if (pw.length < 8)  { errEl.textContent = '⚠️ 비밀번호는 8자 이상이어야 해요'; return; }
 
   if (_authMode === 'signup') {
-    if (pw !== pw2) { showAuthErr('비밀번호가 일치하지 않아요.'); if (btn) { btn.disabled = false; btn.textContent = '이메일로 회원가입'; } return; }
+    if (pw !== pw2) { errEl.textContent = '⚠️ 비밀번호가 일치하지 않아요'; return; }
     const { error } = await _supabase.auth.signUp({ email, password: pw });
-    if (btn) { btn.disabled = false; btn.textContent = '이메일로 회원가입'; }
-    if (error) { showAuthErr('가입 실패: ' + error.message); return; }
-    // Fix 5: 개선된 가입 성공 메시지
-    showAuthErr('');
-    document.getElementById('auth-err').style.color = 'var(--ac)';
-    document.getElementById('auth-err').textContent =
-      '✅ 가입 완료! 받은 편지함(또는 스팸함)에서 인증 메일을 확인해주세요. 인증 후 로그인하세요.';
-  } else {
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pw });
-    if (btn) { btn.disabled = false; btn.textContent = '이메일 로그인'; }
-    if (error) {
-      if (error.message.includes('Invalid login') || error.message.includes('invalid_credentials')) {
-        showAuthErr('이메일 또는 비밀번호가 올바르지 않아요.');
-      } else if (error.message.includes('Email not confirmed')) {
-        showAuthErr('이메일 인증이 완료되지 않았어요. 받은 편지함(또는 스팸함)을 확인해주세요.');
-      } else {
-        showAuthErr('로그인 실패: ' + error.message);
-      }
-      return;
-    }
-    if (data?.user) {
-      closeSheetDirect('sheet-login');
-      showToast('👋 로그인되었어요!');
-    }
+    if (error) { errEl.textContent = '❌ ' + (error.message || '가입 실패'); return; }
+    errEl.style.color = 'var(--ac)';
+    errEl.textContent = '✅ 가입 완료! 이메일을 확인해 로그인하세요';
+    return;
   }
+
+  // 로그인
+  const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pw });
+  if (error) { errEl.textContent = '❌ 이메일 또는 비밀번호가 틀렸어요'; return; }
+  _currentUser = data.user;
+  await _onSignedIn();
 }
 
-// ── 로그아웃 ──
+
+// ── 로그아웃 (즉시 실행 — 확인 다이얼로그 없음) ──
 async function signOut() {
-  await _supabase.auth.signOut();
+  try { await _supabase.auth.signOut({ scope: 'local' }); } catch(e) {}
   _currentUser = null;
-  updateAuthUI();
-  showToast('로그아웃되었어요.');
+  state.geckos = [];
+  state.posts = [];
+  state.nextGeckoId = 1;
+  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
+  _showAuthScreen();
+  showToast('로그아웃 완료');
 }
 
-// ── 인증 상태 변화 감지 ──
-function updateAuthUI() {
-  const user = _currentUser;
-  const avatar = document.getElementById('profile-avatar-btn');
-  const loginBtn = document.getElementById('topbar-login-btn');
-  if (user) {
-    if (avatar) { avatar.style.display = 'flex'; avatar.textContent = (user.email || '?').charAt(0).toUpperCase(); }
-    if (loginBtn) loginBtn.style.display = 'none';
+// ── 회원 탈퇴 (2단계 확인) ──
+let _deleteConfirmStep = 0;
+let _deleteConfirmTimer = null;
+async function deleteAccount() {
+  if (_deleteConfirmStep === 0) {
+    _deleteConfirmStep = 1;
+    showToast('⚠️ 정말 탈퇴하려면 한 번 더 눌러주세요');
+    // 3초 후 리셋
+    _deleteConfirmTimer = setTimeout(() => { _deleteConfirmStep = 0; }, 3000);
+    return;
+  }
+  // 2번째 탭 — 실제 탈퇴 실행
+  _deleteConfirmStep = 0;
+  clearTimeout(_deleteConfirmTimer);
+  showToast('탈퇴 처리 중...');
+  try {
+    await _supabase.from('posts').delete().eq('user_id', _currentUser.id);
+    await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
+    await _supabase.auth.signOut({ scope: 'local' });
+  } catch(e) {}
+  _currentUser = null;
+  state.geckos = [];
+  state.posts = [];
+  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
+  _showAuthScreen();
+  showToast('탈퇴가 완료됐어요');
+}
+
+// ── 로그인 성공 후 처리 ──
+async function _onSignedIn() {
+  document.getElementById('auth-screen').style.display = 'none';
+  // signout-btn 제거됨
+  const homePage = document.getElementById('page-home');
+  homePage.style.display = '';
+  homePage.classList.add('active');
+  // 뒤로가기 히스토리 초기화
+  history.replaceState({ page: 'home' }, '', '#home');
+  _loadProfile();
+  await _loadGeckosFromDB();
+  renderHome();
+  renderPosts();
+  renderGeckoList();
+  renderScanGrid();
+}
+
+// ── 로그인 화면 표시 ──
+function _showAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('auth-form').style.display = 'flex';
+  // signout-btn 제거됨
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  document.getElementById('auth-email') && (document.getElementById('auth-email').value = '');
+  document.getElementById('auth-pw') && (document.getElementById('auth-pw').value = '');
+  document.getElementById('auth-pw2') && (document.getElementById('auth-pw2').value = '');
+  document.getElementById('auth-err') && (document.getElementById('auth-err').textContent = '');
+  switchAuthTab('login');
+}
+
+// ══════════════════════════════
+// DB 연동 함수들
+// ══════════════════════════════
+
+// DB에서 개체 목록 불러오기
+async function _loadGeckosFromDB() {
+  if (!_currentUser) return;
+  const { data, error } = await _supabase
+    .from('geckos')
+    .select('*')
+    .eq('user_id', _currentUser.id)
+    .order('created_at', { ascending: true });
+
+  if (error || !data) {
+    // DB 실패 시 localStorage 폴백
+    console.error('DB 로드 실패, 로컬 데이터 사용:', error);
+    try {
+      const local = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+      if (local) { state.geckos = JSON.parse(local); renderHome(); renderGeckoList(); renderScanGrid(); }
+    } catch(e) {}
+    return;
+  }
+  if (data.length > 0) {
+    state.geckos = data.map(row => ({
+      id: row.id, name: row.name, sex: row.sex, morph: row.morph,
+      grade: row.grade, dob: row.dob, price: row.price, weight: row.weight,
+      status: row.status, cage: row.cage, dad: row.dad, mom: row.mom,
+      memo: row.memo, photo: row.photo,
+    }));
+    // 로컬도 최신화
+    try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(state.geckos)); } catch(e) {}
   } else {
-    if (avatar) avatar.style.display = 'none';
-    if (loginBtn) loginBtn.style.display = 'flex';
+    // DB 비어있으면 로컬 확인
+    try {
+      const local = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed.length > 0) {
+          state.geckos = parsed;
+          // 로컬 데이터를 DB에 복구
+          for (const g of parsed) { await _saveGeckoToDB(g); }
+        }
+      }
+    } catch(e) {}
   }
 }
 
-_supabase.auth.onAuthStateChange((event, session) => {
-  _currentUser = session?.user ?? null;
-  updateAuthUI();
-  if (event === 'SIGNED_IN') {
-    // 프로필 동기화
-    if (_currentUser) {
-      _supabase.from('profiles').upsert({
-        id: _currentUser.id,
-        nickname: _currentUser.user_metadata?.full_name || _currentUser.email?.split('@')[0] || '브리더',
-        avatar_url: _currentUser.user_metadata?.avatar_url || null,
-      }, { onConflict: 'id', ignoreDuplicates: true }).then(() => {});
+// DB에 개체 저장 (upsert = 추가 + 수정 겸용)
+async function _saveGeckoToDB(gecko) {
+  if (!_currentUser) return;
+  // 로컬 백업 (사진은 URL만 저장, base64는 제외)
+  const localSafe = state.geckos.map(g => ({
+    ...g,
+    photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null
+  }));
+  try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(localSafe)); } catch(e) {}
+
+  // DB에는 Storage URL만 저장 (base64는 너무 크므로 제외)
+  let dbPhoto = gecko.photo || null;
+  if (dbPhoto && dbPhoto.startsWith('data:')) dbPhoto = null;
+
+  const row = {
+    id:      String(gecko.id),
+    user_id: _currentUser.id,
+    name:    gecko.name,
+    sex:     gecko.sex,
+    morph:   gecko.morph,
+    grade:   gecko.grade,
+    dob:     gecko.dob || null,
+    price:   gecko.price || null,
+    weight:  gecko.weight || null,
+    status:  gecko.status,
+    cage:    gecko.cage,
+    dad:     gecko.dad || null,
+    mom:     gecko.mom || null,
+    memo:    gecko.memo || null,
+    photo:   dbPhoto,
+  };
+  const { error } = await _supabase.from('geckos').upsert(row, { onConflict: 'id' });
+  if (error) {
+    showToast('⚠️ 서버 저장 실패 — 로컬에만 저장됨');
+    console.error('DB 저장 오류:', error);
+  } else {
+    showToast('✅ 저장 완료!');
+  }
+}
+
+// DB에서 개체 삭제
+async function _deleteGeckoFromDB(id) {
+  if (!_currentUser) return;
+  const { error } = await _supabase
+    .from('geckos')
+    .delete()
+    .eq('id', String(id))
+    .eq('user_id', _currentUser.id);
+  if (error) showToast('❌ 삭제 실패: ' + error.message);
+}
+
+// ══════════════════════════════
+// INIT
+// ══════════════════════════════
+// ── PWA 서비스워커 등록 ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // ── 안전장치: 4초 안에 아무것도 안 되면 강제로 로그인 화면 표시
+  const authTimeout = setTimeout(() => {
+    if (!_currentUser) _showAuthScreen();
+  }, 4000);
+
+  // ── onAuthStateChange: 모든 세션 변화 감지
+  _supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session && !_currentUser) {
+      // 세션 있음 → 앱 진입 (Google OAuth, 이메일 로그인, 기존 세션 모두 포함)
+      clearTimeout(authTimeout);
+      _currentUser = session.user;
+      await _onSignedIn();
+    } else if (!session && event === 'SIGNED_OUT') {
+      // 로그아웃
+      _currentUser = null;
+      _showAuthScreen();
+    } else if (!session && event === 'INITIAL_SESSION') {
+      // 최초 로드인데 세션 없음
+      // URL에 access_token이 있으면 SIGNED_IN이 곧 올 것이므로 잠깐 대기
+      if (!window.location.hash.includes('access_token')) {
+        clearTimeout(authTimeout);
+        _showAuthScreen();
+      }
     }
+  });
+
+  // ── 안전장치: access_token이 URL에 있는데 3초 후에도 앱 안 열리면 강제 체크
+  if (window.location.hash.includes('access_token')) {
+    setTimeout(async () => {
+      if (!_currentUser) {
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (session) {
+          clearTimeout(authTimeout);
+          _currentUser = session.user;
+          await _onSignedIn();
+        } else {
+          _showAuthScreen();
+        }
+      }
+    }, 3000);
   }
 });
-
-// ── 앱 초기화 ──
-(function init() {
-  updateScanBadge();
-  showPage('home', false);
-  // 뒤로가기 히스토리 초기 상태 등록
-  history.replaceState({ page: 'home' }, '', '#home');
-})();
 </script>
 </body>
 </html>
