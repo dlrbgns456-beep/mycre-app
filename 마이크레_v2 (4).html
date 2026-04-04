@@ -1,0 +1,3650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="마이크레">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e1a10">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.svg">
+<link rel="icon" type="image/svg+xml" href="/icon-192.svg">
+<title>마이크레 — 크레스티드 게코 올인원</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=DM+Mono:wght@400;500&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ─── Design Tokens ─── */
+:root {
+  --bg:    #0e1a10;
+  --sf:    #162819;
+  --sf2:   #1d3320;
+  --card:  #1a2f1c;
+  --br:    #2a4a2d;
+  --br2:   #1f3d22;
+  --ac:    #5ddc6a;
+  --ac2:   rgba(93,220,106,.13);
+  --ac3:   rgba(93,220,106,.07);
+  --am:    #f5c842;
+  --am2:   rgba(245,200,66,.14);
+  --coral: #ff7b54;
+  --co2:   rgba(255,123,84,.14);
+  --blue:  #5ab4e8;
+  --bl2:   rgba(90,180,232,.13);
+  --pu:    #c07af0;
+  --pu2:   rgba(192,122,240,.13);
+  --tx:    #ddf0de;
+  --tx2:   #7aab7e;
+  --tx3:   #4a7a4e;
+  --r:     18px;
+  --rs:    12px;
+  --rx:    24px;
+  --shadow: 0 4px 24px rgba(0,0,0,.5);
+}
+
+/* ─── Reset ─── */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;max-width:480px;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior-y:contain}
+html{overscroll-behavior-y:contain}
+img{display:block}
+button{cursor:pointer;border:none;background:none;font-family:inherit}
+
+/* ─── Pages ─── */
+.page{display:none;padding-bottom:80px;min-height:100vh;animation:fadeIn .18s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── Top Bar ─── */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(14,26,16,.93);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
+  border-bottom:1px solid var(--br2);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-icon{width:34px;height:34px;background:var(--ac);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-text{font-family:"Nunito",sans-serif;font-size:22px;font-weight:900;color:var(--ac);letter-spacing:-.5px;line-height:1}
+.logo-sub{font-size:10px;color:var(--tx3);font-family:"DM Mono",monospace;letter-spacing:.5px;margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.tb-btn{width:36px;height:36px;border-radius:10px;background:var(--sf2);border:1px solid var(--br);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--tx2)}
+.premium-badge{background:linear-gradient(135deg,#f5c842,#ff9c27);border-radius:20px;padding:5px 11px;font-size:11px;font-weight:700;color:#1a0a00;font-family:"DM Mono",monospace}
+
+/* ─── Bottom Nav ─── */
+.bnav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;
+  background:rgba(14,26,16,.97);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--br2);
+  display:flex;align-items:center;
+  z-index:100;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nb{flex:1;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none}
+.ni{font-size:21px;transition:transform .15s}
+.nl{font-size:9px;font-family:"DM Mono",monospace;color:var(--tx3);letter-spacing:.5px;transition:color .15s}
+.nb.active .nl{color:var(--ac)}
+.nb.active .ni{transform:scale(1.15)}
+.nb-scan{flex:1;padding:6px 0 5px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none}
+.nb-scan-c{
+  width:50px;height:50px;
+  background:linear-gradient(135deg,var(--ac),#38c947);
+  border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;
+  box-shadow:0 4px 20px rgba(93,220,106,.45);
+  margin-top:-12px;
+  transition:all .15s;
+}
+.nb-scan:active .nb-scan-c{transform:scale(.92)}
+.nb-scan .nl{font-size:9px;font-family:"DM Mono",monospace;color:var(--tx3);letter-spacing:.5px}
+
+/* ─── Section Headers ─── */
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 10px}
+.sec-title{font-size:17px;font-weight:700}
+.sec-more{font-size:12px;color:var(--tx2);font-family:"DM Mono",monospace}
+
+/* ─── Cards ─── */
+.card{background:var(--card);border:1px solid var(--br);border-radius:var(--r);overflow:hidden}
+.card-pad{padding:14px 15px}
+
+/* ─── Buttons ─── */
+.btn-primary{
+  background:linear-gradient(135deg,var(--ac),#38c947);
+  color:#071508;font-weight:700;
+  border-radius:14px;padding:14px;
+  font-size:15px;width:100%;
+  box-shadow:0 4px 18px rgba(93,220,106,.35);
+  transition:all .15s;
+}
+.btn-primary:active{transform:scale(.97);box-shadow:none}
+.btn-outline{background:var(--sf2);border:1.5px solid var(--br);color:var(--tx);border-radius:12px;padding:12px;font-size:14px;font-weight:600;transition:all .15s}
+.btn-outline:active{border-color:var(--ac);color:var(--ac)}
+.btn-sm{background:var(--ac2);border:1px solid var(--ac);color:var(--ac);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700}
+.btn-coral{background:var(--co2);border:1px solid var(--coral);color:var(--coral);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700}
+
+/* ─── Tags ─── */
+.tag{font-family:"DM Mono",monospace;font-size:10px;padding:3px 7px;border-radius:6px;display:inline-block}
+.tag-green{background:var(--ac2);color:var(--ac)}
+.tag-amber{background:var(--am2);color:var(--am)}
+.tag-coral{background:var(--co2);color:var(--coral)}
+.tag-blue{background:var(--bl2);color:var(--blue)}
+.tag-pu{background:var(--pu2);color:var(--pu)}
+.tag-gray{background:var(--sf2);color:var(--tx2)}
+
+/* ─── Sheets (bottom modal) ─── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.sheet-overlay.show{display:flex}
+.sheet{background:var(--sf);border-radius:26px 26px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);animation:sheetUp .22s cubic-bezier(.25,.9,.5,1)}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:38px;height:4px;background:var(--br);border-radius:2px;margin:13px auto 0}
+.sheet-title{font-size:20px;font-weight:800;padding:14px 18px 4px}
+.sheet-body{padding:12px 18px 20px}
+
+/* ─── Form elements ─── */
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;font-family:"DM Mono",monospace;color:var(--tx2);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;display:block}
+.form-input,.form-select,.form-textarea{
+  width:100%;background:var(--bg);border:1.5px solid var(--br);
+  border-radius:12px;padding:11px 13px;
+  color:var(--tx);font-family:"Noto Sans KR",sans-serif;font-size:14px;
+  outline:none;transition:border-color .15s;-webkit-appearance:none;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--ac)}
+.form-input::placeholder{color:var(--tx3)}
+.form-textarea{resize:none;height:80px;line-height:1.6}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ─── Photo Zone ─── */
+.photo-zone{
+  border:2px dashed var(--br);border-radius:var(--r);
+  padding:20px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--sf2);
+  position:relative;overflow:hidden;
+}
+.photo-zone:active,.photo-zone.has-photo{border-style:solid;border-color:var(--ac);background:var(--ac3)}
+.photo-zone-icon{font-size:36px;margin-bottom:8px}
+.photo-zone-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.photo-zone-sub{font-size:12px;color:var(--tx2)}
+.photo-preview{width:100%;max-height:220px;object-fit:cover;border-radius:12px;display:none}
+.photo-zone.has-photo .photo-preview{display:block}
+.photo-zone.has-photo .photo-zone-placeholder{display:none}
+input[type=file]{display:none}
+
+/* ─── Morph Grade Badges ─── */
+.grade-s{background:linear-gradient(135deg,#f5c842,#ff9c27);color:#1a0a00}
+.grade-a{background:var(--am2);color:var(--am)}
+.grade-b{background:var(--ac2);color:var(--ac)}
+.grade-c{background:var(--bl2);color:var(--blue)}
+.grade-badge{font-family:"DM Mono",monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px}
+
+/* ─── Empty State ─── */
+.empty-state{text-align:center;padding:60px 20px}
+.empty-icon{font-size:52px;margin-bottom:14px}
+.empty-title{font-size:17px;font-weight:700;margin-bottom:6px}
+.empty-sub{font-size:13px;color:var(--tx2);line-height:1.6}
+
+/* ─── Scroll row ─── */
+.scroll-row{display:flex;gap:10px;overflow-x:auto;padding:0 18px;scrollbar-width:none}
+.scroll-row::-webkit-scrollbar{display:none}
+
+/* ─── Filter pills ─── */
+.filter-row{display:flex;gap:7px;overflow-x:auto;padding:0 18px 0;scrollbar-width:none;margin-bottom:10px}
+.filter-row::-webkit-scrollbar{display:none}
+.fp{flex-shrink:0;background:var(--sf);border:1px solid var(--br);border-radius:20px;padding:6px 13px;font-size:12px;color:var(--tx2);cursor:pointer;transition:all .15s;font-weight:500}
+.fp.active{background:var(--ac2);border-color:var(--ac);color:var(--ac);font-weight:700}
+
+/* ─── Divider ─── */
+.divider{height:1px;background:var(--br2);margin:0 18px}
+
+/* ─── Toast ─── */
+.toast{
+  position:fixed;bottom:95px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--sf);border:1px solid var(--br);
+  border-radius:12px;padding:10px 18px;
+  font-size:13px;font-weight:600;
+  opacity:0;transition:all .3s;z-index:999;
+  white-space:nowrap;
+  box-shadow:var(--shadow);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ─── HOME PAGE ─── */
+.home-banner{
+  margin:14px 18px;
+  background:linear-gradient(135deg,#1a3d1f,#0d2610);
+  border:1px solid var(--br);border-radius:var(--rx);
+  padding:20px;overflow:hidden;position:relative;
+}
+.home-banner::after{
+  content:"🦎";font-size:80px;
+  position:absolute;right:-8px;bottom:-10px;opacity:.18;
+  transform:rotate(-20deg);
+}
+.banner-eyebrow{font-size:10px;font-family:"DM Mono",monospace;color:var(--ac);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.banner-title{font-size:22px;font-weight:900;line-height:1.25;margin-bottom:10px}
+.banner-title span{color:var(--ac)}
+.banner-desc{font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px}
+
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 18px;margin-bottom:6px}
+.quick-card{
+  background:var(--card);border:1px solid var(--br);
+  border-radius:var(--r);padding:16px 14px;
+  cursor:pointer;transition:all .15s;
+  display:flex;flex-direction:column;gap:6px;
+}
+.quick-card:active{transform:scale(.97);border-color:var(--ac)}
+.quick-icon{font-size:28px;margin-bottom:2px}
+.quick-title{font-size:14px;font-weight:700}
+.quick-sub{font-size:11px;color:var(--tx2);line-height:1.4}
+.quick-card.featured{border-color:rgba(93,220,106,.4);background:linear-gradient(135deg,#1a3320,var(--card))}
+
+/* AI scan teaser */
+.scan-teaser{
+  margin:0 18px 14px;
+  background:linear-gradient(135deg,#1e3823,#162819);
+  border:1.5px solid var(--ac);border-radius:var(--rx);
+  padding:16px 18px;display:flex;align-items:center;gap:14px;
+  cursor:pointer;transition:all .15s;
+}
+.scan-teaser:active{transform:scale(.98)}
+.scan-teaser-left{flex:1}
+.scan-teaser-title{font-size:15px;font-weight:800;margin-bottom:4px}
+.scan-teaser-sub{font-size:12px;color:var(--tx2)}
+.scan-teaser-btn{
+  background:linear-gradient(135deg,var(--ac),#38c947);
+  color:#071508;font-weight:800;font-size:13px;
+  border-radius:12px;padding:10px 16px;
+  white-space:nowrap;flex-shrink:0;
+}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 18px;margin-bottom:16px}
+.stat-chip{background:var(--sf);border:1px solid var(--br);border-radius:var(--rs);padding:12px 10px;text-align:center}
+.stat-label{font-size:9px;font-family:"DM Mono",monospace;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:900;font-family:"Nunito",sans-serif;line-height:1}
+.stat-sub{font-size:10px;color:var(--tx2);margin-top:3px}
+
+/* Recent geckos */
+.gecko-row-item{
+  flex-shrink:0;width:100px;
+  background:var(--card);border:1px solid var(--br);
+  border-radius:var(--r);overflow:hidden;cursor:pointer;
+  transition:all .15s;
+}
+.gecko-row-item:active{transform:scale(.96)}
+.gecko-row-thumb{
+  width:100%;height:80px;background:var(--sf2);
+  display:flex;align-items:center;justify-content:center;font-size:32px;
+}
+.gecko-row-thumb img{width:100%;height:100%;object-fit:cover}
+.gecko-row-info{padding:7px 8px}
+.gecko-row-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gecko-row-morph{font-size:10px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+/* ─── SCAN PAGE ─── */
+.scan-header{padding:20px 18px 14px}
+.scan-header-title{font-size:24px;font-weight:900;margin-bottom:5px}
+.scan-header-sub{font-size:13px;color:var(--tx2);line-height:1.5}
+
+.scan-steps{display:flex;gap:0;padding:0 18px;margin-bottom:16px}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.step::after{content:"";position:absolute;top:14px;right:-50%;width:100%;height:2px;background:var(--br)}
+.step:last-child::after{display:none}
+.step-circle{width:28px;height:28px;border-radius:50%;background:var(--sf2);border:2px solid var(--br);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:"DM Mono",monospace;color:var(--tx2);position:relative;z-index:1}
+.step.active .step-circle{background:var(--ac);border-color:var(--ac);color:#071508}
+.step.done .step-circle{background:var(--ac2);border-color:var(--ac);color:var(--ac)}
+.step-label{font-size:9px;color:var(--tx3);font-family:"DM Mono",monospace;text-align:center;letter-spacing:.3px}
+.step.active .step-label{color:var(--ac)}
+
+.scan-upload-area{margin:0 18px 14px}
+.scan-photo-zone{
+  border:2px dashed var(--br);border-radius:20px;
+  padding:24px 20px;text-align:center;cursor:pointer;
+  background:var(--sf2);transition:all .2s;
+}
+.scan-photo-zone:active,.scan-photo-zone.has-img{border-color:var(--ac);border-style:solid;background:var(--ac3)}
+.scan-photo-zone-icon{font-size:40px;margin-bottom:8px}
+.scan-photo-zone-title{font-size:15px;font-weight:800;margin-bottom:4px}
+.scan-photo-zone-sub{font-size:12px;color:var(--tx2);line-height:1.5}
+/* 멀티 사진 그리드 */
+.scan-multi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.scan-thumb-wrap{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--sf2);border:1px solid var(--br)}
+.scan-thumb-wrap img{width:100%;height:100%;object-fit:cover}
+.scan-thumb-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;line-height:1}
+.scan-add-slot{aspect-ratio:1;border-radius:12px;border:2px dashed var(--br);background:var(--sf2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all .15s;font-size:20px;color:var(--tx3)}
+.scan-add-slot:active{border-color:var(--ac);color:var(--ac)}
+.scan-count-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border-radius:10px;margin-bottom:10px;border:1px solid var(--br2)}
+.scan-count-label{font-size:12px;color:var(--tx2)}
+.scan-count-value{font-family:"DM Mono",monospace;font-size:12px}
+.scan-count-value.good{color:var(--ac)}
+.scan-count-value.ok{color:var(--am)}
+.scan-fire-up-toggle{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--co2);border:1.5px solid var(--coral);border-radius:12px;margin-bottom:10px;cursor:pointer}
+.scan-fire-up-toggle input[type=checkbox]{width:18px;height:18px;accent-color:var(--coral);cursor:pointer;flex-shrink:0}
+.scan-fire-up-info{flex:1}
+.scan-fire-up-title{font-size:13px;font-weight:700;color:var(--coral)}
+.scan-fire-up-sub{font-size:11px;color:var(--tx2);margin-top:2px}
+
+/* Analysis loading */
+.ai-loading{display:none;padding:30px 18px;text-align:center}
+.ai-loading.show{display:block}
+.ai-spinner{
+  width:60px;height:60px;
+  border:3px solid var(--br);
+  border-top-color:var(--ac);
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+  margin:0 auto 16px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-loading-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.ai-loading-sub{font-size:12px;color:var(--tx2)}
+.ai-loading-steps{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.ai-step-item{font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--sf2);border-radius:10px;text-align:left}
+.ai-step-item.done{color:var(--ac)}
+.ai-step-item.done::before{content:"✓";font-weight:700}
+.ai-step-item:not(.done)::before{content:"·"}
+
+/* Result card */
+.result-area{display:none;padding:0 18px 20px}
+.result-area.show{display:block}
+.result-morph-card{
+  background:linear-gradient(135deg,#1e3823,#162819);
+  border:1.5px solid var(--ac);border-radius:20px;
+  padding:18px;margin-bottom:12px;
+}
+.result-morph-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.result-morph-name{font-size:22px;font-weight:900;color:var(--ac);line-height:1.1;margin-bottom:4px}
+.result-confidence{font-family:"DM Mono",monospace;font-size:11px;color:var(--tx2)}
+.result-morph-img{width:70px;height:70px;border-radius:12px;background:var(--sf2);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px}
+.result-trait-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.result-section{margin-bottom:12px}
+.result-section-title{font-size:11px;font-family:"DM Mono",monospace;color:var(--tx2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px}
+.result-desc{font-size:13px;color:var(--tx);line-height:1.7;background:var(--sf2);border-radius:10px;padding:10px 12px}
+.price-range{
+  background:var(--am2);border:1px solid var(--am);
+  border-radius:12px;padding:12px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.price-range-label{font-size:11px;font-family:"DM Mono",monospace;color:var(--am)}
+.price-range-value{font-size:18px;font-weight:800;color:var(--am)}
+
+.genetics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.genetics-item{background:var(--sf2);border-radius:10px;padding:10px 11px}
+.genetics-item-label{font-size:10px;font-family:"DM Mono",monospace;color:var(--tx3);margin-bottom:4px}
+.genetics-item-value{font-size:13px;font-weight:700}
+
+.result-actions{display:flex;gap:8px;margin-top:14px}
+.result-actions button{flex:1}
+
+/* ─── MY GECKO PAGE ─── */
+.gecko-list{padding:0 18px;display:flex;flex-direction:column;gap:9px}
+.gecko-card{
+  background:var(--card);border:1px solid var(--br);
+  border-radius:var(--r);padding:13px 14px;
+  display:flex;align-items:center;gap:12px;
+  cursor:pointer;transition:all .15s;position:relative;overflow:hidden;
+}
+.gecko-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3.5px;border-radius:0 2px 2px 0}
+.gecko-card.gS::before{background:linear-gradient(to bottom,#f5c842,#ff9c27)}
+.gecko-card.gA::before{background:var(--am)}
+.gecko-card.gB::before{background:var(--ac)}
+.gecko-card.gC::before{background:var(--blue)}
+.gecko-card:active{transform:scale(.985);background:var(--sf2)}
+.gecko-thumb{
+  width:52px;height:52px;border-radius:12px;
+  background:var(--sf2);border:1px solid var(--br);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;overflow:hidden;
+}
+.gecko-thumb img{width:100%;height:100%;object-fit:cover}
+.gecko-info{flex:1;min-width:0}
+.gecko-name-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.gecko-name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gecko-sex{font-size:12px}
+.gecko-morph{font-size:12px;color:var(--tx2);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gecko-tags{display:flex;gap:4px;flex-wrap:wrap}
+.gecko-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.gecko-grade-badge{
+  font-family:"Nunito",sans-serif;font-weight:900;font-size:13px;
+  width:32px;height:32px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Add FAB */
+.fab{
+  position:fixed;bottom:90px;right:18px;
+  width:54px;height:54px;
+  background:linear-gradient(135deg,var(--ac),#38c947);
+  border-radius:17px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;color:#071508;
+  box-shadow:0 6px 24px rgba(93,220,106,.5);
+  z-index:90;transition:all .15s;
+  border:none;cursor:pointer;
+}
+.fab:active{transform:scale(.92)}
+
+/* Gecko detail sheet */
+.gecko-detail-photo{width:100%;height:200px;object-fit:cover;border-radius:18px 18px 0 0;display:block;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:60px}
+.gecko-detail-photo img{width:100%;height:100%;object-fit:cover;border-radius:18px 18px 0 0}
+.detail-morph-name{font-size:20px;font-weight:900;color:var(--ac);margin-bottom:3px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--br2)}
+.detail-row:last-child{border-bottom:none}
+.detail-label{font-size:12px;font-family:"DM Mono",monospace;color:var(--tx2)}
+.detail-value{font-size:13px;font-weight:600}
+
+/* QR section */
+.qr-wrap{display:flex;justify-content:center;padding:16px 0 8px}
+#qr-canvas,#qr-canvas canvas,#qr-canvas img{border-radius:12px!important}
+
+/* ─── COMMUNITY PAGE ─── */
+.post-card{
+  background:var(--card);border:1px solid var(--br);
+  border-radius:var(--r);margin:0 18px 10px;
+  overflow:hidden;cursor:pointer;transition:all .15s;
+}
+.post-card:active{transform:scale(.99)}
+.post-card-img{width:100%;height:160px;object-fit:cover;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:50px;color:var(--tx3)}
+.post-card-body{padding:12px 14px}
+.post-author-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.post-avatar{width:28px;height:28px;border-radius:50%;background:var(--ac2);border:1px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.post-author-name{font-size:12px;font-weight:600}
+.post-author-follow{margin-left:auto}
+.post-title{font-size:14px;font-weight:700;margin-bottom:5px;line-height:1.4}
+.post-meta{display:flex;gap:10px;align-items:center}
+.post-price{font-size:15px;font-weight:800;color:var(--am)}
+.post-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.post-stats{display:flex;gap:14px;font-size:11px;color:var(--tx2);font-family:"DM Mono",monospace;margin-top:8px}
+
+/* ─── AUTH SCREEN ─── */
+#auth-screen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;padding:28px 28px;gap:0;
+  animation:fadeIn .3s ease;
+}
+.auth-logo{font-size:52px;margin-bottom:10px}
+.auth-title{font-family:"Nunito",sans-serif;font-size:30px;font-weight:900;color:var(--ac);margin-bottom:4px;letter-spacing:-1px}
+.auth-sub{font-size:13px;color:var(--tx2);margin-bottom:32px;text-align:center;line-height:1.6}
+.auth-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--br);border-radius:var(--rx);padding:22px 20px;display:flex;flex-direction:column;gap:12px}
+.auth-tab-row{display:flex;background:var(--sf2);border-radius:12px;padding:3px;gap:3px;margin-bottom:4px}
+.auth-tab{flex:1;padding:9px 0;border-radius:10px;font-size:13px;font-weight:700;color:var(--tx2);background:none;border:none;cursor:pointer;transition:all .15s}
+.auth-tab.active{background:var(--ac);color:#071508}
+.auth-input{width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:"Noto Sans KR",sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+.auth-input:focus{border-color:var(--ac)}
+.auth-input::placeholder{color:var(--tx3)}
+.auth-btn{width:100%;background:linear-gradient(135deg,var(--ac),#38c947);color:#071508;font-weight:800;font-size:15px;border:none;border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 4px 18px rgba(93,220,106,.35);transition:all .15s;font-family:"Noto Sans KR",sans-serif}
+.auth-btn:active{transform:scale(.97);box-shadow:none}
+.auth-err{font-size:12px;color:var(--coral);text-align:center;min-height:18px;font-weight:600}
+.social-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:15px;font-weight:700;border:none;border-radius:14px;
+  padding:14px;cursor:pointer;transition:all .15s;font-family:"Noto Sans KR",sans-serif;
+}
+.social-btn:active{transform:scale(.97)}
+.google-btn{background:#fff;color:#1f1f1f;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.kakao-btn{background:#FEE500;color:#3C1E1E;box-shadow:0 2px 12px rgba(254,229,0,.35)}
+.auth-divider-line{
+  display:flex;align-items:center;gap:10px;
+  color:var(--tx3);font-size:11px;font-family:"DM Mono",monospace;
+}
+.auth-divider-line::before,.auth-divider-line::after{
+  content:"";flex:1;height:1px;background:var(--br);
+}
+#signout-btn{
+  position:fixed;bottom:92px;right:14px;z-index:89;
+  background:var(--sf2);border:1px solid var(--br);
+  color:var(--tx2);font-size:11px;font-family:"DM Mono",monospace;
+  border-radius:10px;padding:7px 12px;cursor:pointer;
+  display:none;
+}
+
+/* ─── MORE PAGE ─── */
+.more-section{padding:0 18px;margin-bottom:8px}
+.more-section-label{font-size:10px;font-family:"DM Mono",monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:2px;padding:16px 0 8px}
+.more-item{
+  display:flex;align-items:center;gap:13px;
+  background:var(--card);border:1px solid var(--br);
+  border-radius:var(--r);padding:14px 15px;
+  margin-bottom:8px;cursor:pointer;transition:all .15s;
+}
+.more-item:active{transform:scale(.985);border-color:var(--ac)}
+.more-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.more-item-info{flex:1}
+.more-item-title{font-size:14px;font-weight:700;margin-bottom:2px}
+.more-item-sub{font-size:12px;color:var(--tx2)}
+.more-item-arrow{font-size:14px;color:var(--tx3)}
+
+.premium-card{
+  background:linear-gradient(135deg,#2a1f00,#1a1400);
+  border:1.5px solid var(--am);border-radius:var(--rx);
+  padding:18px;margin:0 18px 14px;
+}
+.premium-title{font-size:18px;font-weight:900;color:var(--am);margin-bottom:6px}
+.premium-desc{font-size:12px;color:#c9a850;line-height:1.6;margin-bottom:14px}
+.premium-features{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.premium-feat{font-size:12px;color:#ddb84a;display:flex;align-items:center;gap:7px}
+.premium-feat::before{content:"✦";color:var(--am);font-size:10px}
+.btn-premium{
+  background:linear-gradient(135deg,#f5c842,#ff9c27);
+  color:#1a0a00;font-weight:800;font-size:14px;
+  border-radius:14px;padding:13px;width:100%;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     AUTH SCREEN (소셜 로그인)
+══════════════════════════════════════ -->
+<div id="auth-screen">
+  <!-- 로딩 상태 (기본) -->
+  <div id="auth-loading">
+    <div style="font-size:52px;margin-bottom:16px">🦎</div>
+    <div style="font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;color:var(--ac);margin-bottom:16px">마이크레</div>
+    <div style="width:36px;height:36px;border:3px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
+  </div>
+  <!-- 로그인 폼 (세션 없을 때만 표시) -->
+  <div id="auth-form" style="display:none;flex-direction:column;align-items:center;width:100%;gap:0">
+    <div class="auth-logo">🦎</div>
+    <div class="auth-title">마이크레</div>
+    <div class="auth-sub">내 크레스티드 게코 올인원 관리<br>계정으로 어디서든 내 개체 조회</div>
+    <div class="auth-card">
+      <button class="social-btn google-btn" onclick="signInWithGoogle()">
+        <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Google로 로그인
+      </button>
+      <button class="social-btn kakao-btn" onclick="signInWithKakao()">
+        <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0"><path fill="#3C1E1E" d="M12 3C6.477 3 2 6.477 2 10.5c0 2.544 1.394 4.788 3.5 6.186L4.5 20.5l4.229-2.797C9.584 17.9 10.775 18 12 18c5.523 0 10-3.477 10-7.5S17.523 3 12 3z"/></svg>
+        카카오로 로그인
+      </button>
+      <div class="auth-divider-line"><span>또는 이메일로</span></div>
+      <div id="email-login-area" style="display:none;flex-direction:column;gap:10px">
+        <div class="auth-tab-row">
+          <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
+          <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
+        </div>
+        <input class="auth-input" id="auth-email" type="email" placeholder="이메일 주소" autocomplete="email">
+        <input class="auth-input" id="auth-pw" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="current-password">
+        <input class="auth-input" id="auth-pw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" style="display:none">
+        <div class="auth-err" id="auth-err"></div>
+        <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">이메일 로그인</button>
+      </div>
+      <button onclick="toggleEmailLogin()" style="background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;padding:2px 0" id="email-toggle-btn">이메일로 로그인 ▾</button>
+    </div>
+  </div>
+</div>
+
+<!-- 로그아웃 버튼은 더보기 탭에 있음 -->
+
+
+<!-- ══ 프로필 수정 시트 ══ -->
+<div class="sheet-overlay" id="sheet-profile-edit" onclick="closeSheet('sheet-profile-edit',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">프로필 수정</div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label class="form-label">닉네임</label>
+        <input class="form-input" id="profile-name" type="text" placeholder="닉네임 입력">
+      </div>
+      <div class="form-group">
+        <label class="form-label">한줄 소개</label>
+        <input class="form-input" id="profile-bio" type="text" placeholder="예: 크레스티드 게코 브리더">
+      </div>
+      <div class="form-group">
+        <label class="form-label">이메일</label>
+        <input class="form-input" id="profile-email" type="email" disabled style="opacity:.5">
+      </div>
+      <button class="btn-primary" onclick="saveProfile()">저장하기</button>
+    </div>
+  </div>
+</div>
+<div class="page" id="page-home" style="display:none">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">🦎</div>
+      <div><div class="logo-text">마이크레</div><div class="logo-sub">MY CRESTIE</div></div>
+    </div>
+    <div class="topbar-right">
+      <div class="tb-btn" onclick="showToast('알림이 없습니다')">🔔</div>
+      <div class="premium-badge" onclick="openProSheet()">PRO</div>
+    </div>
+  </div>
+
+  <!-- Banner -->
+  <div class="home-banner">
+    <div class="banner-eyebrow">MYCRE · AI GECKO PLATFORM</div>
+    <div class="banner-title">사진 한 장으로<br><span>모프 판별</span> 완료</div>
+    <div class="banner-desc">크레스티드 게코 <b style="color:var(--ac)">브리더</b>로 가기 위한<br>AI 올인원 관리 플랫폼</div>
+    <button class="btn-primary" style="max-width:180px" onclick="showPage('scan')">📷 지금 판별하기</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-chip">
+      <div class="stat-label">내 개체</div>
+      <div class="stat-value" id="stat-count">0</div>
+      <div class="stat-sub">마리</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-label">판별 횟수</div>
+      <div class="stat-value" id="stat-scans">3</div>
+      <div class="stat-sub">/ 5 무료</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-label">자산 추정</div>
+      <div class="stat-value" id="stat-value" style="font-size:16px;color:var(--am)">—</div>
+      <div class="stat-sub">만원~</div>
+    </div>
+  </div>
+
+  <!-- Quick Grid -->
+  <div class="sec-head"><span class="sec-title">빠른 기능</span></div>
+  <div class="quick-grid">
+    <div class="quick-card featured" onclick="showPage('scan')">
+      <div class="quick-icon">🔍</div>
+      <div class="quick-title">AI 모프 판별</div>
+      <div class="quick-sub">사진 → 모프·유전자·시세 자동 분석</div>
+    </div>
+    <div class="quick-card" onclick="showPage('myge')">
+      <div class="quick-icon">🦎</div>
+      <div class="quick-title">내 개체 관리</div>
+      <div class="quick-sub">등록·혈통·사육 기록 한 곳에</div>
+    </div>
+    <div class="quick-card" onclick="showPage('comm')">
+      <div class="quick-icon">🏘️</div>
+      <div class="quick-title">분양 게시판</div>
+      <div class="quick-sub">키퍼들과 개체 거래 및 정보 공유</div>
+    </div>
+    <div class="quick-card" onclick="openMoreSheet('report')">
+      <div class="quick-icon">🏛️</div>
+      <div class="quick-title">환경부 신고</div>
+      <div class="quick-sub">양서류 보유 신고서 자동 생성</div>
+    </div>
+  </div>
+
+  <!-- Recent geckos -->
+  <div class="sec-head" style="margin-top:8px">
+    <span class="sec-title">내 개체</span>
+    <span class="sec-more" onclick="showPage('myge')">전체보기 →</span>
+  </div>
+  <div class="scroll-row" id="home-gecko-row" style="padding-bottom:14px">
+    <!-- populated by JS -->
+    <div class="gecko-row-item" onclick="showPage('myge')" style="background:var(--sf2);border:1.5px dashed var(--br);display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;gap:5px">
+      <div style="font-size:26px">＋</div>
+      <div style="font-size:11px;color:var(--tx2)">개체 등록</div>
+    </div>
+  </div>
+
+  <!-- Community preview -->
+  <div class="sec-head">
+    <span class="sec-title">최근 분양글</span>
+    <span class="sec-more" onclick="showPage('comm')">더보기 →</span>
+  </div>
+  <div id="home-posts-preview"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: AI 판별
+══════════════════════════════════════ -->
+<div class="page" id="page-scan">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon" style="background:var(--sf2);font-size:20px">🔍</div>
+      <div><div class="logo-text" style="color:var(--tx)">AI 모프 판별</div><div class="logo-sub">MORPH SCANNER</div></div>
+    </div>
+    <div class="topbar-right">
+      <div class="tb-btn" id="scan-free-badge" style="background:var(--ac2);border-color:var(--ac);color:var(--ac);font-family:'DM Mono',monospace;font-size:10px;width:auto;padding:0 10px">잔여 2회</div>
+    </div>
+  </div>
+
+  <div class="scan-header">
+    <div class="scan-header-title">게코 사진을 올려주세요 📸</div>
+    <div class="scan-header-sub">사진이 많을수록 AI 정확도가 높아져요.<br><b style="color:var(--ac)">3장 이상</b> 권장 · 최대 6장</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="scan-steps">
+    <div class="step active" id="step1"><div class="step-circle">1</div><div class="step-label">사진 업로드</div></div>
+    <div class="step" id="step2"><div class="step-circle">2</div><div class="step-label">AI 분석</div></div>
+    <div class="step" id="step3"><div class="step-circle">3</div><div class="step-label">결과 확인</div></div>
+  </div>
+
+  <!-- Upload -->
+  <div class="scan-upload-area" id="scan-upload-area">
+    <!-- 사진 수 표시 바 -->
+    <div class="scan-count-bar">
+      <span class="scan-count-label">📷 업로드된 사진</span>
+      <span class="scan-count-value ok" id="scan-photo-count">0 / 6장 (3장 이상 권장)</span>
+    </div>
+
+    <!-- 멀티 사진 그리드 -->
+    <div class="scan-multi-grid" id="scan-multi-grid">
+      <!-- 슬롯은 JS로 렌더링 -->
+    </div>
+
+    <!-- 사진 추가 버튼 -->
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="document.getElementById('scan-file').click()" style="flex:1;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:12px;color:var(--tx);font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif">🖼 갤러리</button>
+      <button onclick="document.getElementById('scan-camera').click()" style="flex:1;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:12px;color:var(--tx);font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif">📷 카메라</button>
+    </div>
+    <label class="scan-fire-up-toggle">
+      <input type="checkbox" id="fireup-toggle" onchange="updateFireUpState()">
+      <div class="scan-fire-up-info">
+        <div class="scan-fire-up-title">🔥 파이어업(Fire-up) 상태에서 촬영했어요</div>
+        <div class="scan-fire-up-sub">흥분·체온 상승 시 색이 진해집니다. AI가 이를 보정해서 분석해요.</div>
+      </div>
+    </label>
+
+    <input type="file" id="scan-file" accept="image/*" multiple onchange="handleScanPhotos(event)">
+    <input type="file" id="scan-camera" accept="image/*" capture="environment" onchange="handleScanPhotos(event)" style="display:none">
+    <button class="btn-primary" id="scan-analyze-btn" onclick="startAnalysis()" style="display:none">✨ AI 분석 시작</button>
+  </div>
+
+  <!-- Tips -->
+  <div style="padding:0 18px" id="scan-tips">
+    <div class="card card-pad" style="margin-bottom:10px">
+      <div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--ac)">📌 정확도를 높이는 촬영 팁</div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+
+        <div style="background:var(--sf2);border-radius:10px;padding:9px 11px">
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:4px">📸 권장 사진 구도 (3장 이상)</div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.7">
+            1️⃣ <b>등 전체</b> — 패턴·색상 확인용<br>
+            2️⃣ <b>측면</b> — 크레스트·몸통 형태 확인<br>
+            3️⃣ <b>머리 클로즈업</b> — 크레스트·눈 색상 확인
+          </div>
+        </div>
+
+        <div style="background:rgba(255,123,84,.08);border:1px solid rgba(255,123,84,.3);border-radius:10px;padding:9px 11px">
+          <div style="font-size:12px;font-weight:700;color:var(--coral);margin-bottom:4px">🔥 파이어업(Fire-up)이란?</div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.7">
+            게코가 흥분하거나 체온이 오를 때 색이 <b style="color:var(--tx)">훨씬 진하고 선명</b>해지는 현상이에요.<br>
+            파이어업 상태일 때 사진을 찍으면 <b style="color:var(--tx)">실제 모프 색감</b>이 잘 드러나요.<br>
+            반대로 평상시(냉각 상태)는 색이 바래 보여 오판할 수 있어요.
+          </div>
+        </div>
+
+        <div style="background:var(--sf2);border-radius:10px;padding:9px 11px">
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:4px">💡 환경 세팅</div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.7">
+            ✅ 밝은 자연광 또는 LED 조명<br>
+            ✅ 배경은 단색(흰/검정) 추천<br>
+            ✅ 초점 선명하게, 흔들림 없이<br>
+            ❌ 어둡거나 역광 사진 피하기<br>
+            ❌ 케이지 안에서 유리 반사 주의
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="ai-loading" id="ai-loading">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-title">AI가 분석 중이에요 🧬</div>
+    <div class="ai-loading-sub">잠시만 기다려 주세요...</div>
+    <div class="ai-loading-steps" id="ai-loading-steps">
+      <div class="ai-step-item" id="ls1">색상 패턴 인식 중...</div>
+      <div class="ai-step-item" id="ls2">모프 데이터베이스 대조 중...</div>
+      <div class="ai-step-item" id="ls3">유전자 조합 분석 중...</div>
+      <div class="ai-step-item" id="ls4">시세 정보 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-area" id="result-area">
+    <!-- AI 면책 배너 -->
+    <div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.35);border-radius:14px;padding:11px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:18px;flex-shrink:0">⚠️</span>
+      <div style="font-size:12px;color:#c9a850;line-height:1.7">
+        <b style="color:var(--am)">AI 분석 결과는 참고용입니다.</b><br>
+        모프명·등급은 부르는 사람마다 다를 수 있고, 세상에 나와있는 정보 기반이에요.
+        최종 판단은 분양받는 분이 직접 하세요.
+      </div>
+    </div>
+
+    <div class="result-morph-card">
+      <div class="result-morph-header">
+        <div>
+          <div id="res-morph-name" class="result-morph-name">—</div>
+          <div id="res-confidence" class="result-confidence">—</div>
+          <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap" id="res-grade-wrap"></div>
+        </div>
+        <div class="result-morph-img">🦎</div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">특징</div>
+        <div class="result-trait-row" id="res-traits"></div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">모프 설명</div>
+        <div class="result-desc" id="res-desc">—</div>
+      </div>
+    </div>
+
+    <!-- Price -->
+    <div class="price-range" style="margin-bottom:12px">
+      <div>
+        <div class="price-range-label">💰 시세 범위</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">퀄리티에 따라 차이 있음</div>
+      </div>
+      <div class="price-range-value" id="res-price">—</div>
+    </div>
+
+    <!-- Genetics -->
+    <div class="card card-pad" style="margin-bottom:12px">
+      <div class="result-section-title" style="margin-bottom:10px">🧬 유전자 정보</div>
+      <div class="genetics-grid" id="res-genetics"></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--tx2);line-height:1.7;background:var(--sf2);border-radius:10px;padding:10px 12px" id="res-breeding"></div>
+    </div>
+
+    <!-- Possible parents -->
+    <div class="card card-pad" style="margin-bottom:14px">
+      <div class="result-section-title" style="margin-bottom:8px">👪 가능한 부모 조합</div>
+      <div id="res-parents" style="font-size:12px;color:var(--tx2);line-height:1.8"></div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-outline" onclick="resetScan()">↩ 다시 판별</button>
+      <button class="btn-primary" onclick="saveToMyGecko()">+ 내 개체에 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: 내 개체
+══════════════════════════════════════ -->
+<div class="page" id="page-myge">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon" style="background:var(--sf2);font-size:20px">🦎</div>
+      <div><div class="logo-text" style="color:var(--tx)">내 개체</div><div class="logo-sub">MY GECKOS</div></div>
+    </div>
+    <div class="topbar-right">
+      <div class="tb-btn" id="myge-count-badge" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--ac);background:var(--ac2);border-color:var(--ac);width:auto;padding:0 10px">0마리</div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="stats-row" style="margin-top:14px">
+    <div class="stat-chip" onclick="setGeckoFilter('all')" style="cursor:pointer" id="chip-all">
+      <div class="stat-label" style="color:var(--tx2)">전체</div>
+      <div class="stat-value" id="chip-cnt-all">0</div>
+    </div>
+    <div class="stat-chip" onclick="setGeckoFilter('female')" style="cursor:pointer" id="chip-f">
+      <div class="stat-label">♀ 암컷</div>
+      <div class="stat-value" id="chip-cnt-f" style="color:#ff8fb1">0</div>
+    </div>
+    <div class="stat-chip" onclick="setGeckoFilter('male')" style="cursor:pointer" id="chip-m">
+      <div class="stat-label">♂ 수컷</div>
+      <div class="stat-value" id="chip-cnt-m" style="color:var(--blue)">0</div>
+    </div>
+  </div>
+
+  <!-- Search + filter -->
+  <div style="padding:10px 18px 6px">
+    <input class="form-input" id="gecko-search" type="text" placeholder="🔍  이름 또는 모프 검색..." oninput="renderGeckoList()">
+  </div>
+  <div class="filter-row" id="gecko-filter-row">
+    <div class="fp active" onclick="setGeckoFilter('all')">전체</div>
+    <div class="fp" onclick="setGeckoFilter('female')">♀ 암컷</div>
+    <div class="fp" onclick="setGeckoFilter('male')">♂ 수컷</div>
+    <div class="fp" onclick="setGeckoFilter('breeding')">브리딩 중</div>
+    <div class="fp" onclick="setGeckoFilter('unsorted')">📷 미판별</div>
+  </div>
+
+  <div class="gecko-list" id="gecko-list">
+    <!-- populated by JS -->
+  </div>
+
+  <button class="fab" onclick="openAddGecko()">＋</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: 커뮤니티
+══════════════════════════════════════ -->
+<div class="page" id="page-comm">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon" style="background:var(--sf2);font-size:20px">🏘️</div>
+      <div><div class="logo-text" style="color:var(--tx)">커뮤니티</div><div class="logo-sub">CRESTIE BOARD</div></div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-sm" onclick="openWritePost()">+ 글쓰기</button>
+    </div>
+  </div>
+
+  <div class="filter-row" style="margin-top:12px" id="comm-filter-row">
+    <div class="fp active" onclick="setCommFilter('all')">전체</div>
+    <div class="fp" onclick="setCommFilter('sale')">🏷️ 분양</div>
+    <div class="fp" onclick="setCommFilter('wanted')">🔍 구합니다</div>
+    <div class="fp" onclick="setCommFilter('info')">📚 정보공유</div>
+    <div class="fp" onclick="setCommFilter('qna')">❓ Q&A</div>
+  </div>
+
+  <div style="padding:0 18px 8px">
+    <input class="form-input" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px">
+  </div>
+
+  <div id="post-list">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: 더보기
+══════════════════════════════════════ -->
+<div class="page" id="page-more">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon" style="background:var(--sf2);font-size:20px">⚙️</div>
+      <div><div class="logo-text" style="color:var(--tx)">더보기</div><div class="logo-sub">MORE</div></div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div style="padding:18px 18px 10px;display:flex;align-items:center;gap:14px">
+    <div style="width:56px;height:56px;border-radius:18px;background:var(--ac2);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🦎</div>
+    <div>
+      <div style="font-size:17px;font-weight:800;margin-bottom:3px">게코키퍼님</div>
+      <div style="font-size:12px;color:var(--tx2)">@crestiegekko · 팔로워 12명</div>
+    </div>
+    <button class="btn-sm" style="margin-left:auto" onclick="openProfileEdit()">프로필 수정</button>
+  </div>
+  <div class="divider"></div>
+
+  <!-- Premium -->
+  <div class="premium-card" style="margin-top:14px">
+    <div class="premium-title">⭐ 마이크레 PRO</div>
+    <div class="premium-desc">무제한 AI 판별, QR 개체 프로필,<br>환경부 신고서 자동생성까지 모두 이용하세요.</div>
+    <div class="premium-features">
+      <div class="premium-feat">AI 모프 판별 무제한</div>
+      <div class="premium-feat">QR 개체 프로필 카드 생성</div>
+      <div class="premium-feat">환경부 신고서 PDF 자동 출력</div>
+      <div class="premium-feat">브리딩 조합 유전자 예측</div>
+      <div class="premium-feat">개체 이력서 PDF 출력</div>
+    </div>
+    <button class="btn-premium" onclick="openProSheet()">월 4,900원으로 시작하기</button>
+  </div>
+
+  <div class="more-section">
+    <div class="more-section-label">🦎 개체 관리</div>
+
+    <div class="more-item" onclick="openQRSheet()">
+      <div class="more-icon" style="background:var(--ac2)">📱</div>
+      <div class="more-item-info">
+        <div class="more-item-title">QR 개체 프로필</div>
+        <div class="more-item-sub">거래·분양 시 스캔 한 번으로 개체 정보 공유</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+
+    <div class="more-item" onclick="openReportSheet()">
+      <div class="more-icon" style="background:var(--bl2)">🏛️</div>
+      <div class="more-item-info">
+        <div class="more-item-title">환경부 양서류 신고</div>
+        <div class="more-item-sub">보유 현황 신고서 자동 생성 (현재 권고사항)</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+
+    <div class="more-item" onclick="showToast('준비 중인 기능입니다')">
+      <div class="more-icon" style="background:var(--pu2)">🧬</div>
+      <div class="more-item-info">
+        <div class="more-item-title">브리딩 유전자 계산기</div>
+        <div class="more-item-sub">부모 조합으로 자녀 모프 확률 예측</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+  </div>
+
+  <div class="more-section">
+    <div class="more-section-label">📚 정보</div>
+
+    <div class="more-item" onclick="openMorphGuide()">
+      <div class="more-icon" style="background:var(--am2)">📖</div>
+      <div class="more-item-info">
+        <div class="more-item-title">모프 가이드</div>
+        <div class="more-item-sub">릴리화이트부터 아잔틱까지 모든 모프 정보</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+
+    <div class="more-item" onclick="openPriceBoard()">
+      <div class="more-icon" style="background:var(--co2)">📊</div>
+      <div class="more-item-info">
+        <div class="more-item-title">시세 현황판</div>
+        <div class="more-item-sub">모프별 평균 분양가 및 거래 동향</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+  </div>
+
+  <div class="more-section">
+    <div class="more-section-label">⚙️ 설정</div>
+    <div class="more-item" onclick="showToast('준비 중인 기능입니다')">
+      <div class="more-icon" style="background:var(--sf2)">🔔</div>
+      <div class="more-item-info">
+        <div class="more-item-title">알림 설정</div>
+        <div class="more-item-sub">관심 모프 분양 알림, 팔로우 알림</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+    <div class="more-item" onclick="showToast('준비 중인 기능입니다')">
+      <div class="more-icon" style="background:var(--sf2)">📤</div>
+      <div class="more-item-info">
+        <div class="more-item-title">데이터 내보내기</div>
+        <div class="more-item-sub">내 개체 정보 CSV/PDF로 저장</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+  </div>
+
+  <!-- 계정 섹션 -->
+  <div class="more-section">
+    <div class="more-section-label">🔐 계정</div>
+    <button class="more-item" ontouchend="event.preventDefault();signOut()" onclick="signOut()" style="border-color:rgba(255,123,84,.3);background:var(--co2);width:100%;text-align:left;font-family:inherit">
+      <div class="more-icon" style="background:rgba(255,123,84,.2)">🚪</div>
+      <div class="more-item-info">
+        <div class="more-item-title" style="color:var(--coral)">로그아웃</div>
+        <div class="more-item-sub">현재 계정에서 로그아웃</div>
+      </div>
+      <div class="more-item-arrow" style="color:var(--coral)">›</div>
+    </button>
+    <button class="more-item" ontouchend="event.preventDefault();deleteAccount()" onclick="deleteAccount()" style="border-color:rgba(255,60,60,.3);background:rgba(255,60,60,.07);width:100%;text-align:left;font-family:inherit">
+      <div class="more-icon" style="background:rgba(255,60,60,.15)">⚠️</div>
+      <div class="more-item-info">
+        <div class="more-item-title" style="color:#ff4444">회원 탈퇴</div>
+        <div class="more-item-sub">계정 및 모든 데이터 영구 삭제</div>
+      </div>
+      <div class="more-item-arrow" style="color:#ff4444">›</div>
+    </button>
+  </div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     BOTTOM NAV
+══════════════════════════════════════ -->
+<div class="bnav">
+  <button class="nb active" id="nav-home" onclick="showPage('home')">
+    <span class="ni">🏠</span><span class="nl">홈</span>
+  </button>
+  <button class="nb" id="nav-myge" onclick="showPage('myge')">
+    <span class="ni">🦎</span><span class="nl">내 개체</span>
+  </button>
+  <button class="nb-scan" onclick="showPage('scan')">
+    <div class="nb-scan-c">🔍</div>
+    <span class="nl">판별</span>
+  </button>
+  <button class="nb" id="nav-comm" onclick="showPage('comm')">
+    <span class="ni">🏘️</span><span class="nl">커뮤니티</span>
+  </button>
+  <button class="nb" id="nav-more" onclick="showPage('more')">
+    <span class="ni">⚙️</span><span class="nl">더보기</span>
+  </button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 개체 등록/수정
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-add-gecko" onclick="closeSheet('sheet-add-gecko',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="add-gecko-title">새 개체 등록</div>
+    <div class="sheet-body">
+      <!-- Photo -->
+      <div class="form-group">
+        <label class="form-label">📸 사진 (선택)</label>
+        <!-- 사진 미리보기 -->
+        <div class="photo-zone" id="add-photo-zone" style="cursor:default">
+          <div class="photo-zone-placeholder">
+            <div class="photo-zone-icon">📷</div>
+            <div class="photo-zone-title">아래 버튼으로 사진 추가</div>
+          </div>
+          <img class="photo-preview" id="add-photo-preview" src="" alt="">
+        </div>
+        <!-- 갤러리 / 카메라 버튼 분리 -->
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" onclick="document.getElementById('add-photo-gallery').click()"
+            style="flex:1;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:11px;color:var(--tx);font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif">
+            🖼 갤러리
+          </button>
+          <button type="button" onclick="document.getElementById('add-photo-camera').click()"
+            style="flex:1;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:11px;color:var(--tx);font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif">
+            📷 카메라
+          </button>
+        </div>
+        <input type="file" id="add-photo-gallery" accept="image/*" onchange="handleAddPhoto(event)" style="display:none">
+        <input type="file" id="add-photo-camera" accept="image/*" capture="camera" onchange="handleAddPhoto(event)" style="display:none">
+        <!-- 기존 호환용 -->
+        <input type="file" id="add-photo-input" accept="image/*" onchange="handleAddPhoto(event)" style="display:none">
+      </div>
+
+      <!-- Basic info -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">이름 / ID</label>
+          <input class="form-input" id="gecko-name" type="text" placeholder="예: 몽뜨">
+        </div>
+        <div class="form-group">
+          <label class="form-label">성별</label>
+          <select class="form-select" id="gecko-sex" onchange="updateCageAndBreeding()">
+            <option value="미판별">미판별</option>
+            <option value="암컷">♀ 암컷</option>
+            <option value="수컷">♂ 수컷</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="position:relative">
+        <label class="form-label">모프 <span style="color:var(--tx3);font-size:10px;font-weight:400">검색하거나 직접 입력</span></label>
+        <input type="hidden" id="gecko-morph" value="">
+        <input type="text" id="morph-inline-input" autocomplete="off"
+          placeholder="모프 검색... (예: 릴리화이트)"
+          onfocus="showMorphInline()"
+          oninput="filterMorphInline()"
+          style="width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:11px 13px;color:var(--tx);font-family:'Noto Sans KR',sans-serif;font-size:14px;transition:border-color .15s;box-sizing:border-box">
+        <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5)">
+          <div id="morph-inline-list"></div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">생년월일</label>
+          <input class="form-input" id="gecko-dob" type="date" onchange="updateCageAndBreeding()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">취득가격 (만원)</label>
+          <input class="form-input" id="gecko-price" type="number" placeholder="예: 30">
+        </div>
+      </div>
+
+      <!-- Grade — user sets freely, suggestion shown as reference -->
+      <div class="form-group">
+        <label class="form-label">
+          등급 설정
+          <span style="color:var(--tx3);font-size:10px;font-weight:400;margin-left:4px">본인이 직접 판단해서 설정하세요</span>
+        </label>
+        <!-- 등급 버튼 선택 -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px" id="grade-btn-group">
+          <button type="button" onclick="selectGrade('S')" id="gbtn-S"
+            style="padding:10px 4px;border-radius:10px;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;border:1.5px solid var(--br);background:var(--sf2);color:var(--tx2);transition:all .15s">S</button>
+          <button type="button" onclick="selectGrade('A')" id="gbtn-A"
+            style="padding:10px 4px;border-radius:10px;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;border:1.5px solid var(--br);background:var(--sf2);color:var(--tx2);transition:all .15s">A</button>
+          <button type="button" onclick="selectGrade('B')" id="gbtn-B"
+            style="padding:10px 4px;border-radius:10px;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;border:1.5px solid var(--br);background:var(--sf2);color:var(--tx2);transition:all .15s">B</button>
+          <button type="button" onclick="selectGrade('C')" id="gbtn-C"
+            style="padding:10px 4px;border-radius:10px;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;border:1.5px solid var(--br);background:var(--sf2);color:var(--tx2);transition:all .15s">C</button>
+          <button type="button" onclick="selectGrade('')" id="gbtn-"
+            style="padding:10px 4px;border-radius:10px;font-size:11px;border:1.5px solid var(--br);background:var(--sf2);color:var(--tx2);transition:all .15s">미정</button>
+        </div>
+        <input type="hidden" id="gecko-grade" value="">
+        <!-- AI 참고 등급 표시 -->
+        <div id="grade-suggestion" style="display:none;background:var(--sf2);border:1px dashed var(--br);border-radius:10px;padding:9px 12px;font-size:12px;color:var(--tx2);line-height:1.6">
+          <span style="color:var(--tx3)">💡 AI 참고:</span>
+          <span id="grade-suggestion-text"></span>
+          <span style="color:var(--tx3)"> — 어디까지나 참고용이에요. 판단은 본인이 직접 하세요!</span>
+        </div>
+      </div>
+
+      <!-- Weight -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">현재 몸무게 (g)</label>
+          <input class="form-input" id="gecko-weight" type="number" step="0.1" placeholder="예: 25.5" oninput="updateCageAndBreeding()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">상태</label>
+          <select class="form-select" id="gecko-status">
+            <option value="정상">정상</option>
+            <option value="브리딩중">브리딩 중</option>
+            <option value="격리중">격리 중</option>
+            <option value="분양예정">분양 예정</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Cage + breeding auto-info -->
+      <div id="cage-breeding-info" style="display:none;margin-bottom:14px">
+        <div style="background:var(--bg);border:1px solid var(--br);border-radius:12px;padding:12px 13px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:1px">케이지 추천</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <div id="cage-rec-badge" style="font-size:22px;font-family:'Nunito',sans-serif;font-weight:900;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
+            <div>
+              <div id="cage-rec-title" style="font-size:14px;font-weight:700;margin-bottom:2px"></div>
+              <div id="cage-rec-sub" style="font-size:11px;color:var(--tx2)"></div>
+            </div>
+          </div>
+          <div id="breeding-ready-box" style="display:none;border-radius:9px;padding:8px 11px;font-size:12px;line-height:1.7"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">케이지 크기</label>
+        <select class="form-select" id="gecko-cage">
+          <option value="소형 (30cm 이하)">소형 · 30cm 이하 · &lt;10g</option>
+          <option value="중형 (30~45cm)">중형 · 30~45cm · 10~34g</option>
+          <option value="대형 (45cm 이상)">대형 · 45cm+ · 35g+</option>
+        </select>
+      </div>
+
+      <!-- Lineage -->
+      <div class="form-group">
+        <label class="form-label">🧬 혈통 (선택)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx2);margin-bottom:4px">♂ 아버지</div>
+            <input class="form-input" id="gecko-dad" type="text" placeholder="예: 아잔틱 ♂" style="font-size:13px">
+          </div>
+          <div>
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx2);margin-bottom:4px">♀ 어머니</div>
+            <input class="form-input" id="gecko-mom" type="text" placeholder="예: 릴리화이트 ♀" style="font-size:13px">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">메모</label>
+        <textarea class="form-textarea" id="gecko-memo" placeholder="특징, 먹이 반응, 건강 상태 등 자유롭게..."></textarea>
+      </div>
+
+      <button class="btn-primary" onclick="saveGecko()">저장하기</button>
+      <button class="btn-outline" id="delete-gecko-btn" onclick="deleteGecko()" style="display:none;margin-top:8px;color:var(--coral);border-color:var(--coral);background:var(--co2)">🗑 이 개체 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 개체 상세
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-gecko-detail" onclick="closeSheet('sheet-gecko-detail',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="gecko-detail-body" class="sheet-body" style="padding-top:0">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: QR 프로필
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-qr" onclick="closeSheet('sheet-qr',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📱 QR 개체 프로필</div>
+    <div class="sheet-body">
+      <div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:16px;margin-bottom:14px">
+        <div style="text-align:center;margin-bottom:12px">
+          <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">개체를 선택하면 QR코드가 생성돼요</div>
+          <div id="qr-selected-name" style="font-size:16px;font-weight:800;color:var(--ac)">—</div>
+        </div>
+        <div id="qr-canvas-wrap" style="display:flex;justify-content:center;padding:12px 0">
+          <div id="qr-canvas" style="background:white;padding:12px;border-radius:14px"></div>
+        </div>
+        <div style="text-align:center;margin-top:8px">
+          <div style="font-size:11px;color:var(--tx2)">이 QR코드를 스캔하면 개체 프로필을 확인할 수 있어요</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label class="form-label">개체 선택</label>
+        <select class="form-select" id="qr-gecko-select" onchange="generateQR()">
+          <option value="">— 개체 선택 —</option>
+        </select>
+      </div>
+
+      <div id="qr-profile-preview" style="display:none;background:var(--sf2);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">스캔 시 보이는 정보</div>
+        <div id="qr-profile-content" style="font-size:13px;line-height:2;color:var(--tx2)"></div>
+      </div>
+
+      <button class="btn-primary" onclick="openProSheet()">QR 이미지 저장 (PRO)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 환경부 신고
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-report" onclick="closeSheet('sheet-report',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🏛️ 환경부 양서류 신고</div>
+    <div class="sheet-body">
+      <div style="background:var(--bl2);border:1px solid var(--blue);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--blue);font-weight:700;margin-bottom:4px">📋 신고 안내</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.7">크레스티드 게코(볏도마뱀붙이)는 현재 <b style="color:var(--tx)">권고사항</b>으로 환경부에 보유 현황 신고를 권장합니다. 마이크레에서 등록한 개체 정보를 바탕으로 신고서를 자동 생성해드려요.</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px" id="report-gecko-list">
+        <!-- populated by JS -->
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px" id="report-summary">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">신고서 미리보기</div>
+        <div id="report-preview-content" style="font-size:12px;line-height:2;color:var(--tx2)">
+          등록된 개체가 없습니다.
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="openProSheet()">PDF로 출력하기 (PRO)</button>
+      <a href="https://wims.mcee.go.kr/wims/minwon/main/main.do" target="_blank" rel="noopener"
+        style="display:flex;align-items:center;gap:12px;background:var(--bl2);border:1.5px solid var(--blue);border-radius:14px;padding:14px 15px;text-decoration:none;color:var(--tx);margin-top:10px">
+        <span style="font-size:24px;flex-shrink:0">🏛️</span>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:800;margin-bottom:3px;color:var(--blue)">기후에너지환경부</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:2px">야생동물종합관리시스템 바로가기</div>
+          <div style="font-size:11px;color:var(--tx2)">wims.mcee.go.kr · 야생동물 보유 신고 접수</div>
+        </div>
+        <span style="font-size:18px;color:var(--blue)">›</span>
+      </a>
+      <a href="https://wims.mcee.go.kr/wims/minwon/cms/cmsCont.do?cntnts_sn=34" target="_blank" rel="noopener"
+        style="display:flex;align-items:center;gap:12px;background:var(--sf2);border:1px solid var(--br);border-radius:14px;padding:12px 15px;text-decoration:none;color:var(--tx);margin-top:8px">
+        <span style="font-size:20px;flex-shrink:0">📋</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;margin-bottom:2px">민원 신청 페이지</div>
+          <div style="font-size:11px;color:var(--tx2)">보유 신고 민원 바로 신청</div>
+        </div>
+        <span style="font-size:18px;color:var(--tx3)">›</span>
+      </a>
+      <div style="margin-top:10px;font-size:11px;color:var(--tx3);line-height:1.7;padding:0 2px">
+        ※ 볏도마뱀붙이(크레스티드 게코)는 현재 신고 <b style="color:var(--tx2)">권고 단계</b>입니다.<br>법령 개정 시 의무화될 수 있으니 미리 등록해두는 것을 권장해요.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 모프 가이드
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-morph-guide" onclick="closeSheet('sheet-morph-guide',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📖 모프 가이드</div>
+    <div class="sheet-body">
+      <div id="morph-guide-content" style="display:flex;flex-direction:column;gap:10px">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 시세 현황판
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-price-board" onclick="closeSheet('sheet-price-board',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📊 시세 현황판</div>
+    <div class="sheet-body">
+
+      <!-- 안내 -->
+      <div style="background:var(--am2);border:1px solid var(--am);border-radius:12px;padding:11px 13px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:4px">💡 시세 안내</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.7">
+          아래 시세는 <b style="color:var(--tx)">파사모·분양 게시판 거래 사례</b> 기반의 참고 범위예요.<br>
+          퀄리티·혈통·나이에 따라 실제 가격은 크게 다를 수 있어요.<br>
+          <b style="color:var(--am)">거래가 제보</b>로 더 정확한 시세를 만들 수 있어요!
+        </div>
+      </div>
+
+      <!-- 제보 버튼 -->
+      <button class="btn-outline" style="margin-bottom:14px;width:100%;border-color:var(--am);color:var(--am)"
+        onclick="openPriceReport()">📝 최근 거래가 제보하기</button>
+
+      <!-- 등급별 필터 -->
+      <div style="display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;padding-bottom:2px">
+        <div class="fp active" onclick="setPriceFilter('all',this)" style="flex-shrink:0">전체</div>
+        <div class="fp" onclick="setPriceFilter('S',this)" style="flex-shrink:0;background:rgba(245,200,66,.1);border-color:rgba(245,200,66,.3)">⭐ S급</div>
+        <div class="fp" onclick="setPriceFilter('A',this)" style="flex-shrink:0">🥇 A급</div>
+        <div class="fp" onclick="setPriceFilter('B',this)" style="flex-shrink:0">🥈 B급</div>
+        <div class="fp" onclick="setPriceFilter('C',this)" style="flex-shrink:0">🥉 C급</div>
+      </div>
+
+      <div id="price-board-list" style="display:flex;flex-direction:column;gap:8px"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 시세 제보 시트 -->
+<div class="sheet-overlay" id="sheet-price-report" onclick="closeSheet('sheet-price-report',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📝 거래가 제보</div>
+    <div class="sheet-body">
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.6">
+        최근 실제 거래한 가격을 제보해주세요. 익명으로 반영되고 시세 현황판에 활용돼요.
+      </div>
+      <div class="form-group">
+        <label class="form-label">모프명</label>
+        <input class="form-input" id="report-morph" type="text" placeholder="예: 릴리화이트 달마시안">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">거래가 (만원)</label>
+          <input class="form-input" id="report-price-val" type="number" placeholder="예: 75">
+        </div>
+        <div class="form-group">
+          <label class="form-label">베이비/성체</label>
+          <select class="form-select" id="report-age">
+            <option>베이비</option>
+            <option>아성체</option>
+            <option>성체</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">특이사항 (선택)</label>
+        <input class="form-input" id="report-note" type="text" placeholder="예: 고퀄, 혈통 있음, 평범한 퀄리티 등">
+      </div>
+      <button class="btn-primary" onclick="submitPriceReport()">제보 완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 글쓰기
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-write-post" onclick="closeSheet('sheet-write-post',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">✏️ 게시글 작성</div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label class="form-label">카테고리</label>
+        <select class="form-select" id="post-category">
+          <option value="sale">🏷️ 분양</option>
+          <option value="wanted">🔍 구합니다</option>
+          <option value="info">📚 정보공유</option>
+          <option value="qna">❓ Q&A</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">제목</label>
+        <input class="form-input" id="post-title-input" type="text" placeholder="예: 릴리화이트 암컷 분양합니다">
+      </div>
+      <div class="form-group" id="post-price-group">
+        <label class="form-label">분양가 (만원, 선택)</label>
+        <input class="form-input" id="post-price-input" type="number" placeholder="예: 80">
+      </div>
+      <div class="form-group">
+        <label class="form-label">내용</label>
+        <textarea class="form-textarea" id="post-body-input" style="height:120px" placeholder="개체 정보, 특징, 거래 방법 등을 자세히 적어주세요."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">📷 사진 첨부 (선택)</label>
+        <div id="post-photo-zone" style="border:2px dashed var(--br);border-radius:14px;padding:18px;text-align:center;cursor:pointer;position:relative;overflow:hidden" onclick="document.getElementById('post-photo-input').click()">
+          <input type="file" id="post-photo-input" accept="image/*" style="display:none" onchange="handlePostPhoto(event)">
+          <img id="post-photo-preview" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:10px">
+          <div id="post-photo-placeholder" style="color:var(--tx3);font-size:13px">터치해서 사진 추가</div>
+        </div>
+        <button type="button" id="post-photo-remove-btn" style="display:none;margin-top:6px;font-size:12px;color:var(--coral);background:var(--co2);border:1px solid rgba(255,123,84,.3);border-radius:8px;padding:6px 12px" onclick="removePostPhoto()">사진 삭제</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">연결할 내 개체 (선택)</label>
+        <select class="form-select" id="post-gecko-link">
+          <option value="">— 개체 선택 안 함 —</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="submitPost()">게시하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 게시글 상세
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-post-detail" onclick="closeSheet('sheet-post-detail',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body" id="post-detail-body">
+    </div>
+  </div>
+</div>
+<!-- ══════════════════════════════════════
+     SHEET: PRO 결제
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-pro" onclick="closeSheet('sheet-pro',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body" style="padding-top:0">
+      <!-- 헤더 -->
+      <div style="text-align:center;padding:20px 0 16px">
+        <div style="font-size:40px;margin-bottom:8px">⭐</div>
+        <div style="font-size:22px;font-weight:900;color:var(--am)">마이크레 PRO</div>
+        <div style="font-size:13px;color:#c9a850;margin-top:4px">크레스티드 게코 관리의 모든 것</div>
+      </div>
+
+      <!-- 기능 목록 -->
+      <div style="background:var(--sf2);border-radius:16px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:10px;font-family:'DM Mono',monospace">PRO 전용 기능</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
+            <span style="font-size:16px">🔍</span> AI 모프 판별 <b>무제한</b>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
+            <span style="font-size:16px">📱</span> QR 개체 프로필 카드 생성
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
+            <span style="font-size:16px">📄</span> 환경부 신고서 PDF 자동 출력
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
+            <span style="font-size:16px">🧬</span> 브리딩 조합 유전자 예측
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
+            <span style="font-size:16px">📋</span> 개체 이력서 PDF 출력
+          </div>
+        </div>
+      </div>
+
+      <!-- 가격 옵션 -->
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <div id="plan-monthly" onclick="selectPlan('monthly')" style="flex:1;background:var(--card);border:2px solid var(--br);border-radius:14px;padding:14px;text-align:center;cursor:pointer;transition:border-color .15s">
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">월간</div>
+          <div style="font-size:20px;font-weight:900;color:var(--tx)">4,900<span style="font-size:12px;font-weight:400;color:var(--tx2)">원/월</span></div>
+        </div>
+        <div id="plan-yearly" onclick="selectPlan('yearly')" style="flex:1;background:var(--card);border:2px solid var(--am);border-radius:14px;padding:14px;text-align:center;cursor:pointer;position:relative;transition:border-color .15s">
+          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--am);color:#1a0a00;font-size:10px;font-weight:800;padding:2px 10px;border-radius:10px;white-space:nowrap">2개월 무료</div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">연간</div>
+          <div style="font-size:20px;font-weight:900;color:var(--am)">3,900<span style="font-size:12px;font-weight:400;color:#c9a850">원/월</span></div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:2px">연 46,800원 (16,800원 절약)</div>
+        </div>
+      </div>
+
+      <!-- 결제 버튼 -->
+      <button onclick="startProPayment()" style="width:100%;background:linear-gradient(135deg,#f5c842,#ff9c27);color:#1a0a00;font-weight:900;font-size:15px;border:none;border-radius:14px;padding:15px;font-family:inherit;cursor:pointer;margin-bottom:10px">
+        PRO 시작하기
+      </button>
+
+      <!-- 안내 -->
+      <div style="text-align:center;font-size:11px;color:var(--tx3);line-height:1.6;padding:4px 0 8px">
+        결제 후 즉시 활성화 · 언제든 해지 가능<br>
+        문의: <span id="pro-contact-email" style="color:var(--ac);text-decoration:underline;cursor:pointer" onclick="copyContact()">dlrbgns456@gmail.com</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════
+// DATA & STATE
+// ══════════════════════════════
+let state = {
+  currentPage: 'home',
+  geckos: [],
+  posts: [],
+  editingGeckoId: null,
+  geckoFilter: 'all',
+  commFilter: 'all',
+  scanPhotoData: null,
+  freeScansLeft: 2,
+  nextGeckoId: 1,
+  nextPostId: 1,
+};
+
+// Morph database
+const MORPHS = {
+  /* ── S급: 최고등급 / 희귀 유전 모프 ── */
+  '아잔틱': {
+    grade:'S', price:'50~300만+',
+    traits:['열성(Recessive) 유전','황색·적색 색소 완전 결여','흑백/회색/보라 톤'],
+    desc:'노란색과 붉은색 색소(Pigment)가 결핍되어 오직 흑백·회색·보라빛만 띠는 오묘한 모프. 부모 양쪽이 모두 아잔틱 유전자를 보유해야만 자식에게 100% 발현됩니다(열성). 겉으로는 보통 개체처럼 보여도 유전자를 숨기고 있는 개체를 헷(Het) 아잔틱이라 부릅니다. 핀스트라이프가 뚜렷한 개체는 고가에 거래됩니다.',
+    genetics:{type:'열성(Recessive)',allele:'aa',het:'헷 아잔틱(AB) 가능 — 겉모습 노말이지만 유전자 보유',dom:'해당 없음'},
+    parents:'헷 아잔틱 × 헷 아잔틱 → 25% 아잔틱 / 50% 헷 아잔틱 / 25% 노말'
+  },
+  '릴잔틱': {
+    grade:'S', price:'100~400만+',
+    traits:['릴리화이트 + 아잔틱 콤보','궁극의 블랙 앤 화이트','복합 유전자'],
+    desc:'릴리화이트(우성)의 새하얀 옆구리 덮임과 아잔틱(열성)의 완벽한 흑백 색소 결핍이 결합된 궁극의 블랙 앤 화이트 콤보 모프. 아잔틱의 모노톤에 릴리의 백색이 더해져 강렬한 대비를 만들어냅니다.',
+    genetics:{type:'우성+열성 복합',allele:'LW + aa',het:'릴리화이트 헷 아잔틱 활용',dom:'릴리화이트 우성'},
+    parents:'릴리화이트 헷 아잔틱 × 헷 아잔틱 조합으로 생산'
+  },
+  '트익할': {
+    grade:'S', price:'30~150만',
+    traits:['트라이컬러 익스트림 할리퀸','1차·2차·3차 색상 완전 분리','화이트 포인트 품질이 등급 결정'],
+    desc:'1차(바탕), 2차(오렌지/옐로우), 3차(화이트 핀/월) 세 가지 색상이 완벽하게 분리되어 발현되는 최상위 패턴. 할리퀸 게이지 100%에 해당합니다. 새하얀 백색 포인트의 퀄리티와 면적이 등급을 결정하며, 릴리화이트와 결합 시 트익할 릴리가 됩니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'트익할 × 트익할 또는 익스트림 할리퀸 × 고품질 트익할로 강화'
+  },
+  '트익할 릴리': {
+    grade:'S', price:'100~300만+',
+    traits:['트익할 + 릴리화이트 콤보','3색 화려한 패턴','릴리화이트 3차 형질 극대화'],
+    desc:'트익할(3가지 색상의 화려한 패턴) + 릴리화이트(새하얀 3차 형질의 극대화)의 궁극 콤보. 기본 형질(색상)과 구조적 모프(패턴)의 완벽한 결합으로, 최상위 하이엔드 브리딩의 목표 개체입니다.',
+    genetics:{type:'우성+폴리제닉 복합',allele:'LW + 트익할 폴리진',het:'해당 없음',dom:'릴리화이트 우성'},
+    parents:'릴리화이트 × 트익할 조합으로 생산'
+  },
+  '마블링': {
+    grade:'S', price:'시세 형성 중',
+    traits:['최신 입증 모프','모자이크 레터럴 패턴','산산조각 흩뿌려진 무늬'],
+    desc:'레터럴(옆구리)의 무늬가 산산조각 나 모자이크처럼 흩뿌려진 최신 입증 모프. 아직 국내외에서 시세가 형성 중이며, 희소성으로 인해 고가에 거래될 가능성이 높습니다.',
+    genetics:{type:'유전 방식 연구 중',allele:'미상',het:'미상',dom:'미상'},
+    parents:'마블링 × 마블링 교배로 발현 확률 상승'
+  },
+
+  /* ── A급: 하이엔드 유전 / 고품질 패턴 ── */
+  '릴리화이트': {
+    grade:'A', price:'40~150만',
+    traits:['우성(Dominant) 유전','새하얀 크림색 옆구리 덮임(Lateral Coverage)','우동 꼬리(무늬 없는 하얗고 통통한 꼬리)'],
+    desc:'현대 하이엔드 브리딩의 가장 인기 있는 핵심 기반 우성 모프. 새하얀 크림색(3차 형질)이 옆구리와 등을 서리가 내린 것처럼 두껍게 뒤덮습니다. 핵심 식별 포인트: 무늬가 전혀 없이 하얗고 통통한 \'우동 꼬리(Udon Tail)\'. 릴리화이트가 아닌 하얀 개체는 \'논릴리(Non-Lily)\' 또는 \'드리피 화이트 스팟\'으로 구분됩니다. ⚠️ 릴리 × 릴리 교배는 슈퍼 릴리(치사) 위험.',
+    genetics:{type:'우성(Dominant)',allele:'LW/lw',het:'해당 없음',dom:'슈퍼 릴리(LW/LW)는 치사 — 절대 릴리 × 릴리 교배 금지'},
+    parents:'릴리화이트 × 노말 → 50% 릴리화이트 / 릴리화이트 × 카푸치노 → 프라푸치노'
+  },
+  '카푸치노': {
+    grade:'A', price:'15~60만',
+    traits:['우성(Dominant) 유전','진한 커피/갈색 체색','꼬리 기부 Y자 마크','성장 시 어두워지는 다크 테일'],
+    desc:'가장 최근에 발견되어 파충류 업계의 모프 가격을 폭등시킨 우성 모프. 커피를 연상시키는 부드러운 갈색 톤이 특징. 해칭(탄생) 시 꼬리 시작 부분에 선명한 Y자 형태의 하얀 3차 형질 마크가 나타납니다. 성장하면서 꼬리가 매우 어둡고 까맣게 변합니다(다크 테일 — 릴리화이트의 우동 꼬리와 완벽한 대조). ⚠️ 카푸치노 × 카푸치노 = 슈퍼 카푸치노(치사) 위험.',
+    genetics:{type:'우성(Dominant)',allele:'Cap/cap',het:'해당 없음',dom:'슈퍼 카푸치노(Cap/Cap)는 치사 — 절대 카푸치노 × 카푸치노 교배 금지'},
+    parents:'카푸치노 × 노말 → 50% 카푸치노 / 릴리화이트 × 카푸치노 → 프라푸치노'
+  },
+  '프라푸치노': {
+    grade:'A', price:'80~250만',
+    traits:['릴리화이트 + 카푸치노 콤보','카푸치노 어두운 머리·등색','릴리화이트 하얀 옆구리 발현'],
+    desc:'릴리화이트(우성) × 카푸치노(우성) 조합으로 탄생하는 하이엔드 콤보 모프. 머리 쪽은 카푸치노의 질은 색감을 유지하고, 옆구리와 전체적인 표현형은 릴리화이트의 우아한 백색 발현. 식별의 핵심은 상반된 두 형질의 공존입니다. 헷갈리기 쉬운 \'세이블 릴리\'와의 구분은 부모 개체의 유전 정보 확인이 필수.',
+    genetics:{type:'우성+우성 복합',allele:'LW/lw + Cap/cap',het:'해당 없음',dom:'두 우성 유전자 모두 보유'},
+    parents:'릴리화이트 × 카푸치노 직접 교배 (슈퍼폼 생산 없음 — 안전한 교배)'
+  },
+  '세이블': {
+    grade:'A', price:'15~50만',
+    traits:['불안정 우성(Unstable Dominant) 형질','도살·크라운에 두꺼운 흰색/노란색 블록','어두운 몸통과의 강한 대비'],
+    desc:'카푸치노와 비슷해 보이지만 확연히 다른 특징을 가진 불안정 우성 형질. 식별 포인트: 도살(등)과 크라운(머리) 부분에 두꺼운 흰색/노란색 블록이 뚜렷하게 형성되며, 레터럴(옆구리)에 화이트 스팟이 빈발합니다. ⚠️ 세이블 × 세이블 = 슈퍼 세이블(루악)로 불안정 특성상 리스크 존재.',
+    genetics:{type:'불안정 우성(Unstable Dominant)',allele:'Sbl/sbl',het:'해당 없음',dom:'슈퍼 세이블(루악) — 불안정, 피하는 것이 브리더 철칙'},
+    parents:'세이블 × 노말 → 50% 세이블 / 세이블 × 세이블 → 루악(위험)'
+  },
+  '루악': {
+    grade:'A', price:'미정(희귀)',
+    traits:['세이블 × 세이블 슈퍼폼','불안정 우성 최상위 표현','극도로 희귀'],
+    desc:'세이블(불안정 우성)끼리 교배 시 나타나는 슈퍼폼. 불안정 우성의 특성상 위험성이 존재하며, 카푸치노 계열의 슈퍼폼을 피하는 것이 브리더의 철칙입니다. 국내에서 거의 유통되지 않는 극희귀 개체.',
+    genetics:{type:'불안정 우성 슈퍼폼',allele:'Sbl/Sbl',het:'해당 없음',dom:'불안정 — 생존 및 건강 이슈 가능'},
+    parents:'세이블 × 세이블 교배 (비권장)'
+  },
+  '익스트림 할리퀸': {
+    grade:'A', price:'10~40만',
+    traits:['할리퀸 게이지 80%','상위 레터럴까지 무늬 발현','패턴 밀도 훨씬 높음'],
+    desc:'할리퀸에서 한 단계 진화한 고품질 패턴. 하위 레터럴(아랫배)을 넘어 상위 레터럴(옆구리 위쪽)까지 무늬가 높게 치솟은 형태로, 패턴의 밀도가 훨씬 높습니다. 할리퀸 게이지 80%에 해당하며 트익할로 이어지는 중간 단계입니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'익스트림 할리퀸 × 익스트림 할리퀸 또는 트익할 × 할리퀸'
+  },
+  '슈퍼 달마시안': {
+    grade:'A', price:'15~50만',
+    traits:['점의 개수 압도적','잉크를 쏜 듯한 최상위 개체','점이 크고 둥글수록 고퀄리티'],
+    desc:'점의 갯수가 압도적으로 많고 밀도가 높아 잉크를 쏜 듯한 최상위 달마시안 개체. 점이 크고 둥글수록 고퀄리티로 평가받습니다. 베이스 모프(할리퀸, 노말 등) 위에도 독립적으로 발현됩니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'슈퍼 달마시안 × 슈퍼 달마시안 교배로 고밀도 발현 강화'
+  },
+  '쿼드 핀': {
+    grade:'A', price:'15~40만',
+    traits:['상단 핀 2줄 + 화이트 월(횡단 무늬)','총 4개의 선','풀핀의 진화형'],
+    desc:'풀핀의 상단 핀 2줄에 더해, 하위 레터럴 쪽으로 가로줄 무늬(화이트 월)가 발현되어 총 4개의 선이 보이는 형태. 풀핀보다 복잡하고 화려한 패턴으로 높은 가치를 지닙니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'쿼드 핀 × 쿼드 핀 또는 쿼드 핀 × 풀핀'
+  },
+  '차콜': {
+    grade:'A', price:'10~35만',
+    traits:['극단적 선택 브리딩','1차 형질 칠흑같이 어두움','아잔틱보다 진한 검은색 가능'],
+    desc:'우성이나 열성 모프가 아닌, 극단적인 선택적 브리딩을 통해 1차 형질(바탕색)을 칠흑처럼 검게 끌어올린 모프. 아잔틱보다 때로는 더 짙은 검은색을 띠며, 아잔틱과 달리 노란색·붉은색 색소는 보유하고 있습니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'차콜 × 차콜 교배로 암도 강화'
+  },
+
+  /* ── B급: 기본 인기 모프 ── */
+  '할리퀸': {
+    grade:'B', price:'3~10만',
+    traits:['할리퀸 게이지 40%','하위 레터럴 호랑이 무늬','불규칙한 2·3차 색상 발현'],
+    desc:'크레스티드 게코의 베이스 패턴 중 가장 인기 있는 기본형. 하위 레터럴(옆구리 아래)까지 불규칙한 호랑이 무늬가 분포하는 기본 형태. 할리퀸 게이지 40%에 해당합니다. 패턴 면적이 넓고 색상 대비가 강할수록 고가에 거래됩니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'할리퀸 × 할리퀸 교배로 패턴 고착 확률 상승'
+  },
+  '달마시안': {
+    grade:'B', price:'3~8만',
+    traits:['독립 발현 점 형질','검은색 또는 붉은색 잉크 점','베이스 모프와 무관하게 발현'],
+    desc:'베이스 모프와 완전히 독립적으로 발현되는 \'점(Spot)\' 형질. 할리퀸 위에도, 민무늬 위에도 잉크처럼 묻어날 수 있습니다. 밝은 바탕에 검은색 또는 붉은색 잉크 점이 찍혀 있는 형태. 점의 갯수가 많고 클수록 \'슈퍼 달마시안\'으로 분류됩니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'달마시안 × 달마시안 교배 시 반점 고착 확률 상승'
+  },
+  '풀핀': {
+    grade:'B', price:'5~20만',
+    traits:['크라운→꼬리 끊김 없는 하얀 비늘 라인','등 가장자리 핀 줄무늬','구조적 패턴 모프'],
+    desc:'크라운(머리)부터 꼬리까지 끊기지 않고 하얗게 일직선으로 쭉 뻗은 비늘 라인. 등(도살)과 옆구리의 경계를 짓는 핀(Pin) 라인이 완벽하게 연결되어 있는 구조적 패턴 모프입니다. 라인의 굵기와 연속성이 품질을 결정합니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'풀핀 × 풀핀 교배로 라인 선명도 강화'
+  },
+  '엠티백': {
+    grade:'B', price:'5~20만',
+    traits:['도살(등) 내부 무늬 완전 소거','양옆 핀 라인만 남음','1차 형질 바탕색만 노출'],
+    desc:'도살(등) 내부의 무늬가 모두 지워져 오직 1차 형질(바탕색)만 남고, 양옆의 핀만 남은 깔끔한 형태. \'빈 등(Empty Back)\'이라는 이름 그대로 등 부분이 깔끔하게 비어있는 독특한 매력을 가집니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'엠티백 × 엠티백 또는 엠티백 × 풀핀'
+  },
+  '팬텀': {
+    grade:'B', price:'3~10만',
+    traits:['패턴 완전 소거','단색(모노 컬러) 또는 투톤','벅스킨·차콜 등 포함'],
+    desc:'패턴이 모두 깨지거나 지워져 하나의 단색(모노 컬러) 또는 깔끔한 투톤으로 표현되는 모프. 세부 유형으로 레드 팬텀, 옐로우 팬텀, 벅스킨(야생형과 가장 유사한 갈색/적벽돌색) 등이 있습니다. \'단조로움 속의 극강의 깔끔함\'이 특징.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'팬텀 계열 × 팬텀 계열 교배로 단색 고착'
+  },
+  '하이포/핑키': {
+    grade:'B', price:'5~15만',
+    traits:['색소 결핍','반투명하고 창백한 톤','슈퍼폼 = 루시스틱 핑키'],
+    desc:'색소가 결핍되어 반투명하고 창백한 톤업 색상을 가진 모프. 피부가 얇아 보이고 핑크빛이 돌며, 슈퍼폼은 루시스틱 핑키(Lucistic Pinky)라 불립니다. 아잔틱과 달리 완전한 색소 소거는 아닙니다.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'하이포/핑키 계열 × 하이포/핑키 계열 교배'
+  },
+
+  /* ── C급: 기본형 ── */
+  '노멀': {
+    grade:'C', price:'1~5만',
+    traits:['야생형 기본 체색','할리퀸 게이지 10%','모든 모프의 기반'],
+    desc:'뚜렷한 무늬 변이 없이 평범한 기본형. 할리퀸 게이지 10%에 해당하며, 갈색 계열의 자연스러운 체색을 가집니다. 모든 모프의 기반이 되는 형태로 사육 입문에 적합합니다. 브리더의 시선으로 보면 다음 세대의 잠재적 유전자 보유체입니다.',
+    genetics:{type:'폴리제닉(야생형)',allele:'야생형',het:'헷 모프 보유 가능성 있음',dom:'해당 없음'},
+    parents:'모든 모프의 기반이 되는 기본형'
+  },
+};
+
+const MORPH_GRADES = {
+  'S': {label:'S급', color:'#f5c842', bg:'rgba(245,200,66,.18)', cssClass:'gS'},
+  'A': {label:'A급', color:'#ff9c27', bg:'rgba(255,156,39,.15)', cssClass:'gA'},
+  'B': {label:'B급', color:'#5ddc6a', bg:'rgba(93,220,106,.13)', cssClass:'gB'},
+  'C': {label:'C급', color:'#5ab4e8', bg:'rgba(90,180,232,.13)', cssClass:'gC'},
+};
+
+// Sample posts data
+const SAMPLE_POSTS = [
+  {id:1,cat:'sale',title:'릴리화이트 암컷 분양합니다',author:'게코팜123',avatar:'🌟',price:85,morph:'릴리화이트',emoji:'🦎',tags:['암컷','성체','CB21'],views:142,comments:8,likes:23,time:'2시간 전',body:'건강하게 잘 크고 있는 릴리화이트 성체 암컷입니다. CB21년산이고 식욕 왕성합니다. 직거래 또는 안전 택배 가능합니다.'},
+  {id:2,cat:'info',title:'달마시안 반점 수 늘리는 브리딩 후기',author:'크레마니아',avatar:'🧬',price:null,morph:'달마시안',emoji:'🦎',tags:['달마시안','브리딩','정보'],views:89,comments:15,likes:41,time:'5시간 전',body:'3년간 달마시안 브리딩을 해오면서 반점 수를 높이는 방법에 대한 후기를 공유합니다...'},
+  {id:3,cat:'wanted',title:'아잔틱 헷 수컷 구합니다',author:'아잔틱헌터',avatar:'🔍',price:null,morph:'헷 아잔틱',emoji:'🦎',tags:['수컷','헷아잔틱','구합니다'],views:56,comments:4,likes:7,time:'1일 전',body:'아잔틱 브리딩 프로젝트를 위해 헷 아잔틱 수컷을 구하고 있습니다. 혈통 확인 가능한 개체 우선입니다.'},
+  {id:4,cat:'sale',title:'하를레퀸 베이비 3마리 동시 분양',author:'게코브리더',avatar:'🥚',price:6,morph:'하를레퀸',emoji:'🦎',tags:['베이비','하를레퀸','3마리'],views:201,comments:12,likes:34,time:'2일 전',body:'이번 시즌 부화한 하를레퀸 베이비 3마리 동시 분양합니다. 각각 패턴과 색감이 다릅니다.'},
+];
+
+// ══════════════════════════════
+// NAVIGATION
+// ══════════════════════════════
+function showPage(p, pushHistory = true) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nb, .nb-scan').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  const nav = document.getElementById('nav-' + p);
+  if (nav) nav.classList.add('active');
+  state.currentPage = p;
+  if (p === 'home') renderHome();
+  if (p === 'myge') renderGeckoList();
+  if (p === 'comm') renderPosts();
+  if (p === 'scan') resetScanPage();
+  // 뒤로가기 히스토리 등록
+  if (pushHistory) history.pushState({ page: p }, '', '#' + p);
+}
+
+// 뒤로가기 버튼 처리 (앱 종료 방지)
+window.addEventListener('popstate', (e) => {
+  // 열린 시트가 있으면 먼저 닫기
+  const openSheet = document.querySelector('.sheet-overlay.show');
+  if (openSheet) { openSheet.classList.remove('show'); history.pushState({}, ''); return; }
+  // 페이지 이동
+  const page = e.state?.page || 'home';
+  showPage(page, false);
+});
+
+function resetScanPage() {
+  // Only reset if not in result state
+}
+
+// ══ 모프 인라인 드롭다운 ══
+function showMorphInline() {
+  const dd = document.getElementById('morph-inline-dropdown');
+  dd.style.display = 'block';
+  document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
+  renderMorphInline(document.getElementById('morph-inline-input').value);
+}
+
+function hideMorphInline() {
+  const dd = document.getElementById('morph-inline-dropdown');
+  dd.style.display = 'none';
+  document.getElementById('morph-inline-input').style.borderColor = '';
+}
+
+function filterMorphInline() {
+  renderMorphInline(document.getElementById('morph-inline-input').value);
+}
+
+function renderMorphInline(q) {
+  const list = document.getElementById('morph-inline-list');
+  const query = (q || '').toLowerCase();
+  let html = '';
+  let hasResult = false;
+
+  MORPH_LIST_GROUPS.forEach(group => {
+    const matched = group.items.filter(item => !query || item.toLowerCase().includes(query));
+    if (!matched.length) return;
+    hasResult = true;
+    html += `<div style="font-size:10px;color:var(--tx3);padding:8px 12px 4px;font-family:'DM Mono',monospace;letter-spacing:1px;border-top:1px solid var(--br2)">${group.label}</div>`;
+    matched.forEach(item => {
+      const m = MORPHS[item];
+      const g = m ? MORPH_GRADES[m.grade] : null;
+      html += `<div onmousedown="selectMorphInline('${item.replace(/'/g,"\\'")}')" ontouchend="selectMorphInline('${item.replace(/'/g,"\\'")}');event.preventDefault()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;cursor:pointer;transition:background .1s">
+        <span style="font-size:14px;font-weight:600">${item}</span>
+        ${g ? `<span style="font-size:10px;background:${g.bg};color:${g.color};padding:2px 7px;border-radius:6px;font-family:'DM Mono',monospace">${g.label}</span>` : ''}
+      </div>`;
+    });
+  });
+
+  // 직접 입력 옵션
+  if (query && !MORPH_LIST_GROUPS.flatMap(g=>g.items).map(i=>i.toLowerCase()).includes(query)) {
+    html += `<div onmousedown="selectMorphInline('${q.replace(/'/g,"\\'").trim()}')" ontouchend="selectMorphInline('${q.replace(/'/g,"\\'").trim()}');event.preventDefault()" style="padding:11px 13px;font-size:13px;cursor:pointer;color:var(--ac);border-top:1px solid var(--br2);display:flex;align-items:center;gap:7px">
+      <span style="font-size:16px">✏️</span> "<b>${q.trim()}</b>" 직접 입력
+    </div>`;
+    hasResult = true;
+  }
+
+  list.innerHTML = hasResult ? html : '<div style="color:var(--tx3);font-size:13px;padding:12px">검색 결과 없음 — 그냥 입력해도 돼요!</div>';
+}
+
+function selectMorphInline(val) {
+  document.getElementById('gecko-morph').value = val;
+  document.getElementById('morph-inline-input').value = val;
+  document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
+  hideMorphInline();
+  updateGeckoGrade();
+}
+
+// 드롭다운 외부 터치 시 닫기
+document.addEventListener('touchstart', function(e) {
+  const dd = document.getElementById('morph-inline-dropdown');
+  const input = document.getElementById('morph-inline-input');
+  if (dd && dd.style.display !== 'none' && !dd.contains(e.target) && e.target !== input) {
+    hideMorphInline();
+  }
+}, { passive: true });
+
+// ══ 프로필 수정 ══
+let _profile = { name: '게코키퍼님', bio: '' };
+
+function openProfileEdit() {
+  document.getElementById('profile-name').value = _profile.name;
+  document.getElementById('profile-bio').value = _profile.bio;
+  if (_currentUser) document.getElementById('profile-email').value = _currentUser.email || '';
+  openSheet('sheet-profile-edit');
+}
+
+function saveProfile() {
+  _profile.name = document.getElementById('profile-name').value.trim() || '게코키퍼님';
+  _profile.bio  = document.getElementById('profile-bio').value.trim();
+  // 더보기 화면 이름 업데이트
+  const nameEl = document.querySelector('#page-more .more-item-info + div, #page-more div[style*="font-weight:800"]');
+  document.querySelectorAll('#page-more [style*="font-weight:800"]').forEach(el => {
+    if (el.textContent === '게코키퍼님' || el.textContent === _profile.name) el.textContent = _profile.name;
+  });
+  closeSheetDirect('sheet-profile-edit');
+  showToast('✅ 프로필이 수정됐어요');
+  // 더보기 페이지 리렌더
+  showPage('more', false);
+}
+
+// ══════════════════════════════
+// TOAST
+// ══════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════
+// SHEETS
+// ══════════════════════════════
+function openSheet(id) {
+  document.getElementById(id).classList.add('show');
+}
+function closeSheet(id, e) {
+  if (!e || e.target === document.getElementById(id)) {
+    document.getElementById(id).classList.remove('show');
+  }
+}
+function closeSheetDirect(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// ══════════════════════════════
+// HOME
+// ══════════════════════════════
+function renderHome() {
+  // Stats
+  document.getElementById('stat-count').textContent = state.geckos.length;
+  const totalMin = state.geckos.reduce((s, g) => {
+    const m = MORPHS[g.morph];
+    if (!m || !m.price) return s;
+    const match = m.price.match(/(\d+)/);
+    return s + (match ? parseInt(match[1]) : 0);
+  }, 0);
+  document.getElementById('stat-value').textContent = totalMin > 0 ? totalMin + '만+' : '—';
+
+  // Gecko row
+  const row = document.getElementById('home-gecko-row');
+  row.innerHTML = `<div class="gecko-row-item" onclick="showPage('myge');setTimeout(openAddGecko,300)" style="background:var(--sf2);border:1.5px dashed var(--br);display:flex;flex-direction:column;align-items:center;justify-content:center;height:116px;gap:5px;flex-shrink:0;width:80px;border-radius:16px">
+    <div style="font-size:22px">＋</div>
+    <div style="font-size:10px;color:var(--tx2);text-align:center">개체 등록</div>
+  </div>`;
+  state.geckos.slice(-5).reverse().forEach(g => {
+    const m = MORPHS[g.morph] || {};
+    const grade = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
+    const el = document.createElement('div');
+    el.className = 'gecko-row-item';
+    el.style.flexShrink = '0';
+    el.onclick = () => openGeckoDetail(g.id);
+    el.innerHTML = `
+      <div class="gecko-row-thumb">${g.photo ? `<img src="${g.photo}">` : '🦎'}</div>
+      <div class="gecko-row-info">
+        <div class="gecko-row-name">${g.name}</div>
+        <div class="gecko-row-morph">${g.morph || '미판별'}</div>
+      </div>`;
+    row.appendChild(el);
+  });
+
+  // Posts preview — DB에서 로드된 state.posts 사용
+  const preview = document.getElementById('home-posts-preview');
+  preview.innerHTML = '';
+  if (state.posts.length > 0) {
+    state.posts.slice(0,2).forEach(p => {
+      preview.appendChild(buildPostCard(p, true));
+    });
+  } else {
+    preview.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:12px;text-align:center">아직 게시글이 없어요</div>';
+  }
+}
+
+// ══════════════════════════════
+// GECKO MANAGEMENT
+// ══════════════════════════════
+let currentPhotoData = null;
+
+function openAddGecko() {
+  state.editingGeckoId = null;
+  currentPhotoData = null;
+  document.getElementById('add-gecko-title').textContent = '새 개체 등록';
+  document.getElementById('gecko-name').value = '';
+  document.getElementById('gecko-sex').value = '미판별';
+  document.getElementById('gecko-morph').value = '';
+  document.getElementById('morph-inline-input').value = '';
+  document.getElementById('morph-inline-input').style.borderColor = '';
+  hideMorphInline();
+  document.getElementById('gecko-dob').value = '';
+  document.getElementById('gecko-price').value = '';
+  document.getElementById('gecko-status').value = '정상';
+  document.getElementById('gecko-weight').value = '';
+  document.getElementById('gecko-cage').value = '소형 (30cm 이하)';
+  document.getElementById('gecko-dad').value = '';
+  document.getElementById('gecko-mom').value = '';
+  document.getElementById('gecko-memo').value = '';
+  document.getElementById('delete-gecko-btn').style.display = 'none';
+  document.getElementById('grade-suggestion').style.display = 'none';
+  document.getElementById('cage-breeding-info').style.display = 'none';
+  selectGrade('');
+  resetAddPhoto();
+  openSheet('sheet-add-gecko');
+}
+
+function resetAddPhoto() {
+  const zone = document.getElementById('add-photo-zone');
+  zone.classList.remove('has-photo');
+  document.getElementById('add-photo-preview').src = '';
+  _pendingPhotoFile = null;
+  currentPhotoData = '';
+}
+
+let _pendingPhotoFile = null; // Storage 업로드용 File/Blob
+
+function handleAddPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    const MAX = 600;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    // 미리보기용 data URL
+    currentPhotoData = canvas.toDataURL('image/jpeg', 0.7);
+    document.getElementById('add-photo-preview').src = currentPhotoData;
+    document.getElementById('add-photo-zone').classList.add('has-photo');
+    URL.revokeObjectURL(url);
+    // Storage 업로드용 Blob 준비
+    canvas.toBlob(blob => { _pendingPhotoFile = blob; }, 'image/jpeg', 0.7);
+    const kb = Math.round(currentPhotoData.length * 0.75 / 1024);
+    showToast(`📷 사진 준비 완료 (${kb}KB)`);
+  };
+  img.src = url;
+}
+
+// Storage에 사진 업로드 → 공개 URL 반환
+async function _uploadPhotoToStorage(blob, geckoId) {
+  if (!_currentUser || !blob) return null;
+  const fileName = `${_currentUser.id}/${geckoId}_${Date.now()}.jpg`;
+  const { error } = await _supabase.storage
+    .from('gecko-photos')
+    .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+  if (error) {
+    console.error('사진 업로드 실패:', error);
+    return null;
+  }
+  const { data } = _supabase.storage
+    .from('gecko-photos')
+    .getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
+const MORPH_LIST_GROUPS = [
+  {label:'⭐ S급 — 최희귀 / 복합 유전', items:['아잔틱','릴잔틱','트익할','트익할 릴리','마블링']},
+  {label:'🥇 A급 — 하이엔드 유전 모프', items:['릴리화이트','카푸치노','프라푸치노','세이블','루악','차콜','익스트림 할리퀸','슈퍼 달마시안','쿼드 핀']},
+  {label:'🥈 B급 — 인기 기본 모프', items:['할리퀸','달마시안','풀핀','엠티백','팬텀','하이포/핑키']},
+  {label:'🥉 C급 — 기본형', items:['노멀']},
+  {label:'📝 직접 입력 콤보', items:['릴리화이트 달마시안','릴리화이트 할리퀸','LW 풀핀','아잔틱 할리퀸','카푸치노 달마시안','헷 아잔틱']},
+];
+
+function selectMorph(val) {
+  document.getElementById('gecko-morph').value = val;
+  hideMorphDropdown();
+  updateGeckoGrade();
+}
+
+// 등급 버튼 선택
+function selectGrade(g) {
+  document.getElementById('gecko-grade').value = g;
+  const grades = ['S','A','B','C',''];
+  const colors = {S:'#f5c842',A:'var(--am)',B:'var(--ac)',C:'var(--blue)','':'var(--tx2)'};
+  const bgs    = {S:'rgba(245,200,66,.2)',A:'var(--am2)',B:'var(--ac2)',C:'var(--bl2)','':'var(--sf2)'};
+  grades.forEach(gr => {
+    const btn = document.getElementById('gbtn-' + gr);
+    if (!btn) return;
+    if (gr === g) {
+      btn.style.background = bgs[gr];
+      btn.style.borderColor = colors[gr];
+      btn.style.color = colors[gr];
+      btn.style.boxShadow = `0 0 10px ${colors[gr]}44`;
+    } else {
+      btn.style.background = 'var(--sf2)';
+      btn.style.borderColor = 'var(--br)';
+      btn.style.color = 'var(--tx2)';
+      btn.style.boxShadow = '';
+    }
+  });
+}
+
+function updateGeckoGrade() {
+  const morph = document.getElementById('gecko-morph').value;
+  const m = MORPHS[morph];
+  const suggestion = document.getElementById('grade-suggestion');
+  if (m) {
+    // AI 참고 등급 표시 (suggestion only)
+    const gInfo = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
+    document.getElementById('grade-suggestion-text').innerHTML =
+      `<b style="color:${gInfo.color}">${gInfo.label} (${m.grade})</b> · 시세 참고 ${m.price}`;
+    suggestion.style.display = 'block';
+    // 현재 등급이 미설정이면 참고값 pre-select (사용자가 바꿀 수 있음)
+    const current = document.getElementById('gecko-grade').value;
+    if (!current) selectGrade(m.grade);
+  } else {
+    suggestion.style.display = 'none';
+  }
+}
+
+// 몸무게 → 케이지 자동추천 + 번식가능 판정
+function updateCageAndBreeding() {
+  const weightRaw = document.getElementById('gecko-weight').value;
+  const weight = parseFloat(weightRaw);
+  const dob = document.getElementById('gecko-dob').value;
+  const sex = document.getElementById('gecko-sex').value;
+  const infoBox = document.getElementById('cage-breeding-info');
+
+  if (!weightRaw && !dob) { infoBox.style.display = 'none'; return; }
+  infoBox.style.display = 'block';
+
+  // ── 케이지 추천 ──
+  const badgeEl = document.getElementById('cage-rec-badge');
+  const titleEl = document.getElementById('cage-rec-title');
+  const subEl   = document.getElementById('cage-rec-sub');
+  const cageSel = document.getElementById('gecko-cage');
+
+  if (!isNaN(weight) && weight > 0) {
+    let cageKey, cageLabel, cageSub, badgeBg, badgeColor;
+    if (weight < 10) {
+      cageKey = '소형 (30cm 이하)'; cageLabel = '소형 케이지 (30cm 이하)';
+      cageSub = `현재 ${weight}g — 10g 미만은 소형이 안전해요`;
+      badgeBg = 'var(--bl2)'; badgeColor = 'var(--blue)'; badgeEl.textContent = 'S';
+    } else if (weight < 35) {
+      cageKey = '중형 (30~45cm)'; cageLabel = '중형 케이지 (30~45cm)';
+      cageSub = `현재 ${weight}g — 35g 이상이 되면 대형으로 업그레이드`;
+      badgeBg = 'var(--ac2)'; badgeColor = 'var(--ac)'; badgeEl.textContent = 'M';
+    } else {
+      cageKey = '대형 (45cm 이상)'; cageLabel = '대형 케이지 (45cm+)';
+      cageSub = `현재 ${weight}g — 성체 전용 대형 케이지 권장`;
+      badgeBg = 'var(--am2)'; badgeColor = 'var(--am)'; badgeEl.textContent = 'L';
+    }
+    badgeEl.style.background = badgeBg;
+    badgeEl.style.color = badgeColor;
+    titleEl.textContent = cageLabel;
+    subEl.textContent = cageSub;
+    cageSel.value = cageKey;
+  } else {
+    badgeEl.textContent = '?';
+    badgeEl.style.background = 'var(--sf2)'; badgeEl.style.color = 'var(--tx2)';
+    titleEl.textContent = '몸무게를 입력하면 자동 추천해드려요';
+    subEl.textContent = '소형 <10g · 중형 10~34g · 대형 35g+';
+  }
+
+  // ── 번식 가능 판정 ──
+  const breedBox = document.getElementById('breeding-ready-box');
+  if (!dob || sex === '미판별') { breedBox.style.display = 'none'; return; }
+
+  const days = Math.floor((Date.now() - new Date(dob).getTime()) / 86400000);
+  const w = parseFloat(weightRaw);
+
+  let breedReady = false, breedMsg = '', breedColor = '', breedBg = '';
+
+  if (sex === '암컷') {
+    const dayOk = days >= 540;
+    const wOk   = !isNaN(w) && w >= 40;
+    breedReady  = dayOk && wOk;
+    const dayStr = dayOk ? `✅ ${days}일 (540일+)` : `❌ ${days}일 (540일 필요)`;
+    const wStr   = isNaN(w) ? '— (몸무게 입력 필요)' : wOk ? `✅ ${w}g (40g+)` : `❌ ${w}g (40g 필요)`;
+    breedMsg = `♀ 번식 가능 조건<br>· 일령: ${dayStr}<br>· 몸무게: ${wStr}`;
+    breedColor = breedReady ? 'var(--ac)' : 'var(--am)';
+    breedBg    = breedReady ? 'var(--ac2)' : 'var(--am2)';
+  } else if (sex === '수컷') {
+    const dayOk = days >= 365;
+    const wOk   = !isNaN(w) && w >= 35;
+    breedReady  = dayOk && wOk;
+    const dayStr = dayOk ? `✅ ${days}일 (365일+)` : `❌ ${days}일 (365일 필요)`;
+    const wStr   = isNaN(w) ? '— (몸무게 입력 필요)' : wOk ? `✅ ${w}g (35g+)` : `❌ ${w}g (35g 필요)`;
+    breedMsg = `♂ 번식 가능 조건<br>· 일령: ${dayStr}<br>· 몸무게: ${wStr}`;
+    breedColor = breedReady ? 'var(--ac)' : 'var(--am)';
+    breedBg    = breedReady ? 'var(--ac2)' : 'var(--am2)';
+  }
+
+  if (breedMsg) {
+    breedBox.style.display = 'block';
+    breedBox.style.background = breedBg;
+    breedBox.style.border = `1px solid ${breedColor}`;
+    breedBox.style.color = breedColor;
+    breedBox.innerHTML = (breedReady ? '🟢 <b>번식 가능!</b><br>' : '🟡 <b>아직 번식 준비 중</b><br>') + breedMsg;
+  } else {
+    breedBox.style.display = 'none';
+  }
+}
+
+async function saveGecko() {
+  const name = document.getElementById('gecko-name').value.trim();
+  if (!name) { showToast('⚠️ 이름을 입력해주세요'); return; }
+  const morph = document.getElementById('gecko-morph').value;
+  const m = MORPHS[morph] || {};
+
+  const geckoId = state.editingGeckoId || Date.now().toString();
+
+  // ── 사진: Storage 업로드 (새 사진이 있을 때만)
+  let photoUrl = currentPhotoData; // 기본값: 기존 데이터 유지
+  if (_pendingPhotoFile) {
+    showToast('📤 사진 업로드 중...');
+    const uploaded = await _uploadPhotoToStorage(_pendingPhotoFile, geckoId);
+    if (uploaded) {
+      photoUrl = uploaded;
+    } else {
+      showToast('⚠️ 사진 업로드 실패 — 로컬 미리보기만 저장됩니다');
+    }
+    _pendingPhotoFile = null;
+  }
+
+  const gecko = {
+    id: geckoId,
+    name,
+    sex: document.getElementById('gecko-sex').value,
+    morph,
+    grade: document.getElementById('gecko-grade').value || m.grade || '',
+    dob: document.getElementById('gecko-dob').value,
+    price: document.getElementById('gecko-price').value,
+    weight: document.getElementById('gecko-weight').value,
+    status: document.getElementById('gecko-status').value,
+    cage: document.getElementById('gecko-cage').value,
+    dad: document.getElementById('gecko-dad').value,
+    mom: document.getElementById('gecko-mom').value,
+    memo: document.getElementById('gecko-memo').value,
+    photo: photoUrl,
+  };
+
+  if (state.editingGeckoId) {
+    const idx = state.geckos.findIndex(g => g.id === state.editingGeckoId);
+    if (idx !== -1) state.geckos[idx] = gecko;
+  } else {
+    state.geckos.push(gecko);
+  }
+
+  // ── Supabase DB 저장
+  await _saveGeckoToDB(gecko);
+
+  closeSheetDirect('sheet-add-gecko');
+  renderGeckoList();
+  updateCountBadges();
+  populateGeckoSelects();
+}
+
+let _deleteGeckoStep = 0;
+let _deleteGeckoTimer = null;
+function deleteGecko() {
+  if (!state.editingGeckoId) return;
+  if (_deleteGeckoStep === 0) {
+    _deleteGeckoStep = 1;
+    showToast('⚠️ 정말 삭제하려면 한 번 더 눌러주세요');
+    _deleteGeckoTimer = setTimeout(() => { _deleteGeckoStep = 0; }, 3000);
+    return;
+  }
+  _deleteGeckoStep = 0;
+  clearTimeout(_deleteGeckoTimer);
+  _deleteGeckoFromDB(state.editingGeckoId);
+  state.geckos = state.geckos.filter(g => g.id !== state.editingGeckoId);
+  closeSheetDirect('sheet-add-gecko');
+  closeSheetDirect('sheet-gecko-detail');
+  renderGeckoList();
+  updateCountBadges();
+  showToast('🗑 개체가 삭제되었어요');
+}
+
+function setGeckoFilter(f) {
+  state.geckoFilter = f;
+  document.querySelectorAll('#gecko-filter-row .fp').forEach(el => el.classList.remove('active'));
+  const idx = {all:0,female:1,male:2,breeding:3,unsorted:4}[f];
+  document.querySelectorAll('#gecko-filter-row .fp')[idx]?.classList.add('active');
+  renderGeckoList();
+}
+
+function renderGeckoList() {
+  const list = document.getElementById('gecko-list');
+  const search = (document.getElementById('gecko-search')?.value || '').toLowerCase();
+  const filter = state.geckoFilter;
+
+  let geckos = state.geckos.filter(g => {
+    const matchSearch = !search || g.name.toLowerCase().includes(search) || (g.morph||'').toLowerCase().includes(search);
+    let matchFilter = true;
+    if (filter === 'female') matchFilter = g.sex === '암컷';
+    else if (filter === 'male') matchFilter = g.sex === '수컷';
+    else if (filter === 'breeding') matchFilter = g.status === '브리딩중';
+    else if (filter === 'unsorted') matchFilter = !g.morph;
+    return matchSearch && matchFilter;
+  });
+
+  const cntAll = state.geckos.length;
+  const cntF = state.geckos.filter(g=>g.sex==='암컷').length;
+  const cntM = state.geckos.filter(g=>g.sex==='수컷').length;
+  document.getElementById('chip-cnt-all').textContent = cntAll;
+  document.getElementById('chip-cnt-f').textContent = cntF;
+  document.getElementById('chip-cnt-m').textContent = cntM;
+  document.getElementById('myge-count-badge').textContent = cntAll + '마리';
+
+  if (geckos.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">${state.geckos.length === 0 ? '🦎' : '🔍'}</div>
+      <div class="empty-title">${state.geckos.length === 0 ? '아직 등록된 개체가 없어요' : '검색 결과가 없어요'}</div>
+      <div class="empty-sub">${state.geckos.length === 0 ? '아래 + 버튼을 눌러\n첫 번째 개체를 등록해보세요!' : '다른 검색어를 사용해보세요'}</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  geckos.forEach(g => {
+    const m = MORPHS[g.morph] || {};
+    const grade = m.grade || 'C';
+    const gInfo = MORPH_GRADES[grade] || MORPH_GRADES['C'];
+    const sexEmoji = g.sex === '암컷' ? '♀' : g.sex === '수컷' ? '♂' : '?';
+    const sexColor = g.sex === '암컷' ? '#ff8fb1' : g.sex === '수컷' ? 'var(--blue)' : 'var(--tx2)';
+
+    const statusTag = g.status === '브리딩중' ? `<span class="tag tag-pu">브리딩 중</span>` :
+                     g.status === '분양예정' ? `<span class="tag tag-coral">분양 예정</span>` :
+                     g.status === '격리중' ? `<span class="tag tag-amber">격리 중</span>` : '';
+    const cageTag = g.cage ? `<span class="tag tag-blue">케이지 ${g.cage.split(' ')[0]}</span>` : '';
+
+    const card = document.createElement('div');
+    card.className = `gecko-card g${grade}`;
+    card.onclick = () => openGeckoDetail(g.id);
+    card.innerHTML = `
+      <div class="gecko-thumb">${g.photo ? `<img src="${g.photo}">` : '🦎'}</div>
+      <div class="gecko-info">
+        <div class="gecko-name-row">
+          <span class="gecko-name">${g.name}</span>
+          <span style="font-size:12px;color:${sexColor};font-weight:700">${sexEmoji}</span>
+        </div>
+        <div class="gecko-morph">${g.morph || '📷 모프 미판별'}</div>
+        <div class="gecko-tags">${statusTag}${cageTag}</div>
+      </div>
+      <div class="gecko-right">
+        <div class="gecko-grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${grade}</div>
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx2);text-align:right">${g.price ? g.price + '만원' : '—'}</div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function openGeckoDetail(id) {
+  const g = state.geckos.find(x => x.id === id);
+  if (!g) return;
+  const m = MORPHS[g.morph] || {};
+  const grade = m.grade || 'C';
+  const gInfo = MORPH_GRADES[grade] || MORPH_GRADES['C'];
+
+  const age = g.dob ? getAge(g.dob) : '—';
+
+  let html = `
+    <div style="width:100%;height:180px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:70px;overflow:hidden;margin:-0px -0px 0">
+      ${g.photo ? `<img src="${g.photo}" style="width:100%;height:100%;object-fit:cover">` : '🦎'}
+    </div>
+    <div style="padding:16px 18px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:22px;font-weight:900;margin-bottom:3px">${g.name}</div>
+          <div style="color:${gInfo.color};font-size:14px;font-weight:700">${g.morph || '모프 미판별'}</div>
+        </div>
+        <div style="background:${gInfo.bg};color:${gInfo.color};border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:900;font-size:18px">${grade}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        ${detailItem('성별', g.sex === '암컷' ? '♀ 암컷' : g.sex === '수컷' ? '♂ 수컷' : '미판별')}
+        ${detailItem('나이', age)}
+        ${detailItem('상태', g.status || '—')}
+        ${detailItem('케이지', g.cage ? g.cage.split(' ')[0] : '—')}
+        ${detailItem('몸무게', g.weight ? g.weight + 'g' : '—')}
+        ${detailItem('취득가격', g.price ? g.price + '만원' : '—')}
+        ${detailItem('시세 범위', m.price || '—')}
+      </div>
+
+      ${(g.dad || g.mom) ? `
+        <div style="background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:12px 13px;margin-bottom:12px">
+          <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">🧬 혈통</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><div style="font-size:10px;color:var(--blue);margin-bottom:3px">♂ 아버지</div><div style="font-size:13px;font-weight:700">${g.dad || '—'}</div></div>
+            <div><div style="font-size:10px;color:#ff8fb1;margin-bottom:3px">♀ 어머니</div><div style="font-size:13px;font-weight:700">${g.mom || '—'}</div></div>
+          </div>
+        </div>` : ''}
+
+      ${g.memo ? `
+        <div style="background:var(--sf2);border-radius:12px;padding:12px 13px;margin-bottom:12px">
+          <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:6px">메모</div>
+          <div style="font-size:13px;color:var(--tx2);line-height:1.7">${g.memo}</div>
+        </div>` : ''}
+
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn-outline" style="flex:1" onclick="editGecko(${id})">✏️ 수정</button>
+        <button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">📱 QR 보기</button>
+      </div>
+    </div>`;
+
+  document.getElementById('gecko-detail-body').innerHTML = html;
+  openSheet('sheet-gecko-detail');
+}
+
+function detailItem(label, val) {
+  return `<div style="background:var(--bg);border:1px solid var(--br2);border-radius:10px;padding:9px 11px">
+    <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:3px">${label}</div>
+    <div style="font-size:13px;font-weight:700">${val}</div>
+  </div>`;
+}
+
+function getAge(dob) {
+  if (!dob) return '—';
+  const diff = Date.now() - new Date(dob).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days < 30) return days + '일';
+  const months = Math.floor(days / 30);
+  if (months < 12) return months + '개월';
+  return Math.floor(months/12) + '년 ' + (months%12) + '개월';
+}
+
+function editGecko(id) {
+  const g = state.geckos.find(x => x.id === id);
+  if (!g) return;
+  state.editingGeckoId = id;
+  currentPhotoData = g.photo || null;
+  closeSheetDirect('sheet-gecko-detail');
+  document.getElementById('add-gecko-title').textContent = '개체 정보 수정';
+  document.getElementById('gecko-name').value = g.name;
+  document.getElementById('gecko-sex').value = g.sex;
+  document.getElementById('gecko-morph').value = g.morph || '';
+  document.getElementById('morph-inline-input').value = g.morph || '';
+  document.getElementById('morph-inline-input').style.borderColor = g.morph ? 'var(--ac)' : '';
+  hideMorphInline();
+  selectGrade(g.grade || '');
+  document.getElementById('grade-suggestion').style.display = 'none';
+  document.getElementById('gecko-dob').value = g.dob || '';
+  document.getElementById('gecko-price').value = g.price || '';
+  document.getElementById('gecko-status').value = g.status || '정상';
+  document.getElementById('gecko-weight').value = g.weight || '';
+  document.getElementById('gecko-cage').value = g.cage || '소형 (30cm 이하)';
+  document.getElementById('gecko-dad').value = g.dad || '';
+  document.getElementById('gecko-mom').value = g.mom || '';
+  document.getElementById('gecko-memo').value = g.memo || '';
+  document.getElementById('delete-gecko-btn').style.display = 'block';
+  if (g.photo) {
+    document.getElementById('add-photo-preview').src = g.photo;
+    document.getElementById('add-photo-zone').classList.add('has-photo');
+  } else {
+    resetAddPhoto();
+  }
+  updateGeckoGrade();
+  openSheet('sheet-add-gecko');
+}
+
+function updateCountBadges() {
+  document.getElementById('stat-count').textContent = state.geckos.length;
+  document.getElementById('myge-count-badge').textContent = state.geckos.length + '마리';
+}
+
+// ══════════════════════════════
+// AI SCAN — 멀티 사진 + 파이어업
+// ══════════════════════════════
+let lastScanResult = null;
+let scanPhotos = []; // [{data, name}] 최대 6장
+let isFireUp = false;
+
+function updateFireUpState() {
+  isFireUp = document.getElementById('fireup-toggle').checked;
+}
+
+function renderScanGrid() {
+  const grid = document.getElementById('scan-multi-grid');
+  grid.innerHTML = '';
+
+  // 업로드된 사진들
+  scanPhotos.forEach((p, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'scan-thumb-wrap';
+    wrap.innerHTML = `<img src="${p.data}" alt="photo${i+1}">
+      <button class="scan-thumb-del" onclick="removeScanPhoto(${i})">✕</button>`;
+    grid.appendChild(wrap);
+  });
+
+  // 추가 슬롯 (최대 6장)
+  if (scanPhotos.length < 6) {
+    const slot = document.createElement('div');
+    slot.className = 'scan-add-slot';
+    slot.onclick = () => document.getElementById('scan-file').click();
+    slot.innerHTML = `<span>＋</span><span style="font-size:10px;font-family:'DM Mono',monospace">추가</span>`;
+    grid.appendChild(slot);
+  }
+
+  // 카운트 바 업데이트
+  const cnt = scanPhotos.length;
+  const countEl = document.getElementById('scan-photo-count');
+  if (cnt === 0) {
+    countEl.textContent = '0 / 6장 (3장 이상 권장)';
+    countEl.className = 'scan-count-value ok';
+  } else if (cnt < 3) {
+    countEl.textContent = `${cnt} / 6장 — ${3-cnt}장 더 추가하면 정확도↑`;
+    countEl.className = 'scan-count-value ok';
+  } else {
+    countEl.textContent = `${cnt} / 6장 ✅ 분석 준비 완료`;
+    countEl.className = 'scan-count-value good';
+  }
+
+  // 분석 버튼
+  const btn = document.getElementById('scan-analyze-btn');
+  btn.style.display = cnt > 0 ? 'block' : 'none';
+  btn.textContent = cnt >= 3
+    ? `✨ AI 분석 시작 (사진 ${cnt}장${isFireUp?' · 🔥파이어업 보정':''})`
+    : `✨ AI 분석 시작 (${cnt}장 — 3장 이상 권장)`;
+}
+
+function handleScanPhotos(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  const remaining = 6 - scanPhotos.length;
+  const toAdd = files.slice(0, remaining);
+
+  let loaded = 0;
+  toAdd.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      scanPhotos.push({data: ev.target.result, name: file.name});
+      loaded++;
+      if (loaded === toAdd.length) {
+        document.getElementById('scan-tips').style.display = 'none';
+        renderScanGrid();
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+  if (files.length > remaining) showToast(`최대 6장까지 업로드 가능해요 (${remaining}장 추가됨)`);
+}
+
+function removeScanPhoto(idx) {
+  scanPhotos.splice(idx, 1);
+  if (scanPhotos.length === 0) document.getElementById('scan-tips').style.display = 'block';
+  renderScanGrid();
+}
+
+function startAnalysis() {
+  if (scanPhotos.length === 0) { showToast('⚠️ 사진을 최소 1장 이상 올려주세요'); return; }
+  if (state.freeScansLeft <= 0) {
+    showToast('🔒 무료 판별 횟수를 모두 사용했어요');
+    openProSheet();
+    return;
+  }
+
+  document.getElementById('scan-upload-area').style.display = 'none';
+  document.getElementById('scan-tips').style.display = 'none';
+  document.getElementById('ai-loading').classList.add('show');
+  document.getElementById('result-area').classList.remove('show');
+
+  document.getElementById('step1').className = 'step done';
+  document.getElementById('step2').className = 'step active';
+
+  const photoCount = scanPhotos.length;
+  const fireUp = isFireUp;
+
+  // 사진 수에 따라 분석 단계 메시지 업데이트
+  document.getElementById('ls1').textContent = `사진 ${photoCount}장 색상 패턴 인식 중...`;
+  document.getElementById('ls2').textContent = '모프 데이터베이스 교차 대조 중...';
+  document.getElementById('ls3').textContent = fireUp ? '🔥 파이어업 보정 적용 중...' : '유전자 조합 분석 중...';
+  document.getElementById('ls4').textContent = '시세 정보 불러오는 중...';
+
+  ['ls1','ls2','ls3','ls4'].forEach((id, i) => {
+    setTimeout(() => document.getElementById(id).classList.add('done'), 700 + i * 600);
+  });
+
+  // 사진 많을수록 약간 더 오래 (실제감)
+  const delay = 2800 + Math.min(photoCount - 1, 3) * 200;
+  setTimeout(() => {
+    state.freeScansLeft--;
+    document.getElementById('scan-free-badge').textContent = '잔여 ' + state.freeScansLeft + '회';
+    showResult(photoCount, fireUp);
+  }, delay);
+}
+
+function showResult(photoCount, fireUp) {
+  document.getElementById('ai-loading').classList.remove('show');
+  document.getElementById('step2').className = 'step done';
+  document.getElementById('step3').className = 'step active';
+
+  // ── 베타 AI: 사진 수·파이어업에 따라 가중치 기반 모프 선택 ──
+  // 실제 AI 모델 연동 전 데모 시뮬레이션
+  // 파이어업이면 색이 강한 모프(A/B급) 위주, 아니면 전체 중 확률적 선택
+  const morphEntries = Object.entries(MORPHS);
+  let weightedPool = [];
+  morphEntries.forEach(([name, data]) => {
+    // 등급별 가중치: C=4, B=5, A=3, S=1 (실제 개체 분포 반영)
+    const w = {S:1, A:3, B:5, C:4}[data.grade] || 3;
+    // 파이어업이면 A/B급 가중치 2배
+    const fireBonus = (fireUp && ['A','B'].includes(data.grade)) ? 2 : 1;
+    for (let i = 0; i < w * fireBonus; i++) weightedPool.push(name);
+  });
+  const pickedMorph = weightedPool[Math.floor(Math.random() * weightedPool.length)];
+  const m = MORPHS[pickedMorph];
+  lastScanResult = {morph: pickedMorph, data: m};
+
+  const gInfo = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
+
+  // 사진 수가 많을수록 신뢰도 높게, 파이어업 보정 시 +2%
+  const baseConf = photoCount >= 3 ? 89 : photoCount === 2 ? 80 : 72;
+  const conf = baseConf + Math.floor(Math.random() * 7) + (fireUp ? 2 : 0);
+
+  // 후보 모프 2개 (다음으로 유사한 모프) — 가이드 참고용
+  const candidates = weightedPool
+    .filter(n => n !== pickedMorph)
+    .sort(() => Math.random() - .5)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 2);
+
+  document.getElementById('res-morph-name').textContent = pickedMorph;
+  document.getElementById('res-confidence').textContent =
+    `신뢰도 ${conf}% · 사진 ${photoCount}장${fireUp ? ' · 🔥파이어업 보정됨' : ''}`;
+
+  document.getElementById('res-grade-wrap').innerHTML = `
+    <span class="grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${gInfo.label}</span>
+    <span class="tag tag-gray">크레스티드 게코</span>
+    ${fireUp ? '<span class="tag tag-coral">🔥 파이어업 보정</span>' : ''}
+    ${candidates.length ? `<span class="tag tag-amber" style="font-size:10px">유사: ${candidates.join(' / ')}</span>` : ''}`;
+
+  document.getElementById('res-traits').innerHTML = m.traits.map(t => `<span class="tag tag-green">${t}</span>`).join('');
+  document.getElementById('res-desc').textContent = m.desc;
+  document.getElementById('res-price').textContent = m.price;
+
+  document.getElementById('res-genetics').innerHTML = `
+    <div class="genetics-item"><div class="genetics-item-label">유전 방식</div><div class="genetics-item-value" style="color:var(--ac);font-size:12px">${m.genetics.type}</div></div>
+    <div class="genetics-item"><div class="genetics-item-label">대립유전자</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.allele}</div></div>
+    <div class="genetics-item"><div class="genetics-item-label">헷 여부</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.het}</div></div>
+    <div class="genetics-item"><div class="genetics-item-label">우성 특성</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.dom}</div></div>`;
+
+  document.getElementById('res-breeding').innerHTML = '<b style="color:var(--tx)">브리딩 노트:</b> ' + m.parents;
+  document.getElementById('res-parents').innerHTML = m.parents;
+  document.getElementById('result-area').classList.add('show');
+}
+
+function resetScan() {
+  scanPhotos = [];
+  isFireUp = false;
+  document.getElementById('scan-upload-area').style.display = 'block';
+  document.getElementById('scan-tips').style.display = 'block';
+  document.getElementById('ai-loading').classList.remove('show');
+  document.getElementById('result-area').classList.remove('show');
+  document.getElementById('scan-analyze-btn').style.display = 'none';
+  document.getElementById('step1').className = 'step active';
+  document.getElementById('step2').className = 'step';
+  document.getElementById('step3').className = 'step';
+  document.querySelectorAll('.ai-step-item').forEach(el => el.classList.remove('done'));
+  document.getElementById('scan-file').value = '';
+  document.getElementById('fireup-toggle').checked = false;
+  lastScanResult = null;
+  renderScanGrid();
+}
+
+function saveToMyGecko() {
+  if (!lastScanResult) return;
+  closeSheetDirect('sheet-add-gecko');
+  openAddGecko();
+  document.getElementById('gecko-morph').value = lastScanResult.morph;
+  if (lastScanResult.morph) {
+    document.getElementById('morph-inline-input').value = lastScanResult.morph;
+    document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
+  }
+  if (scanPhotos.length > 0) {
+    currentPhotoData = scanPhotos[0].data;
+    document.getElementById('add-photo-preview').src = scanPhotos[0].data;
+    document.getElementById('add-photo-zone').classList.add('has-photo');
+  }
+  updateGeckoGrade();
+  showPage('myge');
+  setTimeout(() => openSheet('sheet-add-gecko'), 300);
+  showToast('📷 판별된 모프가 자동으로 입력되었어요!');
+}
+
+// ══════════════════════════════
+// COMMUNITY
+// ══════════════════════════════
+function setCommFilter(f) {
+  state.commFilter = f;
+  document.querySelectorAll('#comm-filter-row .fp').forEach(el => el.classList.remove('active'));
+  const fMap = {all:0,sale:1,wanted:2,info:3,qna:4};
+  document.querySelectorAll('#comm-filter-row .fp')[fMap[f]]?.classList.add('active');
+  renderPosts();
+}
+
+async function renderPosts() {
+  const list = document.getElementById('post-list');
+  list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3);font-size:13px">불러오는 중...</div>';
+
+  // DB에서 글 로드
+  try {
+    let query = _supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
+    if (state.commFilter !== 'all') query = query.eq('cat', state.commFilter);
+    const { data, error } = await query;
+    if (!error && data) {
+      state.posts = data.map(row => ({
+        ...row,
+        tags: row.tags || [],
+        time: _timeAgo(row.created_at),
+        isOwn: _currentUser && row.user_id === _currentUser.id,
+      }));
+    }
+  } catch(e) {}
+
+  list.innerHTML = '';
+  const all = state.posts;
+  if (all.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">게시글이 없어요</div><div class="empty-sub">첫 번째 글을 작성해보세요!</div></div>`;
+    return;
+  }
+  all.forEach(p => list.appendChild(buildPostCard(p, false)));
+}
+
+function _timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '방금';
+  if (mins < 60) return mins + '분 전';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + '시간 전';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + '일 전';
+  return Math.floor(days / 30) + '개월 전';
+}
+
+function buildPostCard(p, compact) {
+  const catLabels = {sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',qna:'❓ Q&A'};
+  const div = document.createElement('div');
+  div.className = 'post-card';
+  div.onclick = () => openPostDetail(p);
+  div.innerHTML = `
+    ${!compact ? `<div class="post-card-img">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:14px 0 0 14px">` : (p.emoji || '🦎')}</div>` : ''}
+    <div class="post-card-body">
+      <div class="post-author-row">
+        <div class="post-avatar">${p.avatar}</div>
+        <div class="post-author-name">${p.author}</div>
+        <button class="btn-sm post-author-follow" onclick="event.stopPropagation();showToast('팔로우했어요 ✅')">팔로우</button>
+      </div>
+      <div class="post-tags">
+        <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
+        ${p.tags ? p.tags.map(t=>`<span class="tag tag-green">${t}</span>`).join('') : ''}
+      </div>
+      <div class="post-title">${p.title}</div>
+      ${p.price ? `<div class="post-price">${p.price}만원</div>` : ''}
+      <div class="post-stats">
+        <span>👁 ${p.views}</span>
+        <span>💬 ${p.comments}</span>
+        <span>❤️ ${p.likes}</span>
+        <span style="margin-left:auto">${p.time}</span>
+      </div>
+    </div>`;
+  return div;
+}
+
+function openPostDetail(p) {
+  const catLabels = {sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',qna:'❓ Q&A'};
+  document.getElementById('post-detail-body').innerHTML = `
+    <div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : (p.emoji||'🦎')}</div>
+    <div style="padding:16px 18px">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
+        ${p.tags ? p.tags.map(t=>`<span class="tag tag-green">${t}</span>`).join('') : ''}
+      </div>
+      <div style="font-size:19px;font-weight:800;margin-bottom:6px">${p.title}</div>
+      ${p.price ? `<div style="font-size:20px;font-weight:900;color:var(--am);margin-bottom:10px">${p.price}만원</div>` : ''}
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <div class="post-avatar">${p.avatar}</div>
+        <div style="font-size:13px;font-weight:600">${p.author}</div>
+        <button class="btn-sm" onclick="showToast('팔로우했어요 ✅')">팔로우</button>
+        <div style="font-size:11px;color:var(--tx2);margin-left:auto">${p.time}</div>
+      </div>
+      <div style="background:var(--sf2);border-radius:12px;padding:13px;font-size:13px;line-height:1.8;color:var(--tx2);margin-bottom:14px">${p.body}</div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 ${p.comments}개</div>
+      <div style="background:var(--sf2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--tx2);margin-bottom:8px">궁금한 게 있으면 댓글로 물어보세요!</div>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" placeholder="댓글 작성..." style="flex:1;font-size:13px">
+        <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="showToast('댓글이 등록되었어요 ✅')">등록</button>
+      </div>
+    </div>`;
+  openSheet('sheet-post-detail');
+}
+
+function openWritePost() {
+  populateGeckoSelects();
+  openSheet('sheet-write-post');
+}
+
+let _postPhotoData = null;
+
+function handlePostPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    _postPhotoData = ev.target.result;
+    document.getElementById('post-photo-preview').src = _postPhotoData;
+    document.getElementById('post-photo-preview').style.display = 'block';
+    document.getElementById('post-photo-placeholder').style.display = 'none';
+    document.getElementById('post-photo-remove-btn').style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePostPhoto() {
+  _postPhotoData = null;
+  document.getElementById('post-photo-preview').style.display = 'none';
+  document.getElementById('post-photo-preview').src = '';
+  document.getElementById('post-photo-placeholder').style.display = 'block';
+  document.getElementById('post-photo-remove-btn').style.display = 'none';
+  document.getElementById('post-photo-input').value = '';
+}
+
+async function submitPost() {
+  const title = document.getElementById('post-title-input').value.trim();
+  if (!title) { showToast('⚠️ 제목을 입력해주세요'); return; }
+  if (!_currentUser) { showToast('⚠️ 로그인이 필요합니다'); return; }
+
+  // 연결된 개체 정보 가져오기
+  const geckoId = document.getElementById('post-gecko-link').value;
+  const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
+
+  // 사진 우선순위: 직접 첨부 > 연결된 개체 사진
+  const photo = _postPhotoData || (linkedGecko && linkedGecko.photo) || null;
+  const morph = linkedGecko ? linkedGecko.morph : null;
+  const tags = ['내글'];
+  if (linkedGecko) {
+    if (linkedGecko.morph) tags.push(linkedGecko.morph);
+    if (linkedGecko.name) tags.push(linkedGecko.name);
+  }
+
+  const row = {
+    user_id: _currentUser.id,
+    cat: document.getElementById('post-category').value,
+    title,
+    author: _profile.name || '익명',
+    avatar: '🦎',
+    price: document.getElementById('post-price-input').value || null,
+    body: document.getElementById('post-body-input').value,
+    photo,
+    morph,
+    emoji: '🦎',
+    tags,
+  };
+
+  const { error } = await _supabase.from('posts').insert(row);
+  if (error) {
+    showToast('❌ 게시 실패: ' + error.message);
+    console.error('Post save error:', error);
+    return;
+  }
+
+  closeSheetDirect('sheet-write-post');
+  document.getElementById('post-title-input').value = '';
+  document.getElementById('post-price-input').value = '';
+  document.getElementById('post-body-input').value = '';
+  removePostPhoto();
+  await renderPosts();
+  showToast('✅ 게시글이 등록되었어요!');
+}
+
+// ══════════════════════════════
+// QR PROFILE
+// ══════════════════════════════
+function openQRSheet() {
+  populateGeckoSelects();
+  openSheet('sheet-qr');
+  if (state.geckos.length > 0) {
+    document.getElementById('qr-gecko-select').value = state.geckos[0].id;
+    generateQR();
+  }
+}
+
+function openQRForGecko(id) {
+  closeSheetDirect('sheet-gecko-detail');
+  populateGeckoSelects();
+  openSheet('sheet-qr');
+  document.getElementById('qr-gecko-select').value = id;
+  generateQR();
+}
+
+function generateQR() {
+  const id = document.getElementById('qr-gecko-select').value;
+  const qrWrap = document.getElementById('qr-canvas');
+  qrWrap.innerHTML = '';
+  const preview = document.getElementById('qr-profile-preview');
+
+  if (!id) {
+    document.getElementById('qr-selected-name').textContent = '—';
+    preview.style.display = 'none';
+    return;
+  }
+
+  const g = state.geckos.find(x => x.id == id);
+  if (!g) return;
+
+  document.getElementById('qr-selected-name').textContent = g.name;
+
+  // QR에 담을 텍스트 — 실제 배포 시 도메인으로 변경
+  const lines = [
+    `[마이크레] ${g.name}`,
+    `모프: ${g.morph || '미판별'}`,
+    `성별: ${g.sex}`,
+    g.dob ? `출생: ${g.dob}` : '',
+    g.weight ? `몸무게: ${g.weight}g` : '',
+    (g.dad||g.mom) ? `혈통: ${g.dad||'?'} × ${g.mom||'?'}` : '',
+    `등록: mycre.app`,
+  ].filter(Boolean).join(' | ');
+
+  // qrserver.com 무료 API — CDN 없이 이미지 URL로 QR 생성
+  const encoded = encodeURIComponent(lines);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encoded}&color=0e1a10&bgcolor=ffffff&qzone=1&format=png`;
+
+  qrWrap.innerHTML = `
+    <div style="background:white;padding:10px;border-radius:14px;display:inline-block">
+      <img src="${qrUrl}" alt="QR코드" style="width:160px;height:160px;border-radius:8px;display:block"
+        onerror="this.parentElement.innerHTML='<div style=\'color:#999;font-size:12px;text-align:center;padding:20px\'>QR 로드 실패<br>인터넷 연결 확인</div>'">
+    </div>`;
+
+  const m = MORPHS[g.morph] || {};
+  document.getElementById('qr-profile-content').innerHTML = `
+    <div>🦎 <b>${g.name}</b></div>
+    <div>🧬 모프: ${g.morph||'미판별'}</div>
+    <div>${g.sex === '암컷' ? '♀' : '♂'} 성별: ${g.sex}</div>
+    ${g.dob ? `<div>📅 출생: ${g.dob}</div>` : ''}
+    ${g.weight ? `<div>⚖️ 몸무게: ${g.weight}g</div>` : ''}
+    ${m.price ? `<div>💰 시세: ${m.price}</div>` : ''}
+    ${g.dad||g.mom ? `<div>👪 혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>` : ''}`;
+  preview.style.display = 'block';
+}
+
+function populateGeckoSelects() {
+  const selects = ['qr-gecko-select','post-gecko-link'];
+  selects.forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const firstOpt = sel.options[0];
+    sel.innerHTML = '';
+    sel.appendChild(firstOpt || new Option('— 개체 선택 —', ''));
+    state.geckos.forEach(g => {
+      sel.appendChild(new Option(`${g.name} (${g.morph||'미판별'})`, g.id));
+    });
+  });
+}
+
+// ══════════════════════════════
+// REPORT
+// ══════════════════════════════
+function openReportSheet() {
+  const list = document.getElementById('report-gecko-list');
+  const preview = document.getElementById('report-preview-content');
+
+  if (state.geckos.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--tx2);text-align:center;padding:10px">등록된 개체가 없습니다</div>';
+    preview.textContent = '등록된 개체가 없습니다.';
+  } else {
+    list.innerHTML = state.geckos.map(g => `
+      <div style="display:flex;align-items:center;gap:10px;background:var(--sf2);border-radius:10px;padding:10px 12px">
+        <span style="font-size:18px">🦎</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${g.name}</div>
+          <div style="font-size:11px;color:var(--tx2)">${g.morph||'미판별'} · ${g.sex}</div>
+        </div>
+        <span class="tag tag-green">포함</span>
+      </div>`).join('');
+
+    const today = new Date().toLocaleDateString('ko-KR');
+    preview.innerHTML = `<div><b>신고일:</b> ${today}</div>
+      <div><b>보유 종:</b> 볏도마뱀붙이 (Correlophus ciliatus)</div>
+      <div><b>총 보유 수:</b> ${state.geckos.length}마리</div>
+      <div><b>보유 내역:</b></div>
+      ${state.geckos.map((g,i) => `<div style="margin-left:12px">${i+1}. ${g.name} / ${g.sex} / ${g.morph||'미판별'}</div>`).join('')}`;
+  }
+  openSheet('sheet-report');
+}
+
+function openMoreSheet(type) {
+  if (type === 'report') openReportSheet();
+}
+
+// ══════════════════════════════
+// MORPH GUIDE
+// ══════════════════════════════
+function openMorphGuide() {
+  const content = document.getElementById('morph-guide-content');
+
+  // ── 해부학 용어 섹션 ──
+  const anatomySection = `
+  <div style="background:var(--sf2);border:1px solid var(--br);border-radius:16px;padding:14px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:var(--ac)">🦎 개체를 읽는 해부학적 키 (Key)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
+      <div style="background:var(--card);border-radius:10px;padding:9px 10px">
+        <div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:3px">크라운 (Crown)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">마름모꼴 머리의 형태와 볏</div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:9px 10px">
+        <div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:3px">도살 (Dorsal)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">머리부터 등까지 이어지는 상단부. 형질이 집중되는 주요 부위</div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:9px 10px">
+        <div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:3px">핀 (Pin)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">등과 옆구리 사이의 경계 비늘 줄무늬</div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:9px 10px">
+        <div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:3px">레터럴 (Lateral)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">옆구리 영역. 상위(Upper)와 하위(Lower)로 구분</div>
+      </div>
+    </div>
+    <div style="background:var(--bg);border-radius:10px;padding:9px 11px">
+      <div style="font-size:11px;font-weight:700;color:var(--tx);margin-bottom:5px">색상 티어 (Color Tiers)</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:3px;background:#1a1a1a;border:1px solid #444;flex-shrink:0"></div>
+          <span style="font-size:11px;color:var(--tx2)"><b style="color:var(--tx)">1차 형질 (Base)</b> — 가장 어두운 바탕색 (블랙, 다크 레드)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:3px;background:#e87a22;flex-shrink:0"></div>
+          <span style="font-size:11px;color:var(--tx2)"><b style="color:var(--tx)">2차 형질 (Mid)</b> — 중간 색상 (오렌지, 옐로우)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:3px;background:#f0ece0;flex-shrink:0"></div>
+          <span style="font-size:11px;color:var(--tx2)"><b style="color:var(--tx)">3차 형질 (Highlight)</b> — 가장 밝은 색 (화이트, 크림)</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── 유전 법칙 섹션 ──
+  const geneticsSection = `
+  <div style="background:var(--sf2);border:1px solid var(--br);border-radius:16px;padding:14px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:var(--ac)">🧬 유전의 법칙</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--card);border-radius:12px;padding:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:5px">우성 (Dominant)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.6">부모 중 한쪽만 유전자를 보유해도 자식에게 유전될 확률 50%. 단 하나의 유전자만으로도 외형에 특징이 발현됩니다.</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--ac);font-weight:600">예: 릴리화이트, 카푸치노</div>
+      </div>
+      <div style="background:var(--card);border-radius:12px;padding:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:5px">열성 (Recessive)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.6">부모 양쪽 모두가 유전자를 보유해야만 자식에게 100% 발현. 유전자만 숨기고 있는 개체를 '헷(Het)'이라 부릅니다.</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--blue);font-weight:600">예: 아잔틱</div>
+      </div>
+    </div>
+    <div style="background:rgba(93,220,106,.08);border:1px solid rgba(93,220,106,.2);border-radius:10px;padding:9px 11px">
+      <div style="font-size:11px;font-weight:700;color:var(--ac);margin-bottom:3px">헷(Het)이란?</div>
+      <div style="font-size:11px;color:var(--tx2);line-height:1.6">겉모습은 평범한 노말처럼 보이지만, 체내에 숨겨진 열성 유전자를 품고 있는 개체. 헷 아잔틱 × 헷 아잔틱 → 25% 아잔틱 / 50% 헷 아잔틱 / 25% 노말</div>
+    </div>
+  </div>`;
+
+  // ── 할리퀸 게이지 섹션 ──
+  const harlequinSection = `
+  <div style="background:var(--sf2);border:1px solid var(--br);border-radius:16px;padding:14px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:var(--ac)">📊 할리퀸 게이지 (Harlequin Gauge)</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${[
+        {name:'노멀',pct:10,color:'#7aab7e',desc:'뚜렷한 무늬 없음'},
+        {name:'할리퀸',pct:40,color:'#f5c842',desc:'하위 레터럴까지 호랑이 무늬'},
+        {name:'익스트림 할리퀸',pct:80,color:'#ff9c27',desc:'상위 레터럴까지 무늬 상승'},
+        {name:'트익할',pct:100,color:'#ff5f5f',desc:'1차·2차·3차 완전 분리'},
+      ].map(g=>`
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--tx);width:80px;flex-shrink:0">${g.name}</div>
+        <div style="flex:1;height:8px;background:var(--br);border-radius:4px;overflow:hidden">
+          <div style="width:${g.pct}%;height:100%;background:${g.color};border-radius:4px;transition:width .5s"></div>
+        </div>
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:${g.color};width:30px;text-align:right">${g.pct}%</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+
+  // ── 절대 금지 교배 경고 ──
+  const warningSection = `
+  <div style="background:rgba(255,60,60,.08);border:1.5px solid rgba(255,60,60,.35);border-radius:16px;padding:14px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#ff5f5f">⚠️ 절대 금지 교배 (치사 조합)</div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="background:rgba(255,60,60,.1);border-radius:10px;padding:9px 11px">
+        <div style="font-size:12px;font-weight:700;color:#ff7070;margin-bottom:3px">🚫 릴리화이트 × 릴리화이트 = 슈퍼 릴리</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">몸이 젤리처럼 반투명하고 허약하게 태어납니다. 건강상의 치명적 결함으로 생존율이 매우 낮습니다. (브리딩 강력 비권장)</div>
+      </div>
+      <div style="background:rgba(255,60,60,.1);border-radius:10px;padding:9px 11px">
+        <div style="font-size:12px;font-weight:700;color:#ff7070;margin-bottom:3px">🚫 카푸치노 × 카푸치노 = 슈퍼 카푸치노</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">건강상의 치명적 결함. 카푸치노 계열의 슈퍼폼은 피하는 것이 브리더의 철칙입니다.</div>
+      </div>
+      <div style="background:rgba(245,200,66,.08);border-radius:10px;padding:9px 11px">
+        <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:3px">⚡ 세이블 × 세이블 = 루악 (불안정)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">슈퍼폼이 존재하나, 불안정 우성의 특성상 리스크가 있습니다. 카푸치노 계열의 슈퍼폼은 피하는 것이 브리더의 철칙.</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── 참고 안내 ──
+  const disclaimer = `<div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#c9a850;line-height:1.7">
+    <b style="color:var(--am)">📌 참고 안내</b><br>
+    아래 모프 정보는 현재 세상에 나와있는 공개 정보를 기반으로 해요.
+    등급·시세는 커뮤니티마다 다르게 부를 수 있어요. 세상에 나와있는 정보 기반이므로, 최종 판단은 분양받는 분이 직접 하세요.
+  </div>`;
+
+  // ── 등급별 구분선 렌더링 ──
+  let lastGrade = null;
+  const morphCards = Object.entries(MORPHS).map(([name, m]) => {
+    const gInfo = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
+    let gradeHeader = '';
+    if (m.grade !== lastGrade) {
+      lastGrade = m.grade;
+      const gradeLabels = {S:'S급 — 최고 희귀 모프', A:'A급 — 하이엔드 모프', B:'B급 — 인기 기본 모프', C:'C급 — 기본형'};
+      gradeHeader = `<div style="font-size:12px;font-weight:800;color:${gInfo.color};padding:4px 2px;letter-spacing:.5px;font-family:'DM Mono',monospace">${gradeLabels[m.grade]||m.grade}</div>`;
+    }
+    return gradeHeader + `<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:15px;font-weight:800">${name}</div>
+        <span class="grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${gInfo.label}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px">
+        ${m.traits.map(t=>`<span class="tag tag-green">${t}</span>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.65;margin-bottom:9px">${m.desc}</div>
+      <div style="background:var(--sf2);border-radius:10px;padding:9px 11px;margin-bottom:8px">
+        <div style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;margin-bottom:4px">🧬 유전 방식</div>
+        <div style="font-size:12px;font-weight:600;color:var(--tx)">${m.genetics.type}</div>
+        ${m.genetics.het !== '해당 없음' ? `<div style="font-size:11px;color:var(--blue);margin-top:3px">헷: ${m.genetics.het}</div>` : ''}
+        ${m.genetics.dom && m.genetics.dom !== '해당 없음' ? `<div style="font-size:11px;color:#ff7070;margin-top:3px">⚠️ ${m.genetics.dom}</div>` : ''}
+      </div>
+      <div style="background:var(--sf2);border-radius:10px;padding:9px 11px;margin-bottom:8px">
+        <div style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;margin-bottom:4px">🥚 교배 조합</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">${m.parents}</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3)">참고 시세</span>
+        <span style="font-size:13px;font-weight:700;color:var(--am)">💰 ${m.price}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = anatomySection + geneticsSection + harlequinSection + warningSection + disclaimer + morphCards;
+  openSheet('sheet-morph-guide');
+}
+
+// ══════════════════════════════
+// 시세 현황판
+// ══════════════════════════════
+
+// 사용자 제보 데이터 (누적)
+let priceReports = [];
+
+// 시세 데이터 — MORPHS에서 자동 생성 + 사용자 제보 반영
+function buildPriceData() {
+  const base = Object.entries(MORPHS).map(([name, m]) => {
+    // 시세 문자열 파싱 (예: "40~150만", "50~300만+", "1~3만")
+    const match = m.price.match(/(\d+)~(\d+)/);
+    const min = match ? parseInt(match[1]) : 0;
+    const max = match ? parseInt(match[2]) : 0;
+    // 사용자 제보 있으면 평균 계산
+    const reports = priceReports.filter(r => r.morph === name);
+    const avgReport = reports.length > 0
+      ? Math.round(reports.reduce((s,r)=>s+r.price,0)/reports.length)
+      : null;
+    return { name, grade: m.grade, min, max, price: m.price, avgReport, reportCount: reports.length };
+  });
+  return base.sort((a,b) => {
+    const order = {S:0,A:1,B:2,C:3};
+    return (order[a.grade]||9) - (order[b.grade]||9);
+  });
+}
+
+let currentPriceFilter = 'all';
+
+function setPriceFilter(grade, el) {
+  currentPriceFilter = grade;
+  document.querySelectorAll('#sheet-price-board .fp').forEach(f => f.classList.remove('active'));
+  el.classList.add('active');
+  renderPriceBoard();
+}
+
+function renderPriceBoard() {
+  const list = document.getElementById('price-board-list');
+  const data = buildPriceData().filter(d =>
+    currentPriceFilter === 'all' || d.grade === currentPriceFilter
+  );
+
+  list.innerHTML = data.map(d => {
+    const gInfo = MORPH_GRADES[d.grade] || MORPH_GRADES['C'];
+    const barMax = 300;
+    const barPct = d.max > 0 ? Math.min(100, Math.round(d.max / barMax * 100)) : 20;
+    const barMin = d.min > 0 ? Math.min(100, Math.round(d.min / barMax * 100)) : 5;
+    const reportBadge = d.reportCount > 0
+      ? `<span style="font-size:10px;background:var(--ac2);color:var(--ac);padding:2px 6px;border-radius:5px;font-family:'DM Mono',monospace">제보 ${d.reportCount}건</span>`
+      : '';
+    const avgLine = d.avgReport
+      ? `<div style="font-size:11px;color:var(--ac);font-family:'DM Mono',monospace;margin-top:3px">제보 평균: <b>${d.avgReport}만원</b></div>`
+      : '';
+
+    return `<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:15px;font-weight:800">${d.name}</div>
+          ${reportBadge}
+        </div>
+        <span style="font-size:11px;font-family:'DM Mono',monospace;background:${gInfo.bg};color:${gInfo.color};padding:3px 8px;border-radius:6px">${gInfo.label}</span>
+      </div>
+      <!-- 바 차트 -->
+      <div style="position:relative;height:8px;background:var(--sf2);border-radius:4px;margin-bottom:6px;overflow:hidden">
+        <div style="position:absolute;left:${barMin}%;width:${barPct-barMin}%;height:100%;background:linear-gradient(90deg,${gInfo.color}88,${gInfo.color});border-radius:4px"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:13px;color:var(--tx2)">${d.min > 0 ? d.min+'만원' : '—'} <span style="color:var(--tx3)">~</span> ${d.max > 0 ? d.max+'만원' + (d.price.includes('+') ? '+' : '') : '—'}</div>
+        <div style="font-size:11px;color:var(--tx3)">퀄리티에 따라 차이 있음</div>
+      </div>
+      ${avgLine}
+    </div>`;
+  }).join('');
+}
+
+function openPriceBoard() {
+  renderPriceBoard();
+  openSheet('sheet-price-board');
+}
+
+function openPriceReport() {
+  openSheet('sheet-price-report');
+}
+
+function submitPriceReport() {
+  const morph = document.getElementById('report-morph').value.trim();
+  const price = parseInt(document.getElementById('report-price-val').value);
+  const age   = document.getElementById('report-age').value;
+  const note  = document.getElementById('report-note').value.trim();
+
+  if (!morph) { showToast('⚠️ 모프명을 입력해주세요'); return; }
+  if (!price || isNaN(price)) { showToast('⚠️ 거래가를 입력해주세요'); return; }
+
+  priceReports.push({ morph, price, age, note, time: new Date().toLocaleDateString('ko-KR') });
+  closeSheetDirect('sheet-price-report');
+  renderPriceBoard();
+  document.getElementById('report-morph').value = '';
+  document.getElementById('report-price-val').value = '';
+  document.getElementById('report-note').value = '';
+  showToast(`✅ 제보 완료! ${morph} ${price}만원 반영됐어요`);
+}
+
+// ══════════════════════════════
+// PRO 결제
+// ══════════════════════════════
+let _selectedPlan = 'yearly';
+
+function openProSheet() {
+  selectPlan('yearly');
+  openSheet('sheet-pro');
+}
+
+function selectPlan(plan) {
+  _selectedPlan = plan;
+  const m = document.getElementById('plan-monthly');
+  const y = document.getElementById('plan-yearly');
+  if (m) m.style.borderColor = plan === 'monthly' ? 'var(--am)' : 'var(--br)';
+  if (y) y.style.borderColor = plan === 'yearly' ? 'var(--am)' : 'var(--br)';
+}
+
+function startProPayment() {
+  // ── 여기에 실제 결제 링크를 넣으세요 ──
+  // 토스페이먼츠, 카카오페이, 또는 계좌이체 안내 등
+  const prices = { monthly: '4,900원/월', yearly: '46,800원/년 (월 3,900원)' };
+  const plan = prices[_selectedPlan];
+
+  // 방법 1: 카카오페이/토스 결제 링크로 이동
+  // window.location.href = 'https://your-payment-link.com?plan=' + _selectedPlan;
+
+  // 방법 2: 계좌이체 안내 (지금은 이 방식)
+  closeSheetDirect('sheet-pro');
+  const msg = `💳 PRO 결제 안내\n\n선택: ${plan}\n\n` +
+    `[계좌이체]\n카카오뱅크 3333-00-0000000\n예금주: 마이크레\n\n` +
+    `입금 후 아래 이메일로 연락주시면\n24시간 내 PRO 활성화해드려요!\n\ndlrbgns456@gmail.com`;
+
+  // 커스텀 결제 안내 표시
+  const overlay = document.createElement('div');
+  overlay.setAttribute('style', 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px');
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1.5px solid var(--am);border-radius:20px;padding:22px;max-width:320px;width:100%">
+      <div style="text-align:center;font-size:28px;margin-bottom:10px">💳</div>
+      <div style="font-size:16px;font-weight:900;color:var(--am);text-align:center;margin-bottom:14px">PRO 결제 안내</div>
+      <div style="font-size:13px;color:var(--tx);margin-bottom:6px">선택한 플랜: <b style="color:var(--am)">${plan}</b></div>
+      <div style="background:var(--sf2);border-radius:12px;padding:14px;margin:12px 0;font-size:13px;line-height:1.8;color:var(--tx2)">
+        <div style="font-weight:700;color:var(--tx);margin-bottom:4px">💰 계좌이체</div>
+        카카오뱅크 3333-00-0000000<br>
+        예금주: 마이크레<br><br>
+        <div style="font-weight:700;color:var(--tx);margin-bottom:4px">📧 입금 확인</div>
+        입금 후 <b style="color:var(--ac)">dlrbgns456@gmail.com</b>으로<br>
+        닉네임과 이메일을 보내주세요!<br>
+        <span style="font-size:11px;color:var(--tx3)">24시간 내 PRO 활성화</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="copyAccountInfo()" style="flex:1;padding:12px;border-radius:12px;background:var(--sf2);border:1px solid var(--br);color:var(--tx);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">계좌 복사</button>
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:12px;border-radius:12px;background:var(--am);border:none;color:#1a0a00;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">확인</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+function copyAccountInfo() {
+  const text = '카카오뱅크 3333-00-0000000 (마이크레)';
+  navigator.clipboard.writeText(text).then(() => showToast('📋 계좌번호가 복사되었어요!'))
+    .catch(() => showToast('계좌: 카카오뱅크 3333-00-0000000'));
+}
+
+function copyContact() {
+  navigator.clipboard.writeText('dlrbgns456@gmail.com').then(() => showToast('📋 이메일이 복사되었어요!'))
+    .catch(() => {});
+}
+
+// ══════════════════════════════
+// SUPABASE 설정 — 여기만 수정!
+// ══════════════════════════════
+const SUPABASE_URL = 'https://fatjjjwfauujgrvcihwd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhdGpqandmYXV1amdydmNpaHdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxOTM1NTksImV4cCI6MjA5MDc2OTU1OX0.xinT1D_FVBLyN149yTdOEvAZzskIZJn1lg8sRL9i98M';
+
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { flowType: 'implicit' }
+});
+let _currentUser = null;
+let _authMode = 'login'; // 'login' | 'signup'
+
+// ── 이메일 영역 토글 ──
+function toggleEmailLogin() {
+  const area = document.getElementById('email-login-area');
+  const btn  = document.getElementById('email-toggle-btn');
+  const open = area.style.display === 'none';
+  area.style.display = open ? 'flex' : 'none';
+  btn.textContent = open ? '이메일로 로그인 ▴' : '이메일로 로그인 ▾';
+}
+
+// ── WebView 감지 ──
+function _isWebView() {
+  const ua = navigator.userAgent || '';
+  // 카카오톡, 네이버, 인스타그램, 페이스북 등 인앱 브라우저 감지
+  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|wv|WebView/i.test(ua)
+    || (ua.includes('Android') && ua.includes('Version/') && !ua.includes('Chrome'));
+}
+
+function _openInExternalBrowser(url) {
+  // Android: intent 스킴으로 크롬에서 열기
+  if (/Android/i.test(navigator.userAgent)) {
+    const intentUrl = 'intent://' + url.replace(/^https?:\/\//, '') +
+      '#Intent;scheme=https;package=com.android.chrome;end';
+    window.location.href = intentUrl;
+    return;
+  }
+  // iOS/기타: 그냥 열기 시도
+  window.open(url, '_system');
+}
+
+// ── Google 로그인 ──
+async function signInWithGoogle() {
+  if (_isWebView()) {
+    // WebView에서는 Google이 차단하므로 크롬으로 유도
+    const url = window.location.origin || 'https://fascinating-biscuit-a1d132.netlify.app';
+    showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요');
+    setTimeout(() => {
+      if (confirm('크롬 브라우저에서 열까요?')) _openInExternalBrowser(url);
+    }, 300);
+    return;
+  }
+  const { error } = await _supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: 'https://fascinating-biscuit-a1d132.netlify.app' }
+  });
+  if (error) showAuthErr('Google 로그인 실패: ' + error.message);
+}
+
+// ── Kakao 로그인 ──
+async function signInWithKakao() {
+  const { error } = await _supabase.auth.signInWithOAuth({
+    provider: 'kakao',
+    options: { redirectTo: 'https://fascinating-biscuit-a1d132.netlify.app' }
+  });
+  if (error) showAuthErr('카카오 로그인 실패: ' + error.message);
+}
+
+function showAuthErr(msg) {
+  const el = document.getElementById('auth-err');
+  if (el) { el.textContent = msg; el.style.color = 'var(--coral)'; }
+  else showToast(msg);
+}
+
+// ── 탭 전환 ──
+function switchAuthTab(mode) {
+  _authMode = mode;
+  const isSignup = mode === 'signup';
+  document.getElementById('tab-login').classList.toggle('active', !isSignup);
+  document.getElementById('tab-signup').classList.toggle('active', isSignup);
+  document.getElementById('auth-pw2').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('auth-submit-btn').textContent = isSignup ? '회원가입' : '로그인';
+  document.getElementById('auth-err').textContent = '';
+}
+
+// ── 로그인 / 회원가입 버튼 클릭 ──
+async function handleAuthSubmit() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pw    = document.getElementById('auth-pw').value;
+  const pw2   = document.getElementById('auth-pw2').value;
+  const errEl = document.getElementById('auth-err');
+  errEl.textContent = '';
+
+  if (!email || !pw) { errEl.textContent = '⚠️ 이메일과 비밀번호를 입력해 주세요'; return; }
+  if (pw.length < 8)  { errEl.textContent = '⚠️ 비밀번호는 8자 이상이어야 해요'; return; }
+
+  if (_authMode === 'signup') {
+    if (pw !== pw2) { errEl.textContent = '⚠️ 비밀번호가 일치하지 않아요'; return; }
+    const { error } = await _supabase.auth.signUp({ email, password: pw });
+    if (error) { errEl.textContent = '❌ ' + (error.message || '가입 실패'); return; }
+    errEl.style.color = 'var(--ac)';
+    errEl.textContent = '✅ 가입 완료! 이메일을 확인해 로그인하세요';
+    return;
+  }
+
+  // 로그인
+  const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pw });
+  if (error) { errEl.textContent = '❌ 이메일 또는 비밀번호가 틀렸어요'; return; }
+  _currentUser = data.user;
+  await _onSignedIn();
+}
+
+
+// ── 로그아웃 (즉시 실행 — 확인 다이얼로그 없음) ──
+async function signOut() {
+  try { await _supabase.auth.signOut({ scope: 'local' }); } catch(e) {}
+  _currentUser = null;
+  state.geckos = [];
+  state.posts = [];
+  state.nextGeckoId = 1;
+  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
+  _showAuthScreen();
+  showToast('로그아웃 완료');
+}
+
+// ── 회원 탈퇴 (2단계 확인) ──
+let _deleteConfirmStep = 0;
+let _deleteConfirmTimer = null;
+async function deleteAccount() {
+  if (_deleteConfirmStep === 0) {
+    _deleteConfirmStep = 1;
+    showToast('⚠️ 정말 탈퇴하려면 한 번 더 눌러주세요');
+    // 3초 후 리셋
+    _deleteConfirmTimer = setTimeout(() => { _deleteConfirmStep = 0; }, 3000);
+    return;
+  }
+  // 2번째 탭 — 실제 탈퇴 실행
+  _deleteConfirmStep = 0;
+  clearTimeout(_deleteConfirmTimer);
+  showToast('탈퇴 처리 중...');
+  try {
+    await _supabase.from('posts').delete().eq('user_id', _currentUser.id);
+    await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
+    await _supabase.auth.signOut({ scope: 'local' });
+  } catch(e) {}
+  _currentUser = null;
+  state.geckos = [];
+  state.posts = [];
+  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
+  _showAuthScreen();
+  showToast('탈퇴가 완료됐어요');
+}
+
+// ── 로그인 성공 후 처리 ──
+async function _onSignedIn() {
+  document.getElementById('auth-screen').style.display = 'none';
+  // signout-btn 제거됨
+  const homePage = document.getElementById('page-home');
+  homePage.style.display = '';
+  homePage.classList.add('active');
+  // 뒤로가기 히스토리 초기화
+  history.replaceState({ page: 'home' }, '', '#home');
+  await _loadGeckosFromDB();
+  renderHome();
+  renderPosts();
+  renderGeckoList();
+  renderScanGrid();
+}
+
+// ── 로그인 화면 표시 ──
+function _showAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('auth-form').style.display = 'flex';
+  // signout-btn 제거됨
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  document.getElementById('auth-email') && (document.getElementById('auth-email').value = '');
+  document.getElementById('auth-pw') && (document.getElementById('auth-pw').value = '');
+  document.getElementById('auth-pw2') && (document.getElementById('auth-pw2').value = '');
+  document.getElementById('auth-err') && (document.getElementById('auth-err').textContent = '');
+  switchAuthTab('login');
+}
+
+// ══════════════════════════════
+// DB 연동 함수들
+// ══════════════════════════════
+
+// DB에서 개체 목록 불러오기
+async function _loadGeckosFromDB() {
+  if (!_currentUser) return;
+  const { data, error } = await _supabase
+    .from('geckos')
+    .select('*')
+    .eq('user_id', _currentUser.id)
+    .order('created_at', { ascending: true });
+
+  if (error || !data) {
+    // DB 실패 시 localStorage 폴백
+    console.error('DB 로드 실패, 로컬 데이터 사용:', error);
+    try {
+      const local = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+      if (local) { state.geckos = JSON.parse(local); renderHome(); renderGeckoList(); renderScanGrid(); }
+    } catch(e) {}
+    return;
+  }
+  if (data.length > 0) {
+    state.geckos = data.map(row => ({
+      id: row.id, name: row.name, sex: row.sex, morph: row.morph,
+      grade: row.grade, dob: row.dob, price: row.price, weight: row.weight,
+      status: row.status, cage: row.cage, dad: row.dad, mom: row.mom,
+      memo: row.memo, photo: row.photo,
+    }));
+    // 로컬도 최신화
+    try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(state.geckos)); } catch(e) {}
+  } else {
+    // DB 비어있으면 로컬 확인
+    try {
+      const local = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed.length > 0) {
+          state.geckos = parsed;
+          // 로컬 데이터를 DB에 복구
+          for (const g of parsed) { await _saveGeckoToDB(g); }
+        }
+      }
+    } catch(e) {}
+  }
+}
+
+// DB에 개체 저장 (upsert = 추가 + 수정 겸용)
+async function _saveGeckoToDB(gecko) {
+  if (!_currentUser) return;
+  // 로컬 백업 (사진은 URL만 저장, base64는 제외)
+  const localSafe = state.geckos.map(g => ({
+    ...g,
+    photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null
+  }));
+  try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(localSafe)); } catch(e) {}
+
+  // DB에는 Storage URL만 저장 (base64는 너무 크므로 제외)
+  let dbPhoto = gecko.photo || null;
+  if (dbPhoto && dbPhoto.startsWith('data:')) dbPhoto = null;
+
+  const row = {
+    id:      String(gecko.id),
+    user_id: _currentUser.id,
+    name:    gecko.name,
+    sex:     gecko.sex,
+    morph:   gecko.morph,
+    grade:   gecko.grade,
+    dob:     gecko.dob || null,
+    price:   gecko.price || null,
+    weight:  gecko.weight || null,
+    status:  gecko.status,
+    cage:    gecko.cage,
+    dad:     gecko.dad || null,
+    mom:     gecko.mom || null,
+    memo:    gecko.memo || null,
+    photo:   dbPhoto,
+  };
+  const { error } = await _supabase.from('geckos').upsert(row, { onConflict: 'id' });
+  if (error) {
+    showToast('⚠️ 서버 저장 실패 — 로컬에만 저장됨');
+    console.error('DB 저장 오류:', error);
+  } else {
+    showToast('✅ 저장 완료!');
+  }
+}
+
+// DB에서 개체 삭제
+async function _deleteGeckoFromDB(id) {
+  if (!_currentUser) return;
+  const { error } = await _supabase
+    .from('geckos')
+    .delete()
+    .eq('id', String(id))
+    .eq('user_id', _currentUser.id);
+  if (error) showToast('❌ 삭제 실패: ' + error.message);
+}
+
+// ══════════════════════════════
+// INIT
+// ══════════════════════════════
+// ── PWA 서비스워커 등록 ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // ── 안전장치: 4초 안에 아무것도 안 되면 강제로 로그인 화면 표시
+  const authTimeout = setTimeout(() => {
+    if (!_currentUser) _showAuthScreen();
+  }, 4000);
+
+  // ── onAuthStateChange: 모든 세션 변화 감지
+  _supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session && !_currentUser) {
+      // 세션 있음 → 앱 진입 (Google OAuth, 이메일 로그인, 기존 세션 모두 포함)
+      clearTimeout(authTimeout);
+      _currentUser = session.user;
+      await _onSignedIn();
+    } else if (!session && event === 'SIGNED_OUT') {
+      // 로그아웃
+      _currentUser = null;
+      _showAuthScreen();
+    } else if (!session && event === 'INITIAL_SESSION') {
+      // 최초 로드인데 세션 없음
+      // URL에 access_token이 있으면 SIGNED_IN이 곧 올 것이므로 잠깐 대기
+      if (!window.location.hash.includes('access_token')) {
+        clearTimeout(authTimeout);
+        _showAuthScreen();
+      }
+    }
+  });
+
+  // ── 안전장치: access_token이 URL에 있는데 3초 후에도 앱 안 열리면 강제 체크
+  if (window.location.hash.includes('access_token')) {
+    setTimeout(async () => {
+      if (!_currentUser) {
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (session) {
+          clearTimeout(authTimeout);
+          _currentUser = session.user;
+          await _onSignedIn();
+        } else {
+          _showAuthScreen();
+        }
+      }
+    }, 3000);
+  }
+});
+</script>
+</body>
+</html>

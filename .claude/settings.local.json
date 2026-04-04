@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__list_tables",
+      "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__apply_migration",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__execute_sql",
+      "Bash(node -e \":*)"
+    ]
+  }
+}
