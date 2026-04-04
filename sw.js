@@ -1,10 +1,9 @@
-const CACHE_NAME = 'mycre-v1';
+const CACHE_NAME = 'mycre-v3';
 const ASSETS = [
   '/index.html',
   '/manifest.json',
   '/icon-192.svg',
   '/icon-512.svg',
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=DM+Mono:wght@400;500&family=Nunito:wght@700;800;900&display=swap',
 ];
 
 // 설치 — 핵심 파일 캐시

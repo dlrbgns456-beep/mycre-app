@@ -11,7 +11,10 @@
 <link rel="apple-touch-icon" href="/icon-192.svg">
 <link rel="icon" type="image/svg+xml" href="/icon-192.svg">
 <title>마이크레 — 크레스티드 게코 올인원</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=DM+Mono:wght@400;500&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=DM+Mono:wght@400&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ─── Design Tokens ─── */
@@ -956,8 +959,8 @@ input[type=file]{display:none}
   <div style="padding:18px 18px 10px;display:flex;align-items:center;gap:14px">
     <div style="width:56px;height:56px;border-radius:18px;background:var(--ac2);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🦎</div>
     <div>
-      <div style="font-size:17px;font-weight:800;margin-bottom:3px">게코키퍼님</div>
-      <div style="font-size:12px;color:var(--tx2)">@crestiegekko · 팔로워 12명</div>
+      <div id="more-profile-name" style="font-size:17px;font-weight:800;margin-bottom:3px">게코키퍼님</div>
+      <div id="more-profile-sub" style="font-size:12px;color:var(--tx2)">@crestiegekko · 팔로워 12명</div>
     </div>
     <button class="btn-sm" style="margin-left:auto" onclick="openProfileEdit()">프로필 수정</button>
   </div>
@@ -1053,21 +1056,21 @@ input[type=file]{display:none}
   <!-- 계정 섹션 -->
   <div class="more-section">
     <div class="more-section-label">🔐 계정</div>
-    <button class="more-item" ontouchend="event.preventDefault();signOut()" onclick="signOut()" style="border-color:rgba(255,123,84,.3);background:var(--co2);width:100%;text-align:left;font-family:inherit">
-      <div class="more-icon" style="background:rgba(255,123,84,.2)">🚪</div>
-      <div class="more-item-info">
+    <button id="btn-signout" class="more-item" style="border-color:rgba(255,123,84,.3);background:var(--co2);width:100%;text-align:left;font-family:inherit;pointer-events:auto">
+      <div class="more-icon" style="background:rgba(255,123,84,.2);pointer-events:none">🚪</div>
+      <div class="more-item-info" style="pointer-events:none">
         <div class="more-item-title" style="color:var(--coral)">로그아웃</div>
         <div class="more-item-sub">현재 계정에서 로그아웃</div>
       </div>
-      <div class="more-item-arrow" style="color:var(--coral)">›</div>
+      <div class="more-item-arrow" style="color:var(--coral);pointer-events:none">›</div>
     </button>
-    <button class="more-item" ontouchend="event.preventDefault();deleteAccount()" onclick="deleteAccount()" style="border-color:rgba(255,60,60,.3);background:rgba(255,60,60,.07);width:100%;text-align:left;font-family:inherit">
-      <div class="more-icon" style="background:rgba(255,60,60,.15)">⚠️</div>
-      <div class="more-item-info">
+    <button id="btn-delete-account" class="more-item" style="border-color:rgba(255,60,60,.3);background:rgba(255,60,60,.07);width:100%;text-align:left;font-family:inherit;pointer-events:auto">
+      <div class="more-icon" style="background:rgba(255,60,60,.15);pointer-events:none">⚠️</div>
+      <div class="more-item-info" style="pointer-events:none">
         <div class="more-item-title" style="color:#ff4444">회원 탈퇴</div>
         <div class="more-item-sub">계정 및 모든 데이터 영구 삭제</div>
       </div>
-      <div class="more-item-arrow" style="color:#ff4444">›</div>
+      <div class="more-item-arrow" style="color:#ff4444;pointer-events:none">›</div>
     </button>
   </div>
   <div style="height:20px"></div>
@@ -1886,6 +1889,18 @@ function _loadProfile() {
       _profile.bio = p.bio || '';
     }
   } catch(e) {}
+  _updateProfileUI();
+}
+
+function _updateProfileUI() {
+  const nameEl = document.getElementById('more-profile-name');
+  if (nameEl) nameEl.textContent = _profile.name;
+  const subEl = document.getElementById('more-profile-sub');
+  if (subEl && _currentUser) {
+    const email = _currentUser.email || '';
+    const handle = email.split('@')[0] || 'user';
+    subEl.textContent = '@' + handle;
+  }
 }
 
 function _saveProfileLocal() {
@@ -1904,14 +1919,9 @@ function saveProfile() {
   _profile.name = document.getElementById('profile-name').value.trim() || '게코키퍼님';
   _profile.bio  = document.getElementById('profile-bio').value.trim();
   _saveProfileLocal();
-  // 더보기 화면 이름 업데이트
-  document.querySelectorAll('#page-more [style*="font-weight:800"]').forEach(el => {
-    if (el.textContent === '게코키퍼님' || el.textContent === _profile.name) el.textContent = _profile.name;
-  });
+  _updateProfileUI();
   closeSheetDirect('sheet-profile-edit');
   showToast('✅ 프로필이 수정됐어요');
-  // 더보기 페이지 리렌더
-  showPage('more', false);
 }
 
 // ══════════════════════════════
@@ -3678,6 +3688,18 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // ── 로그아웃/탈퇴 버튼 이벤트 (모바일 터치 확실하게) ──
+  const btnSignout = document.getElementById('btn-signout');
+  if (btnSignout) {
+    btnSignout.addEventListener('click', signOut);
+    btnSignout.addEventListener('touchend', function(e) { e.preventDefault(); signOut(); });
+  }
+  const btnDelete = document.getElementById('btn-delete-account');
+  if (btnDelete) {
+    btnDelete.addEventListener('click', deleteAccount);
+    btnDelete.addEventListener('touchend', function(e) { e.preventDefault(); deleteAccount(); });
+  }
+
   // ── 안전장치: 4초 안에 아무것도 안 되면 강제로 로그인 화면 표시
   const authTimeout = setTimeout(() => {
     if (!_currentUser) _showAuthScreen();
