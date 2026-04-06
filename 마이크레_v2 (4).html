@@ -3510,21 +3510,23 @@ async function handleAuthSubmit() {
 }
 
 
-// ── 로그아웃 ──
+// ── 로그아웃 (버튼 잠금 + 새로고침으로 확실하게) ──
 async function signOut() {
   try {
+    const btn = document.getElementById('btn-signout');
+    if (btn) btn.style.pointerEvents = 'none';
+
     const { error } = await _supabase.auth.signOut();
     if (error) throw error;
-    // onAuthStateChange가 SIGNED_OUT 감지 → _showAuthScreen() 자동 호출
+
     _currentUser = null;
     state.geckos = [];
     state.posts = [];
-    showToast('로그아웃 되었습니다.');
+    showToast('안전하게 로그아웃되었습니다.');
+    setTimeout(() => { window.location.reload(); }, 1000);
   } catch(e) {
-    console.error('로그아웃 에러:', e.message);
-    // 에러 나도 강제로 화면 전환
-    _currentUser = null;
-    _showAuthScreen();
+    console.error('로그아웃 오류:', e.message);
+    window.location.reload();
   }
 }
 
@@ -3532,18 +3534,22 @@ async function signOut() {
 let _deleteConfirmStep = 0;
 async function deleteAccount() {
   if (!_currentUser) return;
+  // 1단계: 경고
   if (_deleteConfirmStep === 0) {
     _deleteConfirmStep = 1;
-    showToast('⚠️ 모든 데이터가 삭제됩니다. 한 번 더 클릭 시 확정.');
+    showToast('⚠️ 등록된 모든 개체와 게시물이 삭제됩니다. 한 번 더 클릭 시 확정.');
     setTimeout(() => { _deleteConfirmStep = 0; }, 3000);
     return;
   }
+  // 2단계: 실행
   _deleteConfirmStep = 0;
   try {
-    showToast('데이터 삭제 및 탈퇴 처리 중...');
+    showToast('처리 중...');
+    const btn = document.getElementById('btn-delete-account');
+    if (btn) btn.style.pointerEvents = 'none';
     const uid = _currentUser.id;
 
-    // 1. Storage 사진 + DB 데이터 병렬 삭제 (속도 개선)
+    // Storage 사진 + DB 데이터 병렬 삭제 (속도 최적화)
     const storageCleanup = (async () => {
       try {
         const { data: files } = await _supabase.storage.from('gecko-photos').list(uid);
@@ -3559,18 +3565,15 @@ async function deleteAccount() {
       _supabase.from('geckos').delete().eq('user_id', uid),
     ]);
 
-    // 2. 로그아웃
     await _supabase.auth.signOut();
     _currentUser = null;
-    showToast('탈퇴 처리가 완료되었습니다.');
-
-    // 3. 강제 새로고침으로 깨끗한 상태 보장
-    window.location.reload();
+    showToast('그동안 이용해주셔서 감사합니다.');
+    setTimeout(() => { window.location.href = window.location.origin; }, 2000);
   } catch(e) {
-    console.error('탈퇴 처리 중 오류:', e);
-    _currentUser = null;
-    _showAuthScreen();
-    showToast('처리 중 오류가 발생했습니다.');
+    console.error('탈퇴 오류:', e);
+    showToast('탈퇴 처리 중 문제가 발생했습니다. 관리자에게 문의하세요.');
+    const btn = document.getElementById('btn-delete-account');
+    if (btn) btn.style.pointerEvents = 'auto';
   }
 }
 
@@ -3712,9 +3715,11 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // ── 로그아웃/탈퇴 버튼 이벤트 (click 한 번만 — pointer-events:none이 자식 터치 문제 해결) ──
-  document.getElementById('btn-signout')?.addEventListener('click', signOut);
-  document.getElementById('btn-delete-account')?.addEventListener('click', deleteAccount);
+  // ── 로그아웃/탈퇴 버튼 연결 (onclick = 딱 하나만, 중복 방지) ──
+  const _btnSignout = document.getElementById('btn-signout');
+  if (_btnSignout) _btnSignout.onclick = signOut;
+  const _btnDelete = document.getElementById('btn-delete-account');
+  if (_btnDelete) _btnDelete.onclick = deleteAccount;
 
   // ── 안전장치: 4초 안에 아무것도 안 되면 강제로 로그인 화면 표시
   const authTimeout = setTimeout(() => {
