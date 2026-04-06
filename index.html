@@ -543,6 +543,8 @@ input[type=file]{display:none}
 </style>
 <!-- 포트원(아임포트) SDK -->
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+<!-- QR코드 생성 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -695,6 +697,16 @@ input[type=file]{display:none}
     <span class="sec-more" onclick="showPage('comm')">더보기 →</span>
   </div>
   <div id="home-posts-preview"></div>
+
+  <!-- 배너 광고 슬롯 -->
+  <div id="ad-banner" style="margin:16px 0 8px;background:linear-gradient(135deg,var(--sf2),var(--card));border:1px solid var(--br);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="location.href='mailto:dlrbgns456@gmail.com?subject=마이크레 광고 문의'">
+    <div style="font-size:28px;flex-shrink:0">📢</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:800;color:var(--tx);margin-bottom:2px">이 자리에 광고를 게재하세요!</div>
+      <div style="font-size:10px;color:var(--tx3)">크레스티드 게코 브리더 맞춤 광고 · dlrbgns456@gmail.com</div>
+    </div>
+    <div style="font-size:10px;color:var(--tx3);flex-shrink:0;background:var(--sf2);padding:3px 8px;border-radius:8px;border:1px solid var(--br)">AD</div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -1375,7 +1387,10 @@ input[type=file]{display:none}
         <div id="qr-profile-content" style="font-size:13px;line-height:2;color:var(--tx2)"></div>
       </div>
 
-      <button class="btn-primary" onclick="openProSheet()">QR 이미지 저장 (PRO)</button>
+      <div id="qr-actions" style="display:none;display:flex;gap:8px">
+        <button class="btn-primary" style="flex:1" onclick="saveQRImage()">📥 이미지 저장</button>
+        <button class="btn-outline" style="flex:1" onclick="printQR()">🖨️ 인쇄하기</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3664,6 +3679,10 @@ function openQRSheet() {
 }
 
 function openQRForGecko(id) {
+  if (!state.isPro) {
+    _showProUpgradePopup('QR코드 생성은 PRO 전용 기능이에요.<br>개체 프로필 카드를 QR로 만들어<br>저장하고 인쇄할 수 있어요!');
+    return;
+  }
   closeSheetDirect('sheet-gecko-detail');
   populateGeckoSelects();
   openSheet('sheet-qr');
@@ -3671,43 +3690,45 @@ function openQRForGecko(id) {
   generateQR();
 }
 
+let _currentQRGeckoId = null;
+
 function generateQR() {
   const id = document.getElementById('qr-gecko-select').value;
   const qrWrap = document.getElementById('qr-canvas');
   qrWrap.innerHTML = '';
   const preview = document.getElementById('qr-profile-preview');
+  const actions = document.getElementById('qr-actions');
 
   if (!id) {
     document.getElementById('qr-selected-name').textContent = '—';
     preview.style.display = 'none';
+    actions.style.display = 'none';
+    _currentQRGeckoId = null;
     return;
   }
 
   const g = state.geckos.find(x => x.id == id);
   if (!g) return;
+  _currentQRGeckoId = id;
 
   document.getElementById('qr-selected-name').textContent = g.name;
 
-  // QR에 담을 텍스트 — 실제 배포 시 도메인으로 변경
-  const lines = [
-    `[마이크레] ${g.name}`,
-    `모프: ${g.morph || '미판별'}`,
-    `성별: ${g.sex}`,
-    g.dob ? `출생: ${g.dob}` : '',
-    g.weight ? `몸무게: ${g.weight}g` : '',
-    (g.dad||g.mom) ? `혈통: ${g.dad||'?'} × ${g.mom||'?'}` : '',
-    `등록: mycre.app`,
-  ].filter(Boolean).join(' | ');
+  // QR에 담을 URL — 개체 상세 페이지 링크
+  const qrData = `https://mycre-gecko.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
 
-  // qrserver.com 무료 API — CDN 없이 이미지 URL로 QR 생성
-  const encoded = encodeURIComponent(lines);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encoded}&color=0e1a10&bgcolor=ffffff&qzone=1&format=png`;
-
-  qrWrap.innerHTML = `
-    <div style="background:white;padding:10px;border-radius:14px;display:inline-block">
-      <img src="${qrUrl}" alt="QR코드" style="width:160px;height:160px;border-radius:8px;display:block"
-        onerror="this.parentElement.innerHTML='<div style=\'color:#999;font-size:12px;text-align:center;padding:20px\'>QR 로드 실패<br>인터넷 연결 확인</div>'">
-    </div>`;
+  // qrcode.js로 로컬 QR 생성
+  try {
+    new QRCode(qrWrap, {
+      text: qrData,
+      width: 180,
+      height: 180,
+      colorDark: '#0e1a10',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    qrWrap.innerHTML = '<div style="color:#999;font-size:12px;text-align:center;padding:20px">QR 생성 실패</div>';
+  }
 
   const m = MORPHS[g.morph] || {};
   document.getElementById('qr-profile-content').innerHTML = `
@@ -3719,6 +3740,59 @@ function generateQR() {
     ${m.price ? `<div>💰 시세: ${m.price}</div>` : ''}
     ${g.dad||g.mom ? `<div>👪 혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>` : ''}`;
   preview.style.display = 'block';
+  actions.style.display = 'flex';
+}
+
+// QR 이미지 저장 (갤러리)
+function saveQRImage() {
+  const canvas = document.querySelector('#qr-canvas canvas');
+  if (!canvas) { showToast('QR코드를 먼저 생성해주세요'); return; }
+  const g = state.geckos.find(x => x.id == _currentQRGeckoId);
+  const fileName = `마이크레_QR_${g ? g.name : 'gecko'}.png`;
+
+  const link = document.createElement('a');
+  link.download = fileName;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('📥 QR 이미지가 저장되었어요!');
+}
+
+// QR 인쇄 (A4)
+function printQR() {
+  const canvas = document.querySelector('#qr-canvas canvas');
+  if (!canvas) { showToast('QR코드를 먼저 생성해주세요'); return; }
+  const g = state.geckos.find(x => x.id == _currentQRGeckoId);
+  const m = MORPHS[g?.morph] || {};
+  const imgSrc = canvas.toDataURL('image/png');
+
+  const printWin = window.open('', '_blank', 'width=800,height=600');
+  printWin.document.write(`<!DOCTYPE html><html><head><title>마이크레 QR - ${g?.name||'개체'}</title>
+    <style>
+      body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}
+      .card{text-align:center;border:2px solid #0e1a10;border-radius:20px;padding:40px 30px;max-width:360px}
+      .title{font-size:24px;font-weight:900;margin-bottom:4px}
+      .sub{font-size:14px;color:#666;margin-bottom:20px}
+      .qr{margin:20px auto}
+      .info{text-align:left;font-size:13px;line-height:2;color:#333;margin-top:16px;border-top:1px solid #ddd;padding-top:12px}
+      .footer{margin-top:16px;font-size:10px;color:#999}
+      @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    </style></head><body>
+    <div class="card">
+      <div class="title">🦎 ${g?.name||'개체'}</div>
+      <div class="sub">${g?.morph||'모프 미판별'}</div>
+      <div class="qr"><img src="${imgSrc}" width="200" height="200"></div>
+      <div class="info">
+        ${g?.sex ? `<div>성별: ${g.sex==='암컷'?'♀ 암컷':'♂ 수컷'}</div>` : ''}
+        ${g?.dob ? `<div>출생: ${g.dob}</div>` : ''}
+        ${g?.weight ? `<div>몸무게: ${g.weight}g</div>` : ''}
+        ${m.price ? `<div>시세: ${m.price}</div>` : ''}
+        ${g?.dad||g?.mom ? `<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>` : ''}
+      </div>
+      <div class="footer">마이크레 · mycre-gecko.netlify.app</div>
+    </div>
+    <script>setTimeout(()=>{window.print();window.close()},500)<\/script>
+  </body></html>`);
+  printWin.document.close();
 }
 
 function populateGeckoSelects() {
