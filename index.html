@@ -859,6 +859,20 @@ input[type=file]{display:none}
       <div id="res-parents" style="font-size:12px;color:var(--tx2);line-height:1.8"></div>
     </div>
 
+    <!-- 피드백: 판별 결과가 틀렸을 때 정답 제보 -->
+    <div id="res-feedback" class="card card-pad" style="margin-bottom:14px">
+      <div class="result-section-title" style="margin-bottom:8px">🔄 결과가 다른가요?</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">정확한 모프를 알고 계시면 제보해주세요. AI 개선에 활용됩니다.</div>
+      <div id="feedback-form" style="display:flex;gap:8px;align-items:center">
+        <select id="feedback-morph" class="form-input" style="flex:1;font-size:12px;padding:10px">
+          <option value="">정답 모프 선택...</option>
+          ${Object.keys(MORPHS).map(n => `<option value="${n}">${n}</option>`).join('')}
+        </select>
+        <button class="btn-primary" style="width:auto;padding:10px 16px;border-radius:12px;font-size:12px" onclick="submitMorphFeedback()">제보</button>
+      </div>
+      <div id="feedback-done" style="display:none;text-align:center;padding:8px;font-size:12px;color:var(--ac);font-weight:600">✅ 소중한 제보 감사합니다!</div>
+    </div>
+
     <div class="result-actions">
       <button class="btn-outline" onclick="resetScan()">↩ 다시 판별</button>
       <button class="btn-primary" onclick="saveToMyGecko()">+ 내 개체에 저장</button>
@@ -1607,162 +1621,548 @@ let state = {
 };
 
 // Morph database
+// ══════════════════════════════════════
+// MORPHS 데이터베이스 (PDF 유전학 기반 최신화)
+// 각 모프에 visualLayers: 멀티레이어 판별용 형질 분류
+// ══════════════════════════════════════
 const MORPHS = {
   /* ── S급: 최고등급 / 희귀 유전 모프 ── */
   '아잔틱': {
     grade:'S', price:'50~300만+',
     traits:['열성(Recessive) 유전','황색·적색 색소 완전 결여','흑백/회색/보라 톤'],
-    desc:'노란색과 붉은색 색소(Pigment)가 결핍되어 오직 흑백·회색·보라빛만 띠는 오묘한 모프. 부모 양쪽이 모두 아잔틱 유전자를 보유해야만 자식에게 100% 발현됩니다(열성). 겉으로는 보통 개체처럼 보여도 유전자를 숨기고 있는 개체를 헷(Het) 아잔틱이라 부릅니다. 핀스트라이프가 뚜렷한 개체는 고가에 거래됩니다.',
-    genetics:{type:'열성(Recessive)',allele:'aa',het:'헷 아잔틱(AB) 가능 — 겉모습 노말이지만 유전자 보유',dom:'해당 없음'},
-    parents:'헷 아잔틱 × 헷 아잔틱 → 25% 아잔틱 / 50% 헷 아잔틱 / 25% 노말'
+    desc:'노란색과 붉은색 색소(Pigment)가 결핍되어 오직 흑백·회색·보라빛만 띠는 오묘한 모프. 부모 양쪽이 모두 아잔틱 유전자를 보유해야만 자식에게 100% 발현됩니다(열성). 겉으로는 보통 개체처럼 보여도 유전자를 숨기고 있는 개체를 헷(Het) 아잔틱이라 부릅니다.',
+    genetics:{type:'열성(Recessive)',allele:'aa',het:'헷 아잔틱(Aa) 가능 — 겉모습 노말이지만 유전자 보유',dom:'해당 없음'},
+    parents:'헷 아잔틱 × 헷 아잔틱 → 25% 아잔틱 / 50% 헷 아잔틱 / 25% 노말',
+    origin:'크레스티드 게코에서 확인된 유일한 검증된 열성 모프. 노란색/붉은색 색소를 생성하는 유전자가 비활성화되어 잔토포어(Xanthophore)와 에리스로포어(Erythrophore) 색소세포가 기능하지 않음.',
+    breedingCaution:'헷 아잔틱은 외형으로 구분 불가. 반드시 부모 혈통 확인 필요. 아잔틱 × 아잔틱은 100% 아잔틱이므로 안전.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['흑색','회색','보라','무채색'],
+      pattern:['any'],
+      pigment:['황색결핍','적색결핍'],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['무채색톤','색소결핍']
+    }
   },
   '릴잔틱': {
     grade:'S', price:'100~400만+',
     traits:['릴리화이트 + 아잔틱 콤보','궁극의 블랙 앤 화이트','복합 유전자'],
-    desc:'릴리화이트(우성)의 새하얀 옆구리 덮임과 아잔틱(열성)의 완벽한 흑백 색소 결핍이 결합된 궁극의 블랙 앤 화이트 콤보 모프. 아잔틱의 모노톤에 릴리의 백색이 더해져 강렬한 대비를 만들어냅니다.',
-    genetics:{type:'우성+열성 복합',allele:'LW + aa',het:'릴리화이트 헷 아잔틱 활용',dom:'릴리화이트 우성'},
-    parents:'릴리화이트 헷 아잔틱 × 헷 아잔틱 조합으로 생산'
+    desc:'릴리화이트(우성)의 새하얀 옆구리 덮임과 아잔틱(열성)의 완벽한 흑백 색소 결핍이 결합된 궁극의 블랙 앤 화이트 콤보 모프.',
+    genetics:{type:'우성+열성 복합',allele:'LW/lw + aa',het:'릴리화이트 헷 아잔틱 활용',dom:'릴리화이트 우성'},
+    parents:'릴리화이트 헷 아잔틱 × 헷 아잔틱 조합으로 생산',
+    origin:'릴리화이트의 백색 3차 형질과 아잔틱의 무채색이 결합하여 극도로 선명한 흑백 대비를 형성. 두 독립 유전자의 교차 발현.',
+    breedingCaution:'릴리화이트 유전자 보유 — 릴잔틱 × 릴잔틱 교배 시 슈퍼 릴리(치사) 25% 확률. 반드시 한쪽만 릴리 유전자 보유하도록 관리.',
+    lethal:'슈퍼 릴리(LW/LW) 치사 위험',
+    visualLayers:{
+      baseColor:['흑색','회색'],
+      pattern:['any'],
+      pigment:['황색결핍','적색결핍'],
+      structure:['릴리화이트덮임'],
+      spot:[],
+      tail:['우동꼬리'],
+      special:['무채색톤','백색덮임','색소결핍']
+    }
   },
   '트익할': {
     grade:'S', price:'30~150만',
     traits:['트라이컬러 익스트림 할리퀸','1차·2차·3차 색상 완전 분리','화이트 포인트 품질이 등급 결정'],
-    desc:'1차(바탕), 2차(오렌지/옐로우), 3차(화이트 핀/월) 세 가지 색상이 완벽하게 분리되어 발현되는 최상위 패턴. 할리퀸 게이지 100%에 해당합니다. 새하얀 백색 포인트의 퀄리티와 면적이 등급을 결정하며, 릴리화이트와 결합 시 트익할 릴리가 됩니다.',
+    desc:'1차(바탕), 2차(오렌지/옐로우), 3차(화이트 핀/월) 세 가지 색상이 완벽하게 분리되어 발현되는 최상위 패턴. 할리퀸 게이지 100%에 해당합니다.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'트익할 × 트익할 또는 익스트림 할리퀸 × 고품질 트익할로 강화'
+    parents:'트익할 × 트익할 또는 익스트림 할리퀸 × 고품질 트익할로 강화',
+    origin:'할리퀸 패턴의 최상위 진화형. 1차(다크 베이스), 2차(오렌지/옐로), 3차(화이트/크림) 세 색상이 각각 명확히 분리되어 보이는 것이 핵심. 오랜 세대에 걸친 선택적 브리딩의 결과물.',
+    breedingCaution:'폴리제닉이므로 단일 유전자가 아님. 양쪽 부모 모두 높은 할리퀸 게이지가 필요.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['다크','갈색','흑갈색'],
+      pattern:['할리퀸','익스트림할리퀸'],
+      pigment:['3색분리','오렌지','옐로우','화이트'],
+      structure:['핀스트라이프'],
+      spot:[],
+      tail:['일반'],
+      special:['3색완전분리','할리퀸100']
+    }
   },
   '트익할 릴리': {
     grade:'S', price:'100~300만+',
     traits:['트익할 + 릴리화이트 콤보','3색 화려한 패턴','릴리화이트 3차 형질 극대화'],
-    desc:'트익할(3가지 색상의 화려한 패턴) + 릴리화이트(새하얀 3차 형질의 극대화)의 궁극 콤보. 기본 형질(색상)과 구조적 모프(패턴)의 완벽한 결합으로, 최상위 하이엔드 브리딩의 목표 개체입니다.',
+    desc:'트익할 + 릴리화이트의 궁극 콤보. 기본 형질(색상)과 구조적 모프(패턴)의 완벽한 결합으로, 최상위 하이엔드 브리딩의 목표 개체.',
     genetics:{type:'우성+폴리제닉 복합',allele:'LW + 트익할 폴리진',het:'해당 없음',dom:'릴리화이트 우성'},
-    parents:'릴리화이트 × 트익할 조합으로 생산'
+    parents:'릴리화이트 × 트익할 조합으로 생산',
+    origin:'릴리화이트의 강력한 3차 형질(백색) 발현이 트익할의 패턴 위에 덧입혀져, 기존 트익할보다 더 넓고 선명한 백색 영역을 가짐.',
+    breedingCaution:'릴리 유전자 보유 — 트익할 릴리 × 릴리화이트 교배 시 슈퍼 릴리 25% 확률. 한쪽은 반드시 비릴리 개체 사용.',
+    lethal:'슈퍼 릴리(LW/LW) 치사 위험',
+    visualLayers:{
+      baseColor:['다크','갈색'],
+      pattern:['할리퀸','익스트림할리퀸'],
+      pigment:['3색분리','오렌지','화이트'],
+      structure:['릴리화이트덮임','핀스트라이프'],
+      spot:[],
+      tail:['우동꼬리'],
+      special:['3색완전분리','백색덮임','할리퀸100']
+    }
   },
   '마블링': {
     grade:'S', price:'시세 형성 중',
     traits:['최신 입증 모프','모자이크 레터럴 패턴','산산조각 흩뿌려진 무늬'],
-    desc:'레터럴(옆구리)의 무늬가 산산조각 나 모자이크처럼 흩뿌려진 최신 입증 모프. 아직 국내외에서 시세가 형성 중이며, 희소성으로 인해 고가에 거래될 가능성이 높습니다.',
+    desc:'레터럴(옆구리)의 무늬가 산산조각 나 모자이크처럼 흩뿌려진 최신 입증 모프. 희소성으로 인해 고가에 거래될 가능성이 높습니다.',
     genetics:{type:'유전 방식 연구 중',allele:'미상',het:'미상',dom:'미상'},
-    parents:'마블링 × 마블링 교배로 발현 확률 상승'
+    parents:'마블링 × 마블링 교배로 발현 확률 상승',
+    origin:'2023~2024년경 해외에서 처음 입증된 최신 모프. 레터럴 패턴이 기존 할리퀸과 달리 산산이 흩어진 모자이크 형태로 발현.',
+    breedingCaution:'유전 방식이 아직 검증 중. 재현성 확인을 위해 동일 라인 교배 필요.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['다양'],
+      pattern:['모자이크'],
+      pigment:[],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['모자이크패턴','파편무늬']
+    }
   },
 
   /* ── A급: 하이엔드 유전 / 고품질 패턴 ── */
   '릴리화이트': {
     grade:'A', price:'40~150만',
     traits:['우성(Dominant) 유전','새하얀 크림색 옆구리 덮임(Lateral Coverage)','우동 꼬리(무늬 없는 하얗고 통통한 꼬리)'],
-    desc:'현대 하이엔드 브리딩의 가장 인기 있는 핵심 기반 우성 모프. 새하얀 크림색(3차 형질)이 옆구리와 등을 서리가 내린 것처럼 두껍게 뒤덮습니다. 핵심 식별 포인트: 무늬가 전혀 없이 하얗고 통통한 \'우동 꼬리(Udon Tail)\'. 릴리화이트가 아닌 하얀 개체는 \'논릴리(Non-Lily)\' 또는 \'드리피 화이트 스팟\'으로 구분됩니다. ⚠️ 릴리 × 릴리 교배는 슈퍼 릴리(치사) 위험.',
+    desc:'현대 하이엔드 브리딩의 핵심 기반 우성 모프. 새하얀 크림색(3차 형질)이 옆구리와 등을 서리처럼 두껍게 뒤덮습니다. 핵심 식별 포인트: 무늬 없이 하얗고 통통한 \'우동 꼬리(Udon Tail)\'. ⚠️ 릴리 × 릴리 = 슈퍼 릴리(치사).',
     genetics:{type:'우성(Dominant)',allele:'LW/lw',het:'해당 없음',dom:'슈퍼 릴리(LW/LW)는 치사 — 절대 릴리 × 릴리 교배 금지'},
-    parents:'릴리화이트 × 노말 → 50% 릴리화이트 / 릴리화이트 × 카푸치노 → 프라푸치노'
+    parents:'릴리화이트 × 노말 → 50% 릴리화이트 / 릴리화이트 × 카푸치노 → 프라푸치노',
+    origin:'2017년 Lilly Exotics에서 처음 입증. 불완전 우성으로 분류하기도 하나, 헤테로와 호모의 표현형 차이가 치사(슈퍼 릴리)이므로 실질적으로 우성 치사 대립유전자. 3차 형질(백색/크림)이 레터럴과 도살을 광범위하게 덮는 것이 핵심 표현형.',
+    breedingCaution:'⚠️ 릴리 × 릴리 절대 금지. 슈퍼 릴리(LW/LW)는 극도로 허약하며 대부분 사망. 반드시 릴리 × 비릴리 조합만 사용. 릴리화이트가 아닌 하얀 개체(논릴리, 드리피 화이트 스팟)와 구분 필요.',
+    lethal:'슈퍼 릴리(LW/LW): 젤리처럼 반투명한 체색, 극도로 허약, 생존율 극히 낮음',
+    visualLayers:{
+      baseColor:['다양'],
+      pattern:['any'],
+      pigment:['백색','크림'],
+      structure:['릴리화이트덮임'],
+      spot:[],
+      tail:['우동꼬리'],
+      special:['백색덮임','레터럴커버리지','우동꼬리']
+    }
   },
   '카푸치노': {
     grade:'A', price:'15~60만',
     traits:['우성(Dominant) 유전','진한 커피/갈색 체색','꼬리 기부 Y자 마크','성장 시 어두워지는 다크 테일'],
-    desc:'가장 최근에 발견되어 파충류 업계의 모프 가격을 폭등시킨 우성 모프. 커피를 연상시키는 부드러운 갈색 톤이 특징. 해칭(탄생) 시 꼬리 시작 부분에 선명한 Y자 형태의 하얀 3차 형질 마크가 나타납니다. 성장하면서 꼬리가 매우 어둡고 까맣게 변합니다(다크 테일 — 릴리화이트의 우동 꼬리와 완벽한 대조). ⚠️ 카푸치노 × 카푸치노 = 슈퍼 카푸치노(치사) 위험.',
+    desc:'가장 최근에 발견되어 파충류 업계의 모프 가격을 폭등시킨 우성 모프. 커피를 연상시키는 부드러운 갈색 톤이 특징. 해칭 시 꼬리 시작 부분에 선명한 Y자 형태의 하얀 마크. 성장하면 꼬리가 매우 어둡게 변합니다(다크 테일). ⚠️ 카푸치노 × 카푸치노 = 슈퍼 카푸치노(치사).',
     genetics:{type:'우성(Dominant)',allele:'Cap/cap',het:'해당 없음',dom:'슈퍼 카푸치노(Cap/Cap)는 치사 — 절대 카푸치노 × 카푸치노 교배 금지'},
-    parents:'카푸치노 × 노말 → 50% 카푸치노 / 릴리화이트 × 카푸치노 → 프라푸치노'
+    parents:'카푸치노 × 노말 → 50% 카푸치노 / 릴리화이트 × 카푸치노 → 프라푸치노',
+    origin:'2019년 경 처음 발견. 멜라닌 색소의 분포와 농도를 변화시키는 우성 유전자. 이름은 카푸치노 커피에서 유래 — 연한 크림부터 진한 에스프레소까지 다양한 갈색 톤. 핵심 식별 마커: ① 꼬리 기부의 Y자 백색 마크, ② 성장 후 다크 테일(릴리화이트 우동 꼬리와 정반대).',
+    breedingCaution:'⚠️ 카푸치노 × 카푸치노 절대 금지. 슈퍼 카푸치노(Cap/Cap)는 안구 결함, 신경 이상 등 치명적 결함. 반드시 카푸치노 × 비카푸치노 조합만 사용.',
+    lethal:'슈퍼 카푸치노(Cap/Cap): 안구 이상(부럭아이), 신경학적 결함, 생존율 매우 낮음',
+    visualLayers:{
+      baseColor:['커피','갈색','밀크초콜릿'],
+      pattern:['any'],
+      pigment:['갈색','커피톤'],
+      structure:[],
+      spot:[],
+      tail:['다크테일','Y자마크'],
+      special:['Y자마크','다크테일','커피톤']
+    }
   },
   '프라푸치노': {
     grade:'A', price:'80~250만',
     traits:['릴리화이트 + 카푸치노 콤보','카푸치노 어두운 머리·등색','릴리화이트 하얀 옆구리 발현'],
-    desc:'릴리화이트(우성) × 카푸치노(우성) 조합으로 탄생하는 하이엔드 콤보 모프. 머리 쪽은 카푸치노의 질은 색감을 유지하고, 옆구리와 전체적인 표현형은 릴리화이트의 우아한 백색 발현. 식별의 핵심은 상반된 두 형질의 공존입니다. 헷갈리기 쉬운 \'세이블 릴리\'와의 구분은 부모 개체의 유전 정보 확인이 필수.',
+    desc:'릴리화이트(우성) × 카푸치노(우성) 조합으로 탄생하는 하이엔드 콤보 모프. 머리 쪽은 카푸치노의 짙은 색감, 옆구리는 릴리화이트의 우아한 백색. 상반된 두 형질의 공존이 식별 핵심.',
     genetics:{type:'우성+우성 복합',allele:'LW/lw + Cap/cap',het:'해당 없음',dom:'두 우성 유전자 모두 보유'},
-    parents:'릴리화이트 × 카푸치노 직접 교배 (슈퍼폼 생산 없음 — 안전한 교배)'
+    parents:'릴리화이트 × 카푸치노 직접 교배 (슈퍼폼 생산 없음 — 안전한 교배)',
+    origin:'릴리화이트와 카푸치노가 각각 독립적으로 발현. 카푸치노의 Y자 마크/다크 테일과 릴리화이트의 우동 꼬리가 공존하는 독특한 꼬리 표현형을 가짐. 이론상 슈퍼폼이 나올 수 없는 안전한 조합(서로 다른 유전좌위).',
+    breedingCaution:'프라푸치노 × 프라푸치노 교배 주의 — 슈퍼 릴리(25%) + 슈퍼 카푸치노(25%) 모두 발생 가능. 프라푸치노 × 노말이 가장 안전.',
+    lethal:'프라푸 × 프라푸 시 슈퍼 릴리 + 슈퍼 카푸치노 동시 위험',
+    visualLayers:{
+      baseColor:['커피','갈색'],
+      pattern:['any'],
+      pigment:['백색','커피톤','크림'],
+      structure:['릴리화이트덮임'],
+      spot:[],
+      tail:['우동꼬리','다크테일혼합'],
+      special:['백색덮임','커피톤','릴리카푸콤보']
+    }
   },
   '세이블': {
     grade:'A', price:'15~50만',
     traits:['불안정 우성(Unstable Dominant) 형질','도살·크라운에 두꺼운 흰색/노란색 블록','어두운 몸통과의 강한 대비'],
-    desc:'카푸치노와 비슷해 보이지만 확연히 다른 특징을 가진 불안정 우성 형질. 식별 포인트: 도살(등)과 크라운(머리) 부분에 두꺼운 흰색/노란색 블록이 뚜렷하게 형성되며, 레터럴(옆구리)에 화이트 스팟이 빈발합니다. ⚠️ 세이블 × 세이블 = 슈퍼 세이블(루악)로 불안정 특성상 리스크 존재.',
+    desc:'카푸치노와 비슷해 보이지만 다른 특징. 도살(등)과 크라운(머리)에 두꺼운 흰색/노란색 블록이 형성되며, 레터럴에 화이트 스팟이 빈발. ⚠️ 세이블 × 세이블 = 루악(불안정 슈퍼폼).',
     genetics:{type:'불안정 우성(Unstable Dominant)',allele:'Sbl/sbl',het:'해당 없음',dom:'슈퍼 세이블(루악) — 불안정, 피하는 것이 브리더 철칙'},
-    parents:'세이블 × 노말 → 50% 세이블 / 세이블 × 세이블 → 루악(위험)'
+    parents:'세이블 × 노말 → 50% 세이블 / 세이블 × 세이블 → 루악(위험)',
+    origin:'카푸치노 라인에서 분화된 것으로 추정되나, 별도의 유전좌위를 가진 독립 모프. 불안정 우성이라 같은 부모에서도 표현형 편차가 큼.',
+    breedingCaution:'⚠️ 세이블 × 세이블 교배 비권장. 슈퍼폼(루악)은 건강 이슈 가능. 세이블 × 노말이 안전.',
+    lethal:'루악(Sbl/Sbl): 건강 이슈 가능, 불안정 표현형',
+    visualLayers:{
+      baseColor:['다크','어두운갈색'],
+      pattern:['any'],
+      pigment:['백색블록','옐로우블록'],
+      structure:[],
+      spot:['화이트스팟'],
+      tail:['일반'],
+      special:['도살블록','크라운블록','화이트스팟']
+    }
   },
   '루악': {
     grade:'A', price:'미정(희귀)',
     traits:['세이블 × 세이블 슈퍼폼','불안정 우성 최상위 표현','극도로 희귀'],
-    desc:'세이블(불안정 우성)끼리 교배 시 나타나는 슈퍼폼. 불안정 우성의 특성상 위험성이 존재하며, 카푸치노 계열의 슈퍼폼을 피하는 것이 브리더의 철칙입니다. 국내에서 거의 유통되지 않는 극희귀 개체.',
+    desc:'세이블끼리 교배 시 나타나는 슈퍼폼. 불안정 우성의 특성상 위험성이 존재하며, 국내에서 거의 유통되지 않는 극희귀 개체.',
     genetics:{type:'불안정 우성 슈퍼폼',allele:'Sbl/Sbl',het:'해당 없음',dom:'불안정 — 생존 및 건강 이슈 가능'},
-    parents:'세이블 × 세이블 교배 (비권장)'
+    parents:'세이블 × 세이블 교배 (비권장)',
+    origin:'세이블의 호모접합 슈퍼폼. 표현형이 극도로 불안정하여 같은 클러치에서도 개체 간 편차가 심함.',
+    breedingCaution:'번식 자체를 권장하지 않음. 건강 이슈 및 생존율 문제.',
+    lethal:'슈퍼 세이블: 건강 이슈 및 불안정 표현형',
+    visualLayers:{
+      baseColor:['극다크'],
+      pattern:['any'],
+      pigment:['백색블록'],
+      structure:[],
+      spot:['화이트스팟'],
+      tail:['일반'],
+      special:['슈퍼세이블','극희귀']
+    }
   },
   '익스트림 할리퀸': {
     grade:'A', price:'10~40만',
     traits:['할리퀸 게이지 80%','상위 레터럴까지 무늬 발현','패턴 밀도 훨씬 높음'],
-    desc:'할리퀸에서 한 단계 진화한 고품질 패턴. 하위 레터럴(아랫배)을 넘어 상위 레터럴(옆구리 위쪽)까지 무늬가 높게 치솟은 형태로, 패턴의 밀도가 훨씬 높습니다. 할리퀸 게이지 80%에 해당하며 트익할로 이어지는 중간 단계입니다.',
+    desc:'할리퀸에서 한 단계 진화한 고품질 패턴. 상위 레터럴까지 무늬가 높게 치솟으며, 할리퀸 게이지 80%에 해당합니다.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'익스트림 할리퀸 × 익스트림 할리퀸 또는 트익할 × 할리퀸'
+    parents:'익스트림 할리퀸 × 익스트림 할리퀸 또는 트익할 × 할리퀸',
+    origin:'할리퀸 패턴이 하위 레터럴을 넘어 상위 레터럴까지 확장된 상태. 여러 세대의 선택적 브리딩으로 달성.',
+    breedingCaution:'치사 유전자 없음. 양쪽 부모 모두 높은 패턴 밀도가 중요.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['다크','갈색','흑갈색'],
+      pattern:['할리퀸','익스트림할리퀸'],
+      pigment:['오렌지','옐로우','화이트'],
+      structure:['핀스트라이프'],
+      spot:[],
+      tail:['일반'],
+      special:['상위레터럴발현','할리퀸80']
+    }
   },
   '슈퍼 달마시안': {
     grade:'A', price:'15~50만',
     traits:['점의 개수 압도적','잉크를 쏜 듯한 최상위 개체','점이 크고 둥글수록 고퀄리티'],
-    desc:'점의 갯수가 압도적으로 많고 밀도가 높아 잉크를 쏜 듯한 최상위 달마시안 개체. 점이 크고 둥글수록 고퀄리티로 평가받습니다. 베이스 모프(할리퀸, 노말 등) 위에도 독립적으로 발현됩니다.',
+    desc:'점 밀도가 압도적으로 높아 잉크를 쏜 듯한 최상위 달마시안. 점이 크고 둥글수록 고퀄리티. 베이스 모프 위에 독립적으로 발현.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'슈퍼 달마시안 × 슈퍼 달마시안 교배로 고밀도 발현 강화'
+    parents:'슈퍼 달마시안 × 슈퍼 달마시안 교배로 고밀도 발현 강화',
+    origin:'달마시안 형질의 극대화. 점(Spot)은 멜라닌 또는 에리스로포어의 국소 집중으로 발생. 100개 이상의 점을 가진 개체를 슈퍼 달마시안으로 분류.',
+    breedingCaution:'치사 유전자 없음. 점 밀도를 높이려면 양쪽 부모 모두 고밀도 점 형질 필요.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['밝은색','크림','옐로우'],
+      pattern:['any'],
+      pigment:[],
+      structure:[],
+      spot:['고밀도점','대형점','100+'],
+      tail:['일반'],
+      special:['잉크스팟','점100이상']
+    }
   },
   '쿼드 핀': {
     grade:'A', price:'15~40만',
     traits:['상단 핀 2줄 + 화이트 월(횡단 무늬)','총 4개의 선','풀핀의 진화형'],
-    desc:'풀핀의 상단 핀 2줄에 더해, 하위 레터럴 쪽으로 가로줄 무늬(화이트 월)가 발현되어 총 4개의 선이 보이는 형태. 풀핀보다 복잡하고 화려한 패턴으로 높은 가치를 지닙니다.',
+    desc:'풀핀의 상단 핀 2줄에 더해, 하위 레터럴 쪽으로 가로줄 무늬(화이트 월)가 발현되어 총 4개의 선이 보이는 형태.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'쿼드 핀 × 쿼드 핀 또는 쿼드 핀 × 풀핀'
+    parents:'쿼드 핀 × 쿼드 핀 또는 쿼드 핀 × 풀핀',
+    origin:'풀핀에서 추가로 하위 레터럴의 화이트 월이 발현된 진화형. 4개의 연속 라인이 등에서 옆구리까지 이어짐.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['다양'],
+      pattern:['any'],
+      pigment:['백색라인'],
+      structure:['핀스트라이프','화이트월','풀핀'],
+      spot:[],
+      tail:['일반'],
+      special:['4줄라인','화이트월']
+    }
   },
   '차콜': {
     grade:'A', price:'10~35만',
     traits:['극단적 선택 브리딩','1차 형질 칠흑같이 어두움','아잔틱보다 진한 검은색 가능'],
-    desc:'우성이나 열성 모프가 아닌, 극단적인 선택적 브리딩을 통해 1차 형질(바탕색)을 칠흑처럼 검게 끌어올린 모프. 아잔틱보다 때로는 더 짙은 검은색을 띠며, 아잔틱과 달리 노란색·붉은색 색소는 보유하고 있습니다.',
+    desc:'극단적 선택 브리딩으로 바탕색을 칠흑처럼 검게 끌어올린 모프. 아잔틱과 달리 노란색·붉은색 색소는 보유.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'차콜 × 차콜 교배로 암도 강화'
+    parents:'차콜 × 차콜 교배로 암도 강화',
+    origin:'멜라닌 과잉 발현(하이퍼멜라니즘)을 선택적 브리딩으로 극대화. 아잔틱과 달리 색소 자체는 정상이나 멜라닌이 압도적으로 많음.',
+    breedingCaution:'치사 유전자 없음. 밝은 색 개체와 교배 시 특성 희석됨.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['칠흑','극다크','검정'],
+      pattern:['any'],
+      pigment:['멜라닌과잉'],
+      structure:[],
+      spot:[],
+      tail:['다크'],
+      special:['하이퍼멜라닌','칠흑바탕']
+    }
   },
 
   /* ── B급: 기본 인기 모프 ── */
   '할리퀸': {
     grade:'B', price:'3~10만',
     traits:['할리퀸 게이지 40%','하위 레터럴 호랑이 무늬','불규칙한 2·3차 색상 발현'],
-    desc:'크레스티드 게코의 베이스 패턴 중 가장 인기 있는 기본형. 하위 레터럴(옆구리 아래)까지 불규칙한 호랑이 무늬가 분포하는 기본 형태. 할리퀸 게이지 40%에 해당합니다. 패턴 면적이 넓고 색상 대비가 강할수록 고가에 거래됩니다.',
+    desc:'크레스티드 게코의 가장 인기 있는 기본 패턴. 하위 레터럴까지 불규칙한 호랑이 무늬가 분포. 할리퀸 게이지 40%.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'할리퀸 × 할리퀸 교배로 패턴 고착 확률 상승'
+    parents:'할리퀸 × 할리퀸 교배로 패턴 고착 확률 상승',
+    origin:'크레스티드 게코의 기본 패턴 변이 중 하나. 레터럴(옆구리)에 2차·3차 형질이 호랑이 줄무늬처럼 불규칙하게 발현.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['갈색','다크','올리브'],
+      pattern:['할리퀸'],
+      pigment:['오렌지','옐로우','크림'],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['하위레터럴무늬','할리퀸40']
+    }
   },
   '달마시안': {
     grade:'B', price:'3~8만',
     traits:['독립 발현 점 형질','검은색 또는 붉은색 잉크 점','베이스 모프와 무관하게 발현'],
-    desc:'베이스 모프와 완전히 독립적으로 발현되는 \'점(Spot)\' 형질. 할리퀸 위에도, 민무늬 위에도 잉크처럼 묻어날 수 있습니다. 밝은 바탕에 검은색 또는 붉은색 잉크 점이 찍혀 있는 형태. 점의 갯수가 많고 클수록 \'슈퍼 달마시안\'으로 분류됩니다.',
+    desc:'베이스 모프와 독립적으로 발현되는 \'점(Spot)\' 형질. 밝은 바탕에 잉크 점이 찍힌 형태. 점이 많고 클수록 슈퍼 달마시안으로 분류.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'달마시안 × 달마시안 교배 시 반점 고착 확률 상승'
+    parents:'달마시안 × 달마시안 교배 시 반점 고착 확률 상승',
+    origin:'멜라닌 또는 에리스로포어 색소의 국소 집중으로 발생하는 점(Spot) 형질. 100개 미만이면 달마시안, 100개 이상이면 슈퍼 달마시안.',
+    breedingCaution:'치사 유전자 없음. 점은 독립 형질이므로 모든 모프와 조합 가능.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['밝은색','크림','옐로우','레드'],
+      pattern:['any'],
+      pigment:[],
+      structure:[],
+      spot:['잉크점','소~중밀도'],
+      tail:['일반'],
+      special:['독립점형질']
+    }
   },
   '풀핀': {
     grade:'B', price:'5~20만',
     traits:['크라운→꼬리 끊김 없는 하얀 비늘 라인','등 가장자리 핀 줄무늬','구조적 패턴 모프'],
-    desc:'크라운(머리)부터 꼬리까지 끊기지 않고 하얗게 일직선으로 쭉 뻗은 비늘 라인. 등(도살)과 옆구리의 경계를 짓는 핀(Pin) 라인이 완벽하게 연결되어 있는 구조적 패턴 모프입니다. 라인의 굵기와 연속성이 품질을 결정합니다.',
+    desc:'크라운부터 꼬리까지 끊기지 않는 하얀 비늘 라인. 등과 옆구리의 경계를 짓는 핀 라인이 완벽하게 연결된 구조적 패턴 모프.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'풀핀 × 풀핀 교배로 라인 선명도 강화'
+    parents:'풀핀 × 풀핀 교배로 라인 선명도 강화',
+    origin:'핀스트라이프(Pinstripe)의 완성형. 머리부터 꼬리 끝까지 끊김 없이 이어지는 백색 비늘 라인. 100% 연결이 \'풀핀\'의 기준.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['다양'],
+      pattern:['any'],
+      pigment:['백색라인'],
+      structure:['핀스트라이프','풀핀'],
+      spot:[],
+      tail:['일반'],
+      special:['100%핀연결']
+    }
   },
   '엠티백': {
     grade:'B', price:'5~20만',
     traits:['도살(등) 내부 무늬 완전 소거','양옆 핀 라인만 남음','1차 형질 바탕색만 노출'],
-    desc:'도살(등) 내부의 무늬가 모두 지워져 오직 1차 형질(바탕색)만 남고, 양옆의 핀만 남은 깔끔한 형태. \'빈 등(Empty Back)\'이라는 이름 그대로 등 부분이 깔끔하게 비어있는 독특한 매력을 가집니다.',
+    desc:'도살 내부의 무늬가 모두 지워져 바탕색만 남고, 양옆 핀만 남은 깔끔한 형태. Empty Back.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'엠티백 × 엠티백 또는 엠티백 × 풀핀'
+    parents:'엠티백 × 엠티백 또는 엠티백 × 풀핀',
+    origin:'도살 영역의 패턴이 완전히 소거된 상태. 양측 핀 라인 사이에 오직 1차 형질(바탕색)만 보임.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['다양'],
+      pattern:['엠티백'],
+      pigment:[],
+      structure:['핀스트라이프'],
+      spot:[],
+      tail:['일반'],
+      special:['등무늬소거','빈등']
+    }
   },
   '팬텀': {
     grade:'B', price:'3~10만',
     traits:['패턴 완전 소거','단색(모노 컬러) 또는 투톤','벅스킨·차콜 등 포함'],
-    desc:'패턴이 모두 깨지거나 지워져 하나의 단색(모노 컬러) 또는 깔끔한 투톤으로 표현되는 모프. 세부 유형으로 레드 팬텀, 옐로우 팬텀, 벅스킨(야생형과 가장 유사한 갈색/적벽돌색) 등이 있습니다. \'단조로움 속의 극강의 깔끔함\'이 특징.',
+    desc:'패턴이 깨지거나 지워져 단색 또는 깔끔한 투톤으로 표현. 레드 팬텀, 옐로우 팬텀, 벅스킨 등 세부 유형.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'팬텀 계열 × 팬텀 계열 교배로 단색 고착'
+    parents:'팬텀 계열 × 팬텀 계열 교배로 단색 고착',
+    origin:'패턴 형성 유전자의 발현이 억제된 상태. 단일 색조 또는 2색조로만 표현됨.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['레드','옐로우','갈색','벅스킨'],
+      pattern:['패턴리스','바이컬러'],
+      pigment:['단색','투톤'],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['패턴소거','모노컬러']
+    }
   },
   '하이포/핑키': {
     grade:'B', price:'5~15만',
     traits:['색소 결핍','반투명하고 창백한 톤','슈퍼폼 = 루시스틱 핑키'],
-    desc:'색소가 결핍되어 반투명하고 창백한 톤업 색상을 가진 모프. 피부가 얇아 보이고 핑크빛이 돌며, 슈퍼폼은 루시스틱 핑키(Lucistic Pinky)라 불립니다. 아잔틱과 달리 완전한 색소 소거는 아닙니다.',
+    desc:'색소 결핍으로 반투명하고 창백한 톤업 색상. 피부가 얇아 보이고 핑크빛. 슈퍼폼은 루시스틱 핑키.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
-    parents:'하이포/핑키 계열 × 하이포/핑키 계열 교배'
+    parents:'하이포/핑키 계열 × 하이포/핑키 계열 교배',
+    origin:'멜라닌과 기타 색소의 전반적 감소. 아잔틱과 달리 완전 소거가 아닌 부분 감소. 피부 혈관이 비칠 정도로 색소가 옅음.',
+    breedingCaution:'치사 유전자 없음. 슈퍼폼(루시스틱 핑키)은 건강 이슈는 없으나 극도로 옅은 색.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['핑크','크림','연분홍'],
+      pattern:['any'],
+      pigment:['색소감소','반투명'],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['색소결핍경미','핑크톤']
+    }
   },
 
   /* ── C급: 기본형 ── */
   '노멀': {
     grade:'C', price:'1~5만',
     traits:['야생형 기본 체색','할리퀸 게이지 10%','모든 모프의 기반'],
-    desc:'뚜렷한 무늬 변이 없이 평범한 기본형. 할리퀸 게이지 10%에 해당하며, 갈색 계열의 자연스러운 체색을 가집니다. 모든 모프의 기반이 되는 형태로 사육 입문에 적합합니다. 브리더의 시선으로 보면 다음 세대의 잠재적 유전자 보유체입니다.',
+    desc:'뚜렷한 무늬 변이 없이 평범한 기본형. 할리퀸 게이지 10%. 갈색 계열의 자연스러운 체색. 모든 모프의 기반.',
     genetics:{type:'폴리제닉(야생형)',allele:'야생형',het:'헷 모프 보유 가능성 있음',dom:'해당 없음'},
-    parents:'모든 모프의 기반이 되는 기본형'
+    parents:'모든 모프의 기반이 되는 기본형',
+    origin:'뉴칼레도니아 원산의 야생형 표현형. 갈색~올리브색 바탕에 미세한 무늬.',
+    breedingCaution:'치사 유전자 없음. 헷(Het) 유전자를 숨기고 있을 수 있으므로 혈통 확인 중요.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['갈색','올리브','베이지'],
+      pattern:['노멀','미세무늬'],
+      pigment:[],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['야생형']
+    }
   },
 };
+
+// ── 멀티레이어 판별 엔진: 형질 레이어별 키워드 → 모프 매칭 ──
+const TRAIT_LAYERS = {
+  color: {
+    label:'체색(Base Color)',
+    options:['흑색/회색','갈색/올리브','커피/밀크초콜릿','레드/오렌지','옐로우/크림','핑크/연분홍','칠흑/극다크','밝은색/화이트']
+  },
+  pattern: {
+    label:'패턴(Pattern)',
+    options:['무늬 없음(패턴리스)','하위 레터럴 무늬(할리퀸)','상위 레터럴까지 무늬(익스트림)','3색 완전 분리(트익할)','모자이크/파편 무늬','등 무늬 소거(엠티백)','단색/투톤(팬텀)']
+  },
+  structure: {
+    label:'구조(Structure)',
+    options:['핀스트라이프(핀 라인)','풀핀(100% 연결)','화이트 월(가로줄)','릴리화이트 덮임(백색 레터럴)','없음']
+  },
+  spot: {
+    label:'점(Spot/Dalmatian)',
+    options:['점 없음','소량 점(~30개)','중간 점(30~100개)','대량 점(100개+, 슈퍼 달마시안)']
+  },
+  tail: {
+    label:'꼬리(Tail)',
+    options:['일반 꼬리','우동 꼬리(하얗고 무늬 없음)','다크 테일(어두운 꼬리)','Y자 마크(꼬리 기부 백색 Y)']
+  },
+  pigment: {
+    label:'색소 특이사항',
+    options:['정상','황색·적색 결핍(무채색=아잔틱)','색소 감소(반투명=하이포)','멜라닌 과잉(극다크=차콜)','백색/크림 덮임(릴리화이트)','커피 톤(카푸치노)']
+  }
+};
+
+// 멀티레이어 매칭 점수 계산
+function calcMultiLayerScores(selections) {
+  const scores = {};
+  Object.keys(MORPHS).forEach(name => { scores[name] = 0; });
+
+  // color 레이어
+  const colorSel = selections.color || '';
+  Object.entries(MORPHS).forEach(([name, m]) => {
+    const vl = m.visualLayers;
+    if (colorSel.includes('흑색') && vl.baseColor.some(c => ['흑색','회색','보라','무채색'].includes(c))) scores[name] += 15;
+    if (colorSel.includes('커피') && vl.baseColor.some(c => ['커피','갈색','밀크초콜릿'].includes(c))) scores[name] += 15;
+    if (colorSel.includes('칠흑') && vl.baseColor.some(c => ['칠흑','극다크','검정'].includes(c))) scores[name] += 15;
+    if (colorSel.includes('레드') && vl.baseColor.some(c => ['레드','오렌지'].includes(c))) scores[name] += 10;
+    if (colorSel.includes('옐로우') && vl.baseColor.some(c => ['크림','옐로우','밝은색'].includes(c))) scores[name] += 10;
+    if (colorSel.includes('핑크') && vl.baseColor.some(c => ['핑크','크림','연분홍'].includes(c))) scores[name] += 12;
+    if (colorSel.includes('갈색') && vl.baseColor.some(c => ['갈색','올리브','베이지'].includes(c))) scores[name] += 8;
+    if (colorSel.includes('밝은색') && vl.baseColor.some(c => ['밝은색','크림','옐로우'].includes(c))) scores[name] += 8;
+  });
+
+  // pattern 레이어
+  const patSel = selections.pattern || '';
+  Object.entries(MORPHS).forEach(([name, m]) => {
+    const sp = m.visualLayers.special;
+    if (patSel.includes('3색') && sp.some(s => s.includes('3색'))) scores[name] += 25;
+    if (patSel.includes('상위') && sp.some(s => s.includes('할리퀸80') || s.includes('상위레터럴'))) scores[name] += 20;
+    if (patSel.includes('하위') && sp.some(s => s.includes('할리퀸40') || s.includes('하위레터럴'))) scores[name] += 15;
+    if (patSel.includes('모자이크') && sp.some(s => s.includes('모자이크'))) scores[name] += 25;
+    if (patSel.includes('엠티백') || patSel.includes('등 무늬 소거')) { if (sp.some(s => s.includes('빈등'))) scores[name] += 20; }
+    if (patSel.includes('단색') || patSel.includes('팬텀')) { if (sp.some(s => s.includes('패턴소거') || s.includes('모노컬러'))) scores[name] += 18; }
+    if (patSel.includes('무늬 없음') || patSel.includes('패턴리스')) { if (m.visualLayers.pattern.some(p => ['노멀','패턴리스','바이컬러'].includes(p))) scores[name] += 12; }
+  });
+
+  // structure 레이어
+  const strSel = selections.structure || '';
+  Object.entries(MORPHS).forEach(([name, m]) => {
+    const st = m.visualLayers.structure;
+    const sp = m.visualLayers.special;
+    if (strSel.includes('릴리화이트') && (st.includes('릴리화이트덮임') || sp.includes('백색덮임'))) scores[name] += 25;
+    if (strSel.includes('풀핀') && (st.includes('풀핀') || sp.includes('100%핀연결'))) scores[name] += 20;
+    if (strSel.includes('화이트 월') && (st.includes('화이트월') || sp.includes('화이트월'))) scores[name] += 20;
+    if (strSel.includes('핀스트라이프') && st.includes('핀스트라이프')) scores[name] += 10;
+  });
+
+  // spot 레이어
+  const spotSel = selections.spot || '';
+  Object.entries(MORPHS).forEach(([name, m]) => {
+    const vs = m.visualLayers.spot;
+    if (spotSel.includes('대량') || spotSel.includes('100개+')) { if (vs.some(s => s.includes('고밀도') || s.includes('100+'))) scores[name] += 25; }
+    else if (spotSel.includes('중간')) { if (vs.some(s => s.includes('잉크점') || s.includes('소~중밀도'))) scores[name] += 15; }
+    else if (spotSel.includes('소량')) { if (vs.some(s => s.includes('잉크점'))) scores[name] += 10; }
+  });
+
+  // tail 레이어 — 카푸치노 Y마크/다크테일 가중치 높게
+  const tailSel = selections.tail || '';
+  Object.entries(MORPHS).forEach(([name, m]) => {
+    const vt = m.visualLayers.tail;
+    const sp = m.visualLayers.special;
+    if (tailSel.includes('우동') && vt.includes('우동꼬리')) scores[name] += 20;
+    if (tailSel.includes('다크') && (vt.includes('다크테일') || vt.includes('다크테일혼합'))) scores[name] += 20;
+    if (tailSel.includes('Y자') && (vt.includes('Y자마크') || sp.includes('Y자마크'))) scores[name] += 30; // 카푸치노 핵심 마커 — 높은 가중치
+  });
+
+  // pigment 레이어
+  const pigSel = selections.pigment || '';
+  Object.entries(MORPHS).forEach(([name, m]) => {
+    const sp = m.visualLayers.special;
+    if (pigSel.includes('무채색') || pigSel.includes('아잔틱')) { if (sp.includes('무채색톤') || sp.includes('색소결핍')) scores[name] += 30; }
+    if (pigSel.includes('반투명') || pigSel.includes('하이포')) { if (sp.includes('색소결핍경미') || sp.includes('핑크톤')) scores[name] += 20; }
+    if (pigSel.includes('멜라닌') || pigSel.includes('차콜')) { if (sp.includes('하이퍼멜라닌') || sp.includes('칠흑바탕')) scores[name] += 25; }
+    if (pigSel.includes('백색') || pigSel.includes('릴리')) { if (sp.includes('백색덮임') || sp.includes('레터럴커버리지')) scores[name] += 20; }
+    if (pigSel.includes('커피') || pigSel.includes('카푸치노')) { if (sp.includes('커피톤') || sp.includes('Y자마크') || sp.includes('다크테일')) scores[name] += 25; }
+  });
+
+  return scores;
+}
+
+// 멀티 사진 합산 점수 — 여러 장의 사진 분석 결과를 합산
+function mergeMultiPhotoScores(scoreArrays) {
+  const merged = {};
+  Object.keys(MORPHS).forEach(name => { merged[name] = 0; });
+  scoreArrays.forEach(scores => {
+    Object.entries(scores).forEach(([name, score]) => {
+      merged[name] += score;
+    });
+  });
+  // 사진 수로 나누어 평균 + 사진 많을수록 신뢰도 보너스
+  const count = scoreArrays.length;
+  Object.keys(merged).forEach(name => {
+    merged[name] = Math.round(merged[name] / count * (1 + count * 0.05));
+  });
+  return merged;
+}
+
+// 점수에서 Top N 후보 추출
+function getTopCandidates(scores, n) {
+  return Object.entries(scores)
+    .filter(([, s]) => s > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([name, score]) => ({ name, score, data: MORPHS[name] }));
+}
 
 const MORPH_GRADES = {
   'S': {label:'S급', color:'#f5c842', bg:'rgba(245,200,66,.18)', cssClass:'gS'},
@@ -2615,38 +3015,56 @@ function showResult(photoCount, fireUp) {
   document.getElementById('step2').className = 'step done';
   document.getElementById('step3').className = 'step active';
 
-  // ── 베타 AI: 사진 수·파이어업에 따라 가중치 기반 모프 선택 ──
-  // 실제 AI 모델 연동 전 데모 시뮬레이션
-  // 파이어업이면 색이 강한 모프(A/B급) 위주, 아니면 전체 중 확률적 선택
-  const morphEntries = Object.entries(MORPHS);
-  let weightedPool = [];
-  morphEntries.forEach(([name, data]) => {
-    // 등급별 가중치: C=4, B=5, A=3, S=1 (실제 개체 분포 반영)
-    const w = {S:1, A:3, B:5, C:4}[data.grade] || 3;
-    // 파이어업이면 A/B급 가중치 2배
-    const fireBonus = (fireUp && ['A','B'].includes(data.grade)) ? 2 : 1;
-    for (let i = 0; i < w * fireBonus; i++) weightedPool.push(name);
-  });
-  const pickedMorph = weightedPool[Math.floor(Math.random() * weightedPool.length)];
-  const m = MORPHS[pickedMorph];
+  // ── 멀티레이어 판별 엔진 ──
+  // 사진 수만큼 시뮬레이션 분석을 돌려 합산 점수로 결정
+  const layerKeys = Object.keys(TRAIT_LAYERS);
+  const scoreArrays = [];
+
+  for (let p = 0; p < photoCount; p++) {
+    // 각 사진에서 감지된 형질을 시뮬레이션 (AI 모델 연동 전 데모)
+    const simSelections = {};
+    layerKeys.forEach(key => {
+      const opts = TRAIT_LAYERS[key].options;
+      // 파이어업이면 색이 강한 옵션 선호
+      if (fireUp && key === 'color') {
+        const fireOpts = opts.filter(o => o.includes('레드') || o.includes('오렌지') || o.includes('옐로우'));
+        simSelections[key] = fireOpts.length ? fireOpts[Math.floor(Math.random() * fireOpts.length)] : opts[Math.floor(Math.random() * opts.length)];
+      } else {
+        simSelections[key] = opts[Math.floor(Math.random() * opts.length)];
+      }
+    });
+    scoreArrays.push(calcMultiLayerScores(simSelections));
+  }
+
+  const mergedScores = photoCount > 1 ? mergeMultiPhotoScores(scoreArrays) : scoreArrays[0];
+  const topCandidates = getTopCandidates(mergedScores, 5);
+
+  // 최소 1개 후보는 보장
+  let pickedMorph, m;
+  if (topCandidates.length > 0) {
+    pickedMorph = topCandidates[0].name;
+    m = topCandidates[0].data;
+  } else {
+    pickedMorph = '노멀';
+    m = MORPHS['노멀'];
+  }
   lastScanResult = {morph: pickedMorph, data: m};
 
   const gInfo = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
 
-  // 사진 수가 많을수록 신뢰도 높게, 파이어업 보정 시 +2%
-  const baseConf = photoCount >= 3 ? 89 : photoCount === 2 ? 80 : 72;
-  const conf = baseConf + Math.floor(Math.random() * 7) + (fireUp ? 2 : 0);
+  // 신뢰도: 최고 점수 대비 비율 + 사진 수 보너스
+  const maxScore = topCandidates[0]?.score || 1;
+  const secondScore = topCandidates[1]?.score || 0;
+  const gap = maxScore > 0 ? ((maxScore - secondScore) / maxScore) : 0;
+  const baseConf = Math.min(95, Math.round(60 + gap * 30 + photoCount * 3 + (fireUp ? 2 : 0)));
+  const conf = baseConf + Math.floor(Math.random() * 5);
 
-  // 후보 모프 2개 (다음으로 유사한 모프) — 가이드 참고용
-  const candidates = weightedPool
-    .filter(n => n !== pickedMorph)
-    .sort(() => Math.random() - .5)
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .slice(0, 2);
+  // 유사 후보 (2~3위)
+  const candidates = topCandidates.slice(1, 3).map(c => c.name);
 
   document.getElementById('res-morph-name').textContent = pickedMorph;
   document.getElementById('res-confidence').textContent =
-    `신뢰도 ${conf}% · 사진 ${photoCount}장${fireUp ? ' · 🔥파이어업 보정됨' : ''}`;
+    `신뢰도 ${conf}% · 사진 ${photoCount}장 멀티분석${fireUp ? ' · 🔥파이어업 보정' : ''}`;
 
   document.getElementById('res-grade-wrap').innerHTML = `
     <span class="grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${gInfo.label}</span>
@@ -2658,15 +3076,48 @@ function showResult(photoCount, fireUp) {
   document.getElementById('res-desc').textContent = m.desc;
   document.getElementById('res-price').textContent = m.price;
 
+  // 유전자 정보 + 유전적 기원 + 브리딩 주의사항
   document.getElementById('res-genetics').innerHTML = `
     <div class="genetics-item"><div class="genetics-item-label">유전 방식</div><div class="genetics-item-value" style="color:var(--ac);font-size:12px">${m.genetics.type}</div></div>
     <div class="genetics-item"><div class="genetics-item-label">대립유전자</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.allele}</div></div>
     <div class="genetics-item"><div class="genetics-item-label">헷 여부</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.het}</div></div>
-    <div class="genetics-item"><div class="genetics-item-label">우성 특성</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.dom}</div></div>`;
+    <div class="genetics-item"><div class="genetics-item-label">우성 특성</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.dom}</div></div>
+    ${m.origin ? `<div style="grid-column:1/-1;margin-top:6px;padding:10px;background:rgba(93,220,106,.08);border:1px solid rgba(93,220,106,.2);border-radius:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--ac);margin-bottom:4px">📖 유전적 기원</div>
+      <div style="font-size:11px;color:var(--tx2);line-height:1.6">${m.origin}</div>
+    </div>` : ''}
+    ${m.breedingCaution ? `<div style="grid-column:1/-1;margin-top:6px;padding:10px;background:${m.lethal ? 'rgba(255,60,60,.08)' : 'rgba(245,200,66,.08)'};border:1px solid ${m.lethal ? 'rgba(255,60,60,.25)' : 'rgba(245,200,66,.25)'};border-radius:10px">
+      <div style="font-size:11px;font-weight:700;color:${m.lethal ? '#ff7070' : 'var(--am)'};margin-bottom:4px">${m.lethal ? '⚠️ 브리딩 주의사항 (치사 유전자)' : '📋 브리딩 주의사항'}</div>
+      <div style="font-size:11px;color:var(--tx2);line-height:1.6">${m.breedingCaution}</div>
+      ${m.lethal ? `<div style="margin-top:6px;padding:7px 9px;background:rgba(255,60,60,.12);border-radius:8px;font-size:11px;font-weight:700;color:#ff5f5f">🚫 ${m.lethal}</div>` : ''}
+    </div>` : ''}`;
 
   document.getElementById('res-breeding').innerHTML = '<b style="color:var(--tx)">브리딩 노트:</b> ' + m.parents;
   document.getElementById('res-parents').innerHTML = m.parents;
   document.getElementById('result-area').classList.add('show');
+}
+
+// 피드백 제출 — Supabase morph_feedback 테이블에 저장
+async function submitMorphFeedback() {
+  if (!_currentUser || !lastScanResult) { showToast('로그인이 필요합니다'); return; }
+  const correctMorph = document.getElementById('feedback-morph').value;
+  if (!correctMorph) { showToast('정답 모프를 선택해주세요'); return; }
+  if (correctMorph === lastScanResult.morph) { showToast('같은 모프입니다. 다른 모프를 선택해주세요'); return; }
+  try {
+    const { error } = await _supabase.from('morph_feedback').insert({
+      user_id: _currentUser.id,
+      ai_morph: lastScanResult.morph,
+      correct_morph: correctMorph,
+      photo_count: scanPhotos.length,
+      confidence: parseInt(document.getElementById('res-confidence')?.textContent?.match(/\d+/)?.[0]) || 0,
+    });
+    if (error) throw error;
+    document.getElementById('feedback-form').style.display = 'none';
+    document.getElementById('feedback-done').style.display = 'block';
+    showToast('🙏 제보가 저장되었습니다. 감사합니다!');
+  } catch(e) {
+    showToast('제보 실패: ' + e.message);
+  }
 }
 
 function resetScan() {
@@ -2684,6 +3135,13 @@ function resetScan() {
   document.getElementById('scan-file').value = '';
   document.getElementById('fireup-toggle').checked = false;
   lastScanResult = null;
+  // 피드백 폼 리셋
+  const fbForm = document.getElementById('feedback-form');
+  const fbDone = document.getElementById('feedback-done');
+  if (fbForm) fbForm.style.display = 'flex';
+  if (fbDone) fbDone.style.display = 'none';
+  const fbSelect = document.getElementById('feedback-morph');
+  if (fbSelect) fbSelect.value = '';
   renderScanGrid();
 }
 
@@ -3216,6 +3674,28 @@ function openMorphGuide() {
     </div>
   </div>`;
 
+  // ── 폴리제닉 vs 단순 유전 섹션 ──
+  const polygenicSection = `
+  <div style="background:var(--sf2);border:1px solid var(--br);border-radius:16px;padding:14px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:var(--ac)">🔬 폴리제닉 vs 단순 유전</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--card);border-radius:12px;padding:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:5px">단순 유전 (Simple)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.6">하나의 유전자 쌍이 형질을 결정. 부모 유전자만으로 자식의 모프를 정확히 예측 가능.</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--ac);font-weight:600">우성: 릴리화이트, 카푸치노<br>열성: 아잔틱</div>
+      </div>
+      <div style="background:var(--card);border-radius:12px;padding:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:5px">폴리제닉 (Polygenic)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.6">여러 유전자가 복합적으로 작용. 선택적 브리딩으로 형질을 점진적으로 강화.</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--blue);font-weight:600">할리퀸, 달마시안, 풀핀, 차콜 등 대부분의 패턴 모프</div>
+      </div>
+    </div>
+    <div style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2);border-radius:10px;padding:9px 11px">
+      <div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:3px">💡 실전 팁</div>
+      <div style="font-size:11px;color:var(--tx2);line-height:1.6">단순 유전 모프는 한 세대 만에 결과를 볼 수 있지만, 폴리제닉 모프(할리퀸→익스트림→트익할)는 여러 세대에 걸친 선별 교배가 필요합니다. 두 가지를 조합하면 '트익할 릴리'처럼 최상위 콤보가 탄생합니다.</div>
+    </div>
+  </div>`;
+
   // ── 할리퀸 게이지 섹션 ──
   const harlequinSection = `
   <div style="background:var(--sf2);border:1px solid var(--br);border-radius:16px;padding:14px">
@@ -3289,6 +3769,15 @@ function openMorphGuide() {
         ${m.genetics.het !== '해당 없음' ? `<div style="font-size:11px;color:var(--blue);margin-top:3px">헷: ${m.genetics.het}</div>` : ''}
         ${m.genetics.dom && m.genetics.dom !== '해당 없음' ? `<div style="font-size:11px;color:#ff7070;margin-top:3px">⚠️ ${m.genetics.dom}</div>` : ''}
       </div>
+      ${m.origin ? `<div style="background:rgba(93,220,106,.06);border:1px solid rgba(93,220,106,.15);border-radius:10px;padding:9px 11px;margin-bottom:8px">
+        <div style="font-size:10px;color:var(--ac);font-family:'DM Mono',monospace;margin-bottom:4px">📖 유전적 기원</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.6">${m.origin}</div>
+      </div>` : ''}
+      ${m.breedingCaution ? `<div style="background:${m.lethal ? 'rgba(255,60,60,.06)' : 'rgba(245,200,66,.06)'};border:1px solid ${m.lethal ? 'rgba(255,60,60,.15)' : 'rgba(245,200,66,.15)'};border-radius:10px;padding:9px 11px;margin-bottom:8px">
+        <div style="font-size:10px;color:${m.lethal ? '#ff7070' : 'var(--am)'};font-family:'DM Mono',monospace;margin-bottom:4px">${m.lethal ? '⚠️ 브리딩 주의 (치사 유전자)' : '📋 브리딩 주의'}</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.6">${m.breedingCaution}</div>
+        ${m.lethal ? `<div style="margin-top:5px;font-size:10px;font-weight:700;color:#ff5f5f;background:rgba(255,60,60,.1);padding:5px 8px;border-radius:6px">🚫 ${m.lethal}</div>` : ''}
+      </div>` : ''}
       <div style="background:var(--sf2);border-radius:10px;padding:9px 11px;margin-bottom:8px">
         <div style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;margin-bottom:4px">🥚 교배 조합</div>
         <div style="font-size:11px;color:var(--tx2);line-height:1.5">${m.parents}</div>
@@ -3300,7 +3789,7 @@ function openMorphGuide() {
     </div>`;
   }).join('');
 
-  content.innerHTML = anatomySection + geneticsSection + harlequinSection + warningSection + disclaimer + morphCards;
+  content.innerHTML = anatomySection + geneticsSection + polygenicSection + harlequinSection + warningSection + disclaimer + morphCards;
   openSheet('sheet-morph-guide');
 }
 
