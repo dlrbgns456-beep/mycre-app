@@ -4063,14 +4063,22 @@ function startProPayment() {
 
   closeSheetDirect('sheet-pro');
 
+  // 결제 정보를 localStorage에 임시 저장 (모바일 리다이렉트 복귀 시 사용)
+  localStorage.setItem('_pending_payment', JSON.stringify({
+    merchant_uid: merchantUid,
+    amount: amount,
+    plan: _selectedPlan
+  }));
+
   IMP.request_pay({
-    pg: 'kakaopay',           // 카카오페이 (카드 결제도 가능: 'html5_inicis')
+    pg: 'kakaopay',
     pay_method: 'card',
     merchant_uid: merchantUid,
     name: '마이크레 PRO 정기구독 (' + labels[_selectedPlan] + ')',
     amount: amount,
     buyer_email: _currentUser.email || '',
     buyer_name: _currentUser.user_metadata?.nickname || '',
+    m_redirect_url: window.location.origin + '/?payment=done',
   }, async function(rsp) {
     if (rsp.success) {
       try {
@@ -4464,6 +4472,58 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
+
+  // ── 모바일 결제 복귀 처리 (m_redirect_url로 돌아왔을 때)
+  if (window.location.search.includes('payment=done')) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const impUid = urlParams.get('imp_uid');
+    const merchantUid = urlParams.get('merchant_uid');
+    const impSuccess = urlParams.get('imp_success');
+    // URL 정리 (파라미터 제거)
+    history.replaceState(null, '', '/');
+
+    if (impSuccess === 'true' && impUid) {
+      // localStorage에서 결제 정보 복원
+      let pending = {};
+      try { pending = JSON.parse(localStorage.getItem('_pending_payment') || '{}'); } catch(e) {}
+      localStorage.removeItem('_pending_payment');
+
+      // 로그인 완료 후 후처리 실행
+      const _handleMobilePayment = async () => {
+        if (!_currentUser) { setTimeout(_handleMobilePayment, 500); return; }
+        try {
+          showToast('결제 확인 중...');
+          await _supabase.from('payments').insert({
+            user_id: _currentUser.id,
+            imp_uid: impUid,
+            merchant_uid: merchantUid || pending.merchant_uid || '',
+            amount: pending.amount || 9900,
+            plan: pending.plan || 'monthly',
+            status: 'paid'
+          });
+          const proUntil = new Date();
+          if (pending.plan === 'yearly') {
+            proUntil.setFullYear(proUntil.getFullYear() + 1);
+          } else {
+            proUntil.setMonth(proUntil.getMonth() + 1);
+          }
+          await _supabase.from('profiles').update({
+            is_pro: true,
+            pro_until: proUntil.toISOString()
+          }).eq('id', _currentUser.id);
+          showToast('PRO 활성화 완료! 환영합니다 ⭐');
+          setTimeout(() => { location.reload(); }, 1200);
+        } catch(err) {
+          console.error('모바일 결제 후처리 오류:', err);
+          showToast('결제는 완료되었으나 활성화 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
+        }
+      };
+      setTimeout(_handleMobilePayment, 1000);
+    } else {
+      localStorage.removeItem('_pending_payment');
+      showToast('결제가 취소되었습니다.');
+    }
+  }
 
   // ── 안전장치: access_token이 URL에 있는데 3초 후에도 앱 안 열리면 강제 체크
   if (window.location.hash.includes('access_token')) {
