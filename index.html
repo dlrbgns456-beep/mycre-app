@@ -1274,7 +1274,7 @@ input[type=file]{display:none}
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">생년월일</label>
-          <input class="form-input" id="gecko-dob" type="date" onchange="updateCageAndBreeding()">
+          <input class="form-input" id="gecko-dob" type="text" placeholder="예: 2024-03-15" inputmode="numeric" onchange="updateCageAndBreeding()" onfocus="this.placeholder='YYYY-MM-DD'" onblur="this.placeholder='예: 2024-03-15'">
         </div>
         <div class="form-group">
           <label class="form-label">취득가격 (만원)</label>
@@ -2855,8 +2855,10 @@ async function saveGecko() {
 
   closeSheetDirect('sheet-add-gecko');
   renderGeckoList();
+  renderHome();
   updateCountBadges();
   populateGeckoSelects();
+  showToast(state.editingGeckoId ? '✅ 개체 정보가 수정되었어요' : '✅ 새 개체가 등록되었어요!');
 }
 
 let _deleteGeckoStep = 0;
@@ -2876,6 +2878,7 @@ function deleteGecko() {
   closeSheetDirect('sheet-add-gecko');
   closeSheetDirect('sheet-gecko-detail');
   renderGeckoList();
+  renderHome();
   updateCountBadges();
   showToast('🗑 개체가 삭제되었어요');
 }
