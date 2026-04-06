@@ -707,7 +707,7 @@ input[type=file]{display:none}
       <div><div class="logo-text" style="color:var(--tx)">AI 모프 판별</div><div class="logo-sub">MORPH SCANNER</div></div>
     </div>
     <div class="topbar-right">
-      <div class="tb-btn" id="scan-free-badge" style="background:var(--ac2);border-color:var(--ac);color:var(--ac);font-family:'DM Mono',monospace;font-size:10px;width:auto;padding:0 10px">잔여 2회</div>
+      <div class="tb-btn" id="scan-free-badge" style="background:var(--ac2);border-color:var(--ac);color:var(--ac);font-family:'DM Mono',monospace;font-size:10px;width:auto;padding:0 10px">잔여 3회</div>
     </div>
   </div>
 
@@ -1655,7 +1655,8 @@ let state = {
   geckoFilter: 'all',
   commFilter: 'all',
   scanPhotoData: null,
-  freeScansLeft: 2,
+  freeScansLeft: 3,
+  isPro: false,
   nextGeckoId: 1,
   nextPostId: 1,
 };
@@ -2748,6 +2749,13 @@ function updateCageAndBreeding() {
 async function saveGecko() {
   const name = document.getElementById('gecko-name').value.trim();
   if (!name) { showToast('⚠️ 이름을 입력해주세요'); return; }
+
+  // 무료 등급: 개체 등록 5개 제한 (수정은 허용)
+  if (!state.isPro && !state.editingGeckoId && state.geckos.length >= 5) {
+    _showProUpgradePopup('무료 등급은 최대 5마리까지 등록할 수 있어요.<br>더 많은 개체를 등록하고 싶으신가요?<br><b>PRO로 업그레이드하세요!</b>');
+    return;
+  }
+
   const morph = document.getElementById('gecko-morph').value;
   const m = MORPHS[morph] || {};
 
@@ -3093,9 +3101,8 @@ function removeScanPhoto(idx) {
 
 function startAnalysis() {
   if (scanPhotos.length === 0) { showToast('⚠️ 사진을 최소 1장 이상 올려주세요'); return; }
-  if (state.freeScansLeft <= 0) {
-    showToast('🔒 무료 판별 횟수를 모두 사용했어요');
-    openProSheet();
+  if (!state.isPro && state.freeScansLeft <= 0) {
+    _showProUpgradePopup('오늘의 무료 판별 횟수를 모두 사용했어요.<br>내일 자정에 초기화됩니다.<br><b>PRO는 무제한 판별!</b>');
     return;
   }
 
@@ -3123,8 +3130,7 @@ function startAnalysis() {
   // 사진 많을수록 약간 더 오래 (실제감)
   const delay = 2800 + Math.min(photoCount - 1, 3) * 200;
   setTimeout(() => {
-    state.freeScansLeft--;
-    document.getElementById('scan-free-badge').textContent = '잔여 ' + state.freeScansLeft + '회';
+    _useDailyScan();
     showResult(photoCount, fireUp);
   }, delay);
 }
@@ -4421,18 +4427,98 @@ async function deleteAccount() {
 // ── 로그인 성공 후 처리 ──
 async function _onSignedIn() {
   document.getElementById('auth-screen').style.display = 'none';
-  // signout-btn 제거됨
   const homePage = document.getElementById('page-home');
   homePage.style.display = '';
   homePage.classList.add('active');
-  // 뒤로가기 히스토리 초기화
   history.replaceState({ page: 'home' }, '', '#home');
+
+  // PRO 상태 로드
+  try {
+    const { data: prof } = await _supabase.from('profiles').select('is_pro, pro_until').eq('id', _currentUser.id).maybeSingle();
+    if (prof && prof.is_pro && (!prof.pro_until || new Date(prof.pro_until) > new Date())) {
+      state.isPro = true;
+    } else {
+      state.isPro = false;
+      // 만료된 PRO 자동 해제
+      if (prof && prof.is_pro && prof.pro_until && new Date(prof.pro_until) <= new Date()) {
+        _supabase.from('profiles').update({ is_pro: false }).eq('id', _currentUser.id);
+      }
+    }
+  } catch(e) { state.isPro = false; }
+
+  // 일일 판별 횟수 초기화 (자정 기준)
+  _loadDailyScanCount();
+
+  // PRO면 배지 숨기기, 무료면 잔여 횟수 표시
+  _updateScanBadge();
+
   _loadProfile();
   await _loadGeckosFromDB();
   renderHome();
   renderPosts();
   renderGeckoList();
   renderScanGrid();
+}
+
+// ── 일일 판별 횟수 관리 (localStorage, 자정 리셋) ──
+function _loadDailyScanCount() {
+  if (state.isPro) { state.freeScansLeft = 999; return; }
+  try {
+    const stored = JSON.parse(localStorage.getItem('_daily_scan_' + _currentUser.id) || '{}');
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    if (stored.date === today) {
+      state.freeScansLeft = Math.max(0, 3 - (stored.count || 0));
+    } else {
+      state.freeScansLeft = 3;
+      localStorage.setItem('_daily_scan_' + _currentUser.id, JSON.stringify({ date: today, count: 0 }));
+    }
+  } catch(e) { state.freeScansLeft = 3; }
+}
+
+function _useDailyScan() {
+  if (state.isPro) return;
+  state.freeScansLeft = Math.max(0, state.freeScansLeft - 1);
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const stored = JSON.parse(localStorage.getItem('_daily_scan_' + _currentUser.id) || '{}');
+    const count = (stored.date === today ? (stored.count || 0) : 0) + 1;
+    localStorage.setItem('_daily_scan_' + _currentUser.id, JSON.stringify({ date: today, count }));
+  } catch(e) {}
+  _updateScanBadge();
+}
+
+function _updateScanBadge() {
+  const badge = document.getElementById('scan-free-badge');
+  if (!badge) return;
+  if (state.isPro) {
+    badge.textContent = 'PRO 무제한';
+    badge.style.background = 'rgba(245,200,66,.15)';
+    badge.style.borderColor = '#f5c842';
+    badge.style.color = '#f5c842';
+  } else {
+    badge.textContent = '잔여 ' + state.freeScansLeft + '회';
+    badge.style.background = state.freeScansLeft > 0 ? 'var(--ac2)' : 'rgba(255,60,60,.1)';
+    badge.style.borderColor = state.freeScansLeft > 0 ? 'var(--ac)' : '#ff4444';
+    badge.style.color = state.freeScansLeft > 0 ? 'var(--ac)' : '#ff4444';
+  }
+}
+
+// ── PRO 업그레이드 유도 팝업 ──
+function _showProUpgradePopup(message) {
+  const overlay = document.createElement('div');
+  overlay.setAttribute('style','position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)');
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:2px solid var(--am);border-radius:22px;padding:28px 22px;max-width:320px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+      <div style="font-size:48px;margin-bottom:12px">⭐</div>
+      <div style="font-size:18px;font-weight:900;color:var(--am);margin-bottom:8px">PRO로 업그레이드</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:20px">${message}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="this.closest('div[style*=fixed]').remove();openProSheet()" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#f5c842,#ff9c27);border:none;color:#1a0a00;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 4px 16px rgba(245,200,66,.35)">PRO 시작하기</button>
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;padding:12px;border-radius:12px;background:var(--sf2);border:1px solid var(--br);color:var(--tx3);font-size:13px;font-family:inherit;cursor:pointer">다음에 할게요</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
 }
 
 // ── 로그인 화면 표시 ──
