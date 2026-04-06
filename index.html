@@ -541,6 +541,8 @@ input[type=file]{display:none}
   border-radius:14px;padding:13px;width:100%;
 }
 </style>
+<!-- 포트원(아임포트) SDK -->
+<script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 </head>
 <body>
 
@@ -1606,8 +1608,8 @@ input[type=file]{display:none}
 
       <!-- 안내 -->
       <div style="text-align:center;font-size:11px;color:var(--tx3);line-height:1.6;padding:4px 0 8px">
-        결제 후 즉시 활성화 · 언제든 해지 가능<br>
-        문의: <span id="pro-contact-email" style="color:var(--ac);text-decoration:underline;cursor:pointer" onclick="copyContact()">dlrbgns456@gmail.com</span>
+        카카오페이 · 카드 결제 지원 · 즉시 활성화<br>
+        문의: <span style="color:var(--ac);text-decoration:underline;cursor:pointer" onclick="navigator.clipboard.writeText('dlrbgns456@gmail.com').then(()=>showToast('이메일 복사됨'))">dlrbgns456@gmail.com</span>
       </div>
     </div>
   </div>
@@ -4047,93 +4049,68 @@ function selectPlan(plan) {
 }
 
 function startProPayment() {
-  // ── 여기에 실제 결제 링크를 넣으세요 ──
-  // 토스페이먼츠, 카카오페이, 또는 계좌이체 안내 등
-  const prices = { monthly: '4,900원/월', yearly: '46,800원/년 (월 3,900원)' };
-  const plan = prices[_selectedPlan];
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
 
-  // 방법 1: 카카오페이/토스 결제 링크로 이동
-  // window.location.href = 'https://your-payment-link.com?plan=' + _selectedPlan;
+  const amounts = { monthly: 4900, yearly: 46800 };
+  const labels = { monthly: '월간 구독', yearly: '연간 구독' };
+  const amount = amounts[_selectedPlan];
+  const merchantUid = 'order_' + Date.now();
 
-  // 방법 2: 계좌이체 안내 (지금은 이 방식)
+  // 포트원(아임포트) 초기화
+  const IMP = window.IMP;
+  if (!IMP) { showToast('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return; }
+  IMP.init('imp48623845');
+
   closeSheetDirect('sheet-pro');
-  const msg = `💳 PRO 결제 안내\n\n선택: ${plan}\n\n` +
-    `[계좌이체]\n카카오뱅크 3333-00-0000000\n예금주: 마이크레\n\n` +
-    `입금 후 아래 이메일로 연락주시면\n24시간 내 PRO 활성화해드려요!\n\ndlrbgns456@gmail.com`;
 
-  // 커스텀 결제 안내 표시
-  const overlay = document.createElement('div');
-  overlay.setAttribute('style', 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)');
-  overlay.innerHTML = `
-    <div style="background:var(--card);border:2px solid var(--am);border-radius:22px;padding:26px 22px;max-width:340px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.4)">
-      <div style="text-align:center;margin-bottom:14px">
-        <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#f5c842,#ff9c27);font-size:26px;margin-bottom:8px">🏦</div>
-        <div style="font-size:18px;font-weight:900;color:var(--am)">PRO 결제 안내</div>
-        <div style="font-size:12px;color:var(--tx3);margin-top:2px">안전한 무통장 입금</div>
-      </div>
+  IMP.request_pay({
+    pg: 'kakaopay',           // 카카오페이 (카드 결제도 가능: 'html5_inicis')
+    pay_method: 'card',
+    merchant_uid: merchantUid,
+    name: '마이크레 PRO 정기구독 (' + labels[_selectedPlan] + ')',
+    amount: amount,
+    buyer_email: _currentUser.email || '',
+    buyer_name: _currentUser.user_metadata?.nickname || '',
+  }, async function(rsp) {
+    if (rsp.success) {
+      try {
+        // 1) payments 테이블에 결제 내역 저장
+        await _supabase.from('payments').insert({
+          user_id: _currentUser.id,
+          imp_uid: rsp.imp_uid,
+          merchant_uid: rsp.merchant_uid,
+          amount: amount,
+          plan: _selectedPlan,
+          status: 'paid'
+        });
 
-      <div style="background:var(--sf2);border:1px solid var(--br);border-radius:14px;padding:16px;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--tx3);margin-bottom:6px;letter-spacing:.5px">선택 플랜</div>
-        <div style="font-size:17px;font-weight:900;color:var(--am)">${plan}</div>
-      </div>
+        // 2) profiles 테이블 PRO 활성화
+        const proUntil = new Date();
+        if (_selectedPlan === 'yearly') {
+          proUntil.setFullYear(proUntil.getFullYear() + 1);
+        } else {
+          proUntil.setMonth(proUntil.getMonth() + 1);
+        }
+        await _supabase.from('profiles').update({
+          is_pro: true,
+          pro_until: proUntil.toISOString()
+        }).eq('id', _currentUser.id);
 
-      <div style="background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(255,156,39,.08));border:1.5px solid rgba(245,200,66,.3);border-radius:14px;padding:16px;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span style="font-size:18px">🏦</span>
-          <span style="font-size:14px;font-weight:800;color:var(--tx)">입금 계좌</span>
-        </div>
-        <div style="background:var(--card);border:1px solid var(--br);border-radius:10px;padding:12px;font-family:'DM Mono',monospace">
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">카카오뱅크</div>
-          <div style="font-size:17px;font-weight:800;color:var(--tx);letter-spacing:1px">3333-00-0000000</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">예금주: <b>마이크레</b></div>
-        </div>
-      </div>
+        showToast('PRO 활성화 완료! 환영합니다 ⭐');
 
-      <div style="background:var(--sf2);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <span style="font-size:16px">📋</span>
-          <span style="font-size:13px;font-weight:700;color:var(--tx)">입금 후 안내</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--tx2);line-height:1.6">
-          <div style="display:flex;gap:8px;align-items:flex-start">
-            <span style="background:var(--am);color:#1a0a00;font-size:10px;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
-            <span>아래 계좌로 <b style="color:var(--tx)">정확한 금액</b> 입금</span>
-          </div>
-          <div style="display:flex;gap:8px;align-items:flex-start">
-            <span style="background:var(--am);color:#1a0a00;font-size:10px;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
-            <span><b style="color:var(--ac)" onclick="copyContact()" style="cursor:pointer">dlrbgns456@gmail.com</b> 으로<br>가입 이메일 + 닉네임 전송</span>
-          </div>
-          <div style="display:flex;gap:8px;align-items:flex-start">
-            <span style="background:var(--am);color:#1a0a00;font-size:10px;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
-            <span><b style="color:var(--ac)">24시간 내</b> PRO 활성화 완료!</span>
-          </div>
-        </div>
-      </div>
+        // 3) 페이지 새로고침으로 PRO 기능 즉시 반영
+        setTimeout(() => { location.reload(); }, 1200);
 
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <button onclick="copyAccountInfo()" style="flex:1;padding:13px;border-radius:12px;background:var(--sf2);border:1.5px solid var(--br);color:var(--tx);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s">📋 계좌 복사</button>
-        <button onclick="copyContact()" style="flex:1;padding:13px;border-radius:12px;background:var(--sf2);border:1.5px solid var(--br);color:var(--tx);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s">📧 이메일 복사</button>
-      </div>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#f5c842,#ff9c27);border:none;color:#1a0a00;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 4px 16px rgba(245,200,66,.35)">확인했어요</button>
-
-      <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--tx3);line-height:1.5">
-        입금 확인 후 수동 활성화 방식입니다<br>
-        문의: dlrbgns456@gmail.com
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-}
-
-function copyAccountInfo() {
-  const text = '카카오뱅크 3333-00-0000000 (마이크레)';
-  navigator.clipboard.writeText(text).then(() => showToast('📋 계좌번호가 복사되었어요!'))
-    .catch(() => showToast('계좌: 카카오뱅크 3333-00-0000000'));
-}
-
-function copyContact() {
-  navigator.clipboard.writeText('dlrbgns456@gmail.com').then(() => showToast('📋 이메일이 복사되었어요!'))
-    .catch(() => {});
+      } catch (err) {
+        console.error('결제 후처리 오류:', err);
+        showToast('결제는 완료되었으나 활성화 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
+      }
+    } else {
+      // 결제 실패 또는 사용자 취소
+      showToast('결제가 취소되었습니다.');
+      console.warn('결제 실패:', rsp.error_msg);
+    }
+  });
 }
 
 // ══════════════════════════════
