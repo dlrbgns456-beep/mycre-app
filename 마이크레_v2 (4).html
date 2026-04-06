@@ -1056,7 +1056,7 @@ input[type=file]{display:none}
   <!-- 계정 섹션 -->
   <div class="more-section">
     <div class="more-section-label">🔐 계정</div>
-    <button id="btn-signout" class="more-item" style="border-color:rgba(255,123,84,.3);background:var(--co2);width:100%;text-align:left;font-family:inherit;pointer-events:auto">
+    <button id="btn-signout" class="more-item" onclick="signOut()" style="border-color:rgba(255,123,84,.3);background:var(--co2);width:100%;text-align:left;font-family:inherit">
       <div class="more-icon" style="background:rgba(255,123,84,.2);pointer-events:none">🚪</div>
       <div class="more-item-info" style="pointer-events:none">
         <div class="more-item-title" style="color:var(--coral)">로그아웃</div>
@@ -1064,7 +1064,7 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow" style="color:var(--coral);pointer-events:none">›</div>
     </button>
-    <button id="btn-delete-account" class="more-item" style="border-color:rgba(255,60,60,.3);background:rgba(255,60,60,.07);width:100%;text-align:left;font-family:inherit;pointer-events:auto">
+    <button id="btn-delete-account" class="more-item" onclick="deleteAccount()" style="border-color:rgba(255,60,60,.3);background:rgba(255,60,60,.07);width:100%;text-align:left;font-family:inherit">
       <div class="more-icon" style="background:rgba(255,60,60,.15);pointer-events:none">⚠️</div>
       <div class="more-item-info" style="pointer-events:none">
         <div class="more-item-title" style="color:#ff4444">회원 탈퇴</div>
@@ -3715,12 +3715,6 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // ── 로그아웃/탈퇴 버튼 연결 (onclick = 딱 하나만, 중복 방지) ──
-  const _btnSignout = document.getElementById('btn-signout');
-  if (_btnSignout) _btnSignout.onclick = signOut;
-  const _btnDelete = document.getElementById('btn-delete-account');
-  if (_btnDelete) _btnDelete.onclick = deleteAccount;
-
   // ── 안전장치: 4초 안에 아무것도 안 되면 강제로 로그인 화면 표시
   const authTimeout = setTimeout(() => {
     if (!_currentUser) _showAuthScreen();
