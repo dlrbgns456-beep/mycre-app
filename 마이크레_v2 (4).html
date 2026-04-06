@@ -4298,6 +4298,7 @@ async function deleteAccount() {
     console.error('탈퇴 처리 오류:', e.message);
     showToast('오류가 발생했습니다. 다시 시도해주세요.');
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.querySelector('.more-item-title').textContent = '회원탈퇴'; }
+  }
 }
 
 // ── 로그인 성공 후 처리 ──
