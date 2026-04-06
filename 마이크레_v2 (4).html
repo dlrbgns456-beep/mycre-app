@@ -3510,70 +3510,56 @@ async function handleAuthSubmit() {
 }
 
 
-// ── 로그아웃 (버튼 잠금 + 새로고침으로 확실하게) ──
+// ── 로그아웃 ──
 async function signOut() {
   try {
-    const btn = document.getElementById('btn-signout');
-    if (btn) btn.style.pointerEvents = 'none';
-
+    showToast('로그아웃 중...');
     const { error } = await _supabase.auth.signOut();
     if (error) throw error;
 
     _currentUser = null;
     state.geckos = [];
     state.posts = [];
-    showToast('안전하게 로그아웃되었습니다.');
-    setTimeout(() => { window.location.reload(); }, 1000);
+
+    setTimeout(() => {
+      window.location.href = window.location.origin + window.location.pathname;
+    }, 500);
   } catch(e) {
-    console.error('로그아웃 오류:', e.message);
+    console.error('로그아웃 에러:', e.message);
     window.location.reload();
   }
 }
 
-// ── 회원 탈퇴 (2단계 탭 확인 — PWA에서 confirm() 작동 안 하므로) ──
+// ── 회원 탈퇴 (2단계 탭 — PWA standalone에서 confirm() 작동 안 하므로) ──
 let _deleteConfirmStep = 0;
 async function deleteAccount() {
   if (!_currentUser) return;
-  // 1단계: 경고
   if (_deleteConfirmStep === 0) {
     _deleteConfirmStep = 1;
-    showToast('⚠️ 등록된 모든 개체와 게시물이 삭제됩니다. 한 번 더 클릭 시 확정.');
+    showToast('⚠️ 등록된 모든 데이터가 영구 삭제됩니다. 한 번 더 클릭 시 확정.');
     setTimeout(() => { _deleteConfirmStep = 0; }, 3000);
     return;
   }
-  // 2단계: 실행
   _deleteConfirmStep = 0;
   try {
-    showToast('처리 중...');
-    const btn = document.getElementById('btn-delete-account');
-    if (btn) btn.style.pointerEvents = 'none';
+    showToast('탈퇴 처리 중...');
     const uid = _currentUser.id;
 
-    // Storage 사진 + DB 데이터 병렬 삭제 (속도 최적화)
-    const storageCleanup = (async () => {
-      try {
-        const { data: files } = await _supabase.storage.from('gecko-photos').list(uid);
-        if (files && files.length > 0) {
-          await _supabase.storage.from('gecko-photos').remove(files.map(f => uid + '/' + f.name));
-        }
-      } catch(e) {}
-    })();
-
+    // 내 데이터 병렬 삭제 (속도 최적화)
     await Promise.all([
-      storageCleanup,
       _supabase.from('posts').delete().eq('user_id', uid),
       _supabase.from('geckos').delete().eq('user_id', uid),
     ]);
 
     await _supabase.auth.signOut();
-    _currentUser = null;
-    showToast('그동안 이용해주셔서 감사합니다.');
-    setTimeout(() => { window.location.href = window.location.origin; }, 2000);
+
+    showToast('탈퇴 완료. 초기화면으로 돌아갑니다.');
+    setTimeout(() => {
+      window.location.href = window.location.origin + window.location.pathname;
+    }, 1000);
   } catch(e) {
-    console.error('탈퇴 오류:', e);
-    showToast('탈퇴 처리 중 문제가 발생했습니다. 관리자에게 문의하세요.');
-    const btn = document.getElementById('btn-delete-account');
-    if (btn) btn.style.pointerEvents = 'auto';
+    console.error('탈퇴 처리 오류:', e.message);
+    showToast('오류가 발생했습니다. 다시 시도해주세요.');
   }
 }
 
