@@ -807,70 +807,80 @@ input[type=file]{display:none}
   <!-- Result -->
   <div class="result-area" id="result-area">
     <!-- AI 면책 배너 -->
-    <div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.35);border-radius:14px;padding:11px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start">
-      <span style="font-size:18px;flex-shrink:0">⚠️</span>
-      <div style="font-size:12px;color:#c9a850;line-height:1.7">
-        <b style="color:var(--am)">AI 분석 결과는 참고용입니다.</b><br>
-        모프명·등급은 부르는 사람마다 다를 수 있고, 세상에 나와있는 정보 기반이에요.
+    <div style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.25);border-radius:14px;padding:11px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:16px;flex-shrink:0">🔬</span>
+      <div style="font-size:11px;color:#c9a850;line-height:1.7">
+        <b style="color:var(--am)">AI 분석은 확률 기반 추정입니다.</b><br>
+        결과를 단정하지 않으며, 가장 유사한 모프 후보를 확률로 제시합니다.
         최종 판단은 분양받는 분이 직접 하세요.
       </div>
     </div>
 
-    <div class="result-morph-card">
-      <div class="result-morph-header">
-        <div>
-          <div id="res-morph-name" class="result-morph-name">—</div>
-          <div id="res-confidence" class="result-confidence">—</div>
-          <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap" id="res-grade-wrap"></div>
-        </div>
-        <div class="result-morph-img">🦎</div>
-      </div>
-
-      <div class="result-section">
-        <div class="result-section-title">특징</div>
-        <div class="result-trait-row" id="res-traits"></div>
-      </div>
-
-      <div class="result-section">
-        <div class="result-section-title">모프 설명</div>
-        <div class="result-desc" id="res-desc">—</div>
-      </div>
-    </div>
-
-    <!-- Price -->
-    <div class="price-range" style="margin-bottom:12px">
-      <div>
-        <div class="price-range-label">💰 시세 범위</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">퀄리티에 따라 차이 있음</div>
-      </div>
-      <div class="price-range-value" id="res-price">—</div>
-    </div>
-
-    <!-- Genetics -->
+    <!-- 후보 리스트 (확률 순위) -->
     <div class="card card-pad" style="margin-bottom:12px">
-      <div class="result-section-title" style="margin-bottom:10px">🧬 유전자 정보</div>
-      <div class="genetics-grid" id="res-genetics"></div>
-      <div style="margin-top:10px;font-size:12px;color:var(--tx2);line-height:1.7;background:var(--sf2);border-radius:10px;padding:10px 12px" id="res-breeding"></div>
+      <div class="result-section-title" style="margin-bottom:10px">📊 모프 후보 (확률 순위)</div>
+      <div id="res-candidate-list"></div>
     </div>
 
-    <!-- Possible parents -->
-    <div class="card card-pad" style="margin-bottom:14px">
-      <div class="result-section-title" style="margin-bottom:8px">👪 가능한 부모 조합</div>
-      <div id="res-parents" style="font-size:12px;color:var(--tx2);line-height:1.8"></div>
+    <!-- 1위 후보 상세 정보 -->
+    <div id="res-top-detail">
+      <div class="result-morph-card">
+        <div class="result-morph-header">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);margin-bottom:2px;letter-spacing:.5px">🥇 1위 후보 상세</div>
+            <div id="res-morph-name" class="result-morph-name">—</div>
+            <div id="res-confidence" class="result-confidence">—</div>
+            <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap" id="res-grade-wrap"></div>
+          </div>
+          <div class="result-morph-img">🦎</div>
+        </div>
+
+        <div class="result-section">
+          <div class="result-section-title">특징</div>
+          <div class="result-trait-row" id="res-traits"></div>
+        </div>
+
+        <div class="result-section">
+          <div class="result-section-title">모프 설명</div>
+          <div class="result-desc" id="res-desc">—</div>
+        </div>
+      </div>
+
+      <!-- Price -->
+      <div class="price-range" style="margin-bottom:12px">
+        <div>
+          <div class="price-range-label">💰 시세 범위</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">퀄리티에 따라 차이 있음</div>
+        </div>
+        <div class="price-range-value" id="res-price">—</div>
+      </div>
+
+      <!-- Genetics -->
+      <div class="card card-pad" style="margin-bottom:12px">
+        <div class="result-section-title" style="margin-bottom:10px">🧬 유전자 정보</div>
+        <div class="genetics-grid" id="res-genetics"></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--tx2);line-height:1.7;background:var(--sf2);border-radius:10px;padding:10px 12px" id="res-breeding"></div>
+      </div>
+
+      <!-- Possible parents -->
+      <div class="card card-pad" style="margin-bottom:14px">
+        <div class="result-section-title" style="margin-bottom:8px">👪 가능한 부모 조합</div>
+        <div id="res-parents" style="font-size:12px;color:var(--tx2);line-height:1.8"></div>
+      </div>
     </div>
 
     <!-- 피드백: 판별 결과가 틀렸을 때 정답 제보 -->
-    <div id="res-feedback" class="card card-pad" style="margin-bottom:14px">
-      <div class="result-section-title" style="margin-bottom:8px">🔄 결과가 다른가요?</div>
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">정확한 모프를 알고 계시면 제보해주세요. AI 개선에 활용됩니다.</div>
+    <div id="res-feedback" class="card card-pad" style="margin-bottom:14px;border:1.5px solid rgba(93,220,106,.2)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:16px">🔄</span>
+        <div class="result-section-title" style="margin:0">결과가 다른가요?</div>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;line-height:1.5">정확한 모프를 알고 계시면 제보해주세요.<br>소중한 데이터로 AI 판별 정확도를 개선합니다.</div>
       <div id="feedback-form" style="display:flex;gap:8px;align-items:center">
-        <select id="feedback-morph" class="form-input" style="flex:1;font-size:12px;padding:10px">
-          <option value="">정답 모프 선택...</option>
-          ${Object.keys(MORPHS).map(n => `<option value="${n}">${n}</option>`).join('')}
-        </select>
+        <select id="feedback-morph" class="form-input" style="flex:1;font-size:12px;padding:10px"></select>
         <button class="btn-primary" style="width:auto;padding:10px 16px;border-radius:12px;font-size:12px" onclick="submitMorphFeedback()">제보</button>
       </div>
-      <div id="feedback-done" style="display:none;text-align:center;padding:8px;font-size:12px;color:var(--ac);font-weight:600">✅ 소중한 제보 감사합니다!</div>
+      <div id="feedback-done" style="display:none;text-align:center;padding:10px;font-size:13px;color:var(--ac);font-weight:700">✅ 소중한 제보 감사합니다!</div>
     </div>
 
     <div class="result-actions">
@@ -3118,44 +3128,74 @@ function showResult(photoCount, fireUp) {
   const mergedScores = photoCount > 1 ? mergeMultiPhotoScores(scoreArrays) : scoreArrays[0];
   const topCandidates = getTopCandidates(mergedScores, 5);
 
-  // 최소 1개 후보는 보장
-  let pickedMorph, m;
-  if (topCandidates.length > 0) {
-    pickedMorph = topCandidates[0].name;
-    m = topCandidates[0].data;
-  } else {
-    pickedMorph = '노멀';
-    m = MORPHS['노멀'];
-  }
-  lastScanResult = {morph: pickedMorph, data: m};
+  // 최소 1개 후보 보장
+  if (topCandidates.length === 0) topCandidates.push({ name: '노멀', score: 1, data: MORPHS['노멀'] });
+
+  // 확률 계산: 상위 후보들의 점수를 합산하여 비율로 변환
+  const totalScore = topCandidates.reduce((sum, c) => sum + c.score, 0);
+  const candidatesWithProb = topCandidates.map(c => ({
+    ...c,
+    prob: totalScore > 0 ? Math.round((c.score / totalScore) * 100) : 0
+  }));
+  // 확률 합이 100이 되도록 보정
+  const probSum = candidatesWithProb.reduce((s, c) => s + c.prob, 0);
+  if (probSum > 0 && candidatesWithProb.length > 0) candidatesWithProb[0].prob += (100 - probSum);
+
+  const top = candidatesWithProb[0];
+  const pickedMorph = top.name;
+  const m = top.data;
+  lastScanResult = { morph: pickedMorph, data: m, candidates: candidatesWithProb };
 
   const gInfo = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
 
-  // 신뢰도: 최고 점수 대비 비율 + 사진 수 보너스
-  const maxScore = topCandidates[0]?.score || 1;
-  const secondScore = topCandidates[1]?.score || 0;
-  const gap = maxScore > 0 ? ((maxScore - secondScore) / maxScore) : 0;
-  const baseConf = Math.min(95, Math.round(60 + gap * 30 + photoCount * 3 + (fireUp ? 2 : 0)));
-  const conf = baseConf + Math.floor(Math.random() * 5);
+  // ── 후보 리스트 렌더링 (확률 바 차트) ──
+  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+  const barColors = ['var(--ac)','var(--am)','var(--blue)','var(--tx3)','var(--tx3)'];
+  document.getElementById('res-candidate-list').innerHTML = candidatesWithProb.map((c, i) => {
+    const cg = MORPH_GRADES[c.data.grade] || MORPH_GRADES['C'];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i < candidatesWithProb.length - 1 ? 'border-bottom:1px solid var(--br);' : ''}" ${i > 0 ? `onclick="showCandidateDetail(${i})" style="cursor:pointer"` : ''}>
+      <span style="font-size:14px;flex-shrink:0;width:22px;text-align:center">${medals[i] || ''}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:800;color:${i === 0 ? 'var(--ac)' : 'var(--tx)'}">${c.name}</span>
+          <span class="grade-badge" style="background:${cg.bg};color:${cg.color};font-size:9px;padding:2px 6px">${cg.label}</span>
+          <span style="font-size:13px;font-weight:900;color:${i === 0 ? 'var(--ac)' : 'var(--tx2)'};margin-left:auto;font-family:'DM Mono',monospace">${c.prob}%</span>
+        </div>
+        <div style="height:6px;background:var(--sf2);border-radius:3px;overflow:hidden">
+          <div style="width:${c.prob}%;height:100%;background:${barColors[i]};border-radius:3px;transition:width .6s ease"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + `<div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:6px">사진 ${photoCount}장 멀티분석${fireUp ? ' · 🔥파이어업 보정' : ''} · 후보를 탭하면 상세 보기</div>`;
 
-  // 유사 후보 (2~3위)
-  const candidates = topCandidates.slice(1, 3).map(c => c.name);
+  // ── 1위 후보 상세 렌더링 ──
+  renderCandidateDetail(top, gInfo, fireUp);
+
+  // ── 피드백 select 동적 생성 ──
+  const fbSelect = document.getElementById('feedback-morph');
+  fbSelect.innerHTML = '<option value="">정답 모프 선택...</option>' + Object.keys(MORPHS).map(n => '<option value="' + n + '">' + n + '</option>').join('');
+
+  document.getElementById('result-area').classList.add('show');
+}
+
+// 후보 상세 렌더링 (1위 또는 다른 후보 탭 시)
+function renderCandidateDetail(candidate, gInfo, fireUp) {
+  const m = candidate.data;
+  const pickedMorph = candidate.name;
 
   document.getElementById('res-morph-name').textContent = pickedMorph;
   document.getElementById('res-confidence').textContent =
-    `신뢰도 ${conf}% · 사진 ${photoCount}장 멀티분석${fireUp ? ' · 🔥파이어업 보정' : ''}`;
+    `${pickedMorph}일 확률 ${candidate.prob}%`;
 
   document.getElementById('res-grade-wrap').innerHTML = `
     <span class="grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${gInfo.label}</span>
     <span class="tag tag-gray">크레스티드 게코</span>
-    ${fireUp ? '<span class="tag tag-coral">🔥 파이어업 보정</span>' : ''}
-    ${candidates.length ? `<span class="tag tag-amber" style="font-size:10px">유사: ${candidates.join(' / ')}</span>` : ''}`;
+    ${fireUp ? '<span class="tag tag-coral">🔥 파이어업 보정</span>' : ''}`;
 
-  document.getElementById('res-traits').innerHTML = m.traits.map(t => `<span class="tag tag-green">${t}</span>`).join('');
+  document.getElementById('res-traits').innerHTML = m.traits.map(t => '<span class="tag tag-green">' + t + '</span>').join('');
   document.getElementById('res-desc').textContent = m.desc;
   document.getElementById('res-price').textContent = m.price;
 
-  // 유전자 정보 + 유전적 기원 + 브리딩 주의사항
   document.getElementById('res-genetics').innerHTML = `
     <div class="genetics-item"><div class="genetics-item-label">유전 방식</div><div class="genetics-item-value" style="color:var(--ac);font-size:12px">${m.genetics.type}</div></div>
     <div class="genetics-item"><div class="genetics-item-label">대립유전자</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.allele}</div></div>
@@ -3173,7 +3213,17 @@ function showResult(photoCount, fireUp) {
 
   document.getElementById('res-breeding').innerHTML = '<b style="color:var(--tx)">브리딩 노트:</b> ' + m.parents;
   document.getElementById('res-parents').innerHTML = m.parents;
-  document.getElementById('result-area').classList.add('show');
+}
+
+// 후보 탭 시 상세 전환
+function showCandidateDetail(index) {
+  if (!lastScanResult || !lastScanResult.candidates) return;
+  const candidate = lastScanResult.candidates[index];
+  if (!candidate) return;
+  const gInfo = MORPH_GRADES[candidate.data.grade] || MORPH_GRADES['C'];
+  renderCandidateDetail(candidate, gInfo, isFireUp);
+  // 스크롤 to detail
+  document.getElementById('res-top-detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // 피드백 제출 — Supabase morph_feedback 테이블에 저장
