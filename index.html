@@ -549,6 +549,22 @@ input[type=file]{display:none}
 <body>
 
 <!-- ══════════════════════════════════════
+     공유용 개체 프로필 (비로그인 QR 조회)
+══════════════════════════════════════ -->
+<div id="shared-gecko-page" style="display:none;min-height:100vh;padding:20px;padding-bottom:80px">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:36px;margin-bottom:6px">🦎</div>
+    <div style="font-family:'Nunito',sans-serif;font-size:20px;font-weight:900;color:var(--ac)">마이크레</div>
+    <div style="font-size:11px;color:var(--tx3)">개체 프로필 카드</div>
+  </div>
+  <div id="shared-gecko-content"></div>
+  <div style="text-align:center;margin-top:20px">
+    <a href="/" style="display:inline-block;background:var(--ac);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:700">마이크레 앱 시작하기</a>
+    <div style="font-size:10px;color:var(--tx3);margin-top:10px">mycre-gecko.netlify.app</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      AUTH SCREEN (소셜 로그인)
 ══════════════════════════════════════ -->
 <div id="auth-screen">
@@ -2964,14 +2980,34 @@ function openGeckoDetail(id) {
           <div style="font-size:13px;color:var(--tx2);line-height:1.7">${g.memo}</div>
         </div>` : ''}
 
+      ${state.isPro ? `
+      <div style="background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">📱 QR 프로필 카드</div>
+        <div id="detail-qr-${id}" style="display:inline-block;background:white;padding:8px;border-radius:10px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-sm" style="flex:1;padding:10px;font-size:11px" onclick="saveDetailQR(${id})">📥 이미지 저장</button>
+          <button class="btn-sm" style="flex:1;padding:10px;font-size:11px" onclick="printDetailQR(${id})">🖨️ 인쇄하기</button>
+        </div>
+      </div>` : ''}
+
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn-outline" style="flex:1" onclick="editGecko(${id})">✏️ 수정</button>
-        <button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">📱 QR 보기</button>
+        ${state.isPro ? `<button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">📱 QR 시트</button>` :
+        `<button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">🔒 QR (PRO)</button>`}
       </div>
     </div>`;
 
   document.getElementById('gecko-detail-body').innerHTML = html;
   openSheet('sheet-gecko-detail');
+
+  // PRO: 상세 페이지 내 QR 자동 생성
+  if (state.isPro && typeof QRCode !== 'undefined') {
+    const qrEl = document.getElementById('detail-qr-' + id);
+    if (qrEl) {
+      const qrData = `https://mycre-gecko.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
+      try { new QRCode(qrEl, { text: qrData, width: 140, height: 140, colorDark:'#0e1a10', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
+    }
+  }
 }
 
 function detailItem(label, val) {
@@ -3795,6 +3831,35 @@ function printQR() {
   printWin.document.close();
 }
 
+// 개체 상세에서 직접 QR 저장/인쇄
+function saveDetailQR(id) {
+  const canvas = document.querySelector('#detail-qr-' + id + ' canvas');
+  if (!canvas) { showToast('QR코드가 없습니다'); return; }
+  const g = state.geckos.find(x => x.id == id);
+  const link = document.createElement('a');
+  link.download = `마이크레_QR_${g ? g.name : 'gecko'}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('📥 QR 이미지가 저장되었어요!');
+}
+
+function printDetailQR(id) {
+  const canvas = document.querySelector('#detail-qr-' + id + ' canvas');
+  if (!canvas) { showToast('QR코드가 없습니다'); return; }
+  const g = state.geckos.find(x => x.id == id);
+  const m = MORPHS[g?.morph] || {};
+  const imgSrc = canvas.toDataURL('image/png');
+  const printWin = window.open('', '_blank', 'width=800,height=600');
+  printWin.document.write(`<!DOCTYPE html><html><head><title>마이크레 QR - ${g?.name||'개체'}</title>
+    <style>body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}.card{text-align:center;border:2px solid #0e1a10;border-radius:20px;padding:40px 30px;max-width:360px}.title{font-size:24px;font-weight:900;margin-bottom:4px}.sub{font-size:14px;color:#666;margin-bottom:20px}.qr{margin:20px auto}.info{text-align:left;font-size:13px;line-height:2;color:#333;margin-top:16px;border-top:1px solid #ddd;padding-top:12px}.footer{margin-top:16px;font-size:10px;color:#999}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+    <div class="card"><div class="title">🦎 ${g?.name||'개체'}</div><div class="sub">${g?.morph||'미판별'}</div>
+    <div class="qr"><img src="${imgSrc}" width="200" height="200"></div>
+    <div class="info">${g?.sex?`<div>성별: ${g.sex==='암컷'?'♀ 암컷':'♂ 수컷'}</div>`:''} ${g?.dob?`<div>출생: ${g.dob}</div>`:''} ${g?.weight?`<div>몸무게: ${g.weight}g</div>`:''} ${m.price?`<div>시세: ${m.price}</div>`:''} ${g?.dad||g?.mom?`<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>`:''}</div>
+    <div class="footer">마이크레 · mycre-gecko.netlify.app</div></div>
+    <script>setTimeout(()=>{window.print();window.close()},500)<\/script></body></html>`);
+  printWin.document.close();
+}
+
 function populateGeckoSelects() {
   const selects = ['qr-gecko-select','post-gecko-link'];
   selects.forEach(selId => {
@@ -4139,6 +4204,91 @@ function submitPriceReport() {
 }
 
 // ══════════════════════════════
+// ══════════════════════════════
+// 공유용 개체 프로필 (비로그인 QR 조회)
+// ══════════════════════════════
+async function _showSharedGeckoPage(geckoId, ownerId) {
+  // 앱 UI 숨기고 공유 페이지만 표시
+  document.getElementById('auth-screen').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.querySelector('.bnav').style.display = 'none';
+  document.getElementById('shared-gecko-page').style.display = 'block';
+
+  const content = document.getElementById('shared-gecko-content');
+  content.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3)">로딩 중...</div>';
+
+  try {
+    const { data: g, error } = await _supabase
+      .from('geckos')
+      .select('name, morph, sex, dob, weight, dad, mom, photo, status')
+      .eq('id', geckoId)
+      .eq('user_id', ownerId)
+      .maybeSingle();
+
+    if (error || !g) {
+      content.innerHTML = `
+        <div style="text-align:center;padding:40px 20px">
+          <div style="font-size:48px;margin-bottom:12px">😢</div>
+          <div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:6px">개체를 찾을 수 없어요</div>
+          <div style="font-size:12px;color:var(--tx3)">삭제되었거나 잘못된 링크일 수 있습니다.</div>
+        </div>`;
+      return;
+    }
+
+    const m = MORPHS[g.morph] || {};
+    const grade = m.grade || 'C';
+    const gInfo = MORPH_GRADES[grade] || MORPH_GRADES['C'];
+    const age = g.dob ? getAge(g.dob) : null;
+
+    content.innerHTML = `
+      <div style="background:var(--card);border:1.5px solid var(--br);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.15)">
+        ${g.photo ? `<div style="width:100%;height:200px;overflow:hidden"><img src="${g.photo}" style="width:100%;height:100%;object-fit:cover"></div>` :
+        `<div style="width:100%;height:140px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:60px">🦎</div>`}
+        <div style="padding:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <div style="font-size:22px;font-weight:900">${g.name}</div>
+              <div style="color:${gInfo.color};font-size:14px;font-weight:700">${g.morph || '모프 미판별'}</div>
+            </div>
+            <div style="background:${gInfo.bg};color:${gInfo.color};border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">${grade}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--sf2);border-radius:10px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:2px">성별</div>
+              <div style="font-size:14px;font-weight:700">${g.sex === '암컷' ? '♀ 암컷' : g.sex === '수컷' ? '♂ 수컷' : '미판별'}</div>
+            </div>
+            ${age ? `<div style="background:var(--sf2);border-radius:10px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:2px">나이</div>
+              <div style="font-size:14px;font-weight:700">${age}</div>
+            </div>` : ''}
+            ${g.weight ? `<div style="background:var(--sf2);border-radius:10px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:2px">몸무게</div>
+              <div style="font-size:14px;font-weight:700">${g.weight}g</div>
+            </div>` : ''}
+            ${g.status ? `<div style="background:var(--sf2);border-radius:10px;padding:10px 12px">
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:2px">상태</div>
+              <div style="font-size:14px;font-weight:700">${g.status}</div>
+            </div>` : ''}
+          </div>
+          ${(g.dad || g.mom) ? `
+          <div style="background:var(--sf2);border-radius:10px;padding:10px 12px;margin-top:8px">
+            <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">🧬 혈통</div>
+            <div style="font-size:13px;font-weight:700">♂ ${g.dad||'?'} × ♀ ${g.mom||'?'}</div>
+          </div>` : ''}
+          ${m.price ? `
+          <div style="background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(255,156,39,.08));border:1px solid rgba(245,200,66,.2);border-radius:10px;padding:10px 12px;margin-top:8px">
+            <div style="font-size:10px;color:var(--tx3);margin-bottom:2px">💰 시세 범위</div>
+            <div style="font-size:14px;font-weight:700;color:var(--am)">${m.price}</div>
+          </div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--tx3)">이 프로필은 마이크레 앱에서 QR코드로 공유되었습니다.</div>`;
+  } catch(err) {
+    console.error('공유 페이지 로드 오류:', err);
+    content.innerHTML = '<div style="text-align:center;padding:30px;color:#ff4444">데이터를 불러올 수 없습니다.</div>';
+  }
+}
+
 // ══════════════════════════════
 // 이용약관 / 개인정보처리방침
 // ══════════════════════════════
@@ -4716,6 +4866,13 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // ── QR 공유 페이지: ?gecko=ID&owner=UID 파라미터 감지
+  const _urlParams = new URLSearchParams(window.location.search);
+  if (_urlParams.has('gecko') && _urlParams.has('owner')) {
+    _showSharedGeckoPage(_urlParams.get('gecko'), _urlParams.get('owner'));
+    return; // 공유 페이지만 표시, 나머지 앱 로직 실행 안 함
+  }
+
   // ── 안전장치: 4초 안에 아무것도 안 되면 강제로 로그인 화면 표시
   const authTimeout = setTimeout(() => {
     if (!_currentUser) _showAuthScreen();
