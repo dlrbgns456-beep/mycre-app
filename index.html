@@ -3510,16 +3510,28 @@ async function handleAuthSubmit() {
 }
 
 
-// ── 로그아웃 (즉시 실행 — 확인 다이얼로그 없음) ──
+// ── 로그아웃 ──
 async function signOut() {
-  try { await _supabase.auth.signOut({ scope: 'local' }); } catch(e) {}
-  _currentUser = null;
-  state.geckos = [];
-  state.posts = [];
-  state.nextGeckoId = 1;
-  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
-  _showAuthScreen();
-  showToast('로그아웃 완료');
+  try {
+    const { error } = await _supabase.auth.signOut();
+    if (error) throw error;
+    _currentUser = null;
+    state.geckos = [];
+    state.posts = [];
+    state.nextGeckoId = 1;
+    try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
+    showToast('로그아웃 되었습니다.');
+    // _showAuthScreen()은 onAuthStateChange SIGNED_OUT에서 자동 호출
+  } catch(e) {
+    console.error('로그아웃 실패:', e.message);
+    // 에러 나도 강제로 로그아웃 처리
+    _currentUser = null;
+    state.geckos = [];
+    state.posts = [];
+    try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(ex) {}
+    _showAuthScreen();
+    showToast('로그아웃 되었습니다.');
+  }
 }
 
 // ── 회원 탈퇴 (2단계 확인) ──
