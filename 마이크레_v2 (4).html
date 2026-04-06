@@ -2790,7 +2790,10 @@ function buildPostCard(p, compact) {
   return div;
 }
 
-function openPostDetail(p) {
+let _currentPostId = null;
+
+async function openPostDetail(p) {
+  _currentPostId = p.id;
   const catLabels = {sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',qna:'❓ Q&A'};
   document.getElementById('post-detail-body').innerHTML = `
     <div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : (p.emoji||'🦎')}</div>
@@ -2808,15 +2811,87 @@ function openPostDetail(p) {
         <div style="font-size:11px;color:var(--tx2);margin-left:auto">${p.time}</div>
       </div>
       <div style="background:var(--sf2);border-radius:12px;padding:13px;font-size:13px;line-height:1.8;color:var(--tx2);margin-bottom:14px">${p.body}</div>
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 ${p.comments}개</div>
-      <div style="background:var(--sf2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--tx2);margin-bottom:8px">궁금한 게 있으면 댓글로 물어보세요!</div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 <span id="comment-count">0</span>개</div>
+      <div id="comments-list" style="margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
-        <input class="form-input" placeholder="댓글 작성..." style="flex:1;font-size:13px">
-        <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="showToast('댓글이 등록되었어요 ✅')">등록</button>
+        <input id="comment-input" class="form-input" placeholder="댓글 작성..." style="flex:1;font-size:13px">
+        <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="submitComment()">등록</button>
       </div>
       ${p.isOwn ? '<button class="btn-outline" onclick="deletePost(' + p.id + ')" style="color:var(--coral);border-color:var(--coral);background:var(--co2);margin-top:10px;width:100%">🗑 이 게시글 삭제</button>' : ''}
     </div>`;
   openSheet('sheet-post-detail');
+  loadComments(p.id);
+}
+
+async function loadComments(postId) {
+  const list = document.getElementById('comments-list');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:10px;color:var(--tx3);font-size:12px">댓글 로딩...</div>';
+  try {
+    const { data, error } = await _supabase.from('comments').select('*')
+      .eq('post_id', postId).order('created_at', { ascending: true });
+    if (error) throw error;
+    const countEl = document.getElementById('comment-count');
+    if (countEl) countEl.textContent = data.length;
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div style="background:var(--sf2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--tx2)">궁금한 게 있으면 댓글로 물어보세요!</div>';
+      return;
+    }
+    list.innerHTML = data.map(c => `
+      <div style="background:var(--sf2);border-radius:10px;padding:10px 12px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:700">${c.author}</span>
+          <span style="font-size:10px;color:var(--tx3);margin-left:auto">${_timeAgo(c.created_at)}</span>
+          ${_currentUser && c.user_id === _currentUser.id ? `<button onclick="deleteComment(${c.id})" style="background:none;border:none;font-size:11px;color:var(--coral);cursor:pointer;padding:0">삭제</button>` : ''}
+        </div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.5">${c.body}</div>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:8px">댓글을 불러올 수 없습니다.</div>';
+  }
+}
+
+async function submitComment() {
+  if (!_currentUser || !_currentPostId) return;
+  const input = document.getElementById('comment-input');
+  const body = input.value.trim();
+  if (!body) return;
+  input.disabled = true;
+  try {
+    const authorName = _profile.name || '익명';
+    const { error } = await _supabase.from('comments').insert({
+      post_id: _currentPostId,
+      user_id: _currentUser.id,
+      author: authorName,
+      body: body,
+    });
+    if (error) throw error;
+    input.value = '';
+    showToast('댓글이 등록되었어요 ✅');
+    loadComments(_currentPostId);
+  } catch(e) {
+    showToast('댓글 등록 실패: ' + e.message);
+  }
+  input.disabled = false;
+}
+
+let _deleteCommentStep = {};
+async function deleteComment(commentId) {
+  if (!_deleteCommentStep[commentId]) {
+    _deleteCommentStep[commentId] = true;
+    showToast('⚠️ 한 번 더 누르면 삭제됩니다');
+    setTimeout(() => { delete _deleteCommentStep[commentId]; }, 3000);
+    return;
+  }
+  delete _deleteCommentStep[commentId];
+  try {
+    const { error } = await _supabase.from('comments').delete().eq('id', commentId).eq('user_id', _currentUser.id);
+    if (error) throw error;
+    showToast('댓글 삭제됨');
+    loadComments(_currentPostId);
+  } catch(e) {
+    showToast('삭제 실패');
+  }
 }
 
 let _deletePostStep = 0;
@@ -3545,11 +3620,25 @@ async function deleteAccount() {
     showToast('탈퇴 처리 중...');
     const uid = _currentUser.id;
 
-    // 내 데이터 병렬 삭제 (속도 최적화)
+    // Storage 사진 삭제
+    try {
+      const { data: files } = await _supabase.storage.from('gecko-photos').list(uid);
+      if (files && files.length > 0) {
+        await _supabase.storage.from('gecko-photos').remove(files.map(f => `${uid}/${f.name}`));
+      }
+      const { data: postFiles } = await _supabase.storage.from('gecko-photos').list(`posts/${uid}`);
+      if (postFiles && postFiles.length > 0) {
+        await _supabase.storage.from('gecko-photos').remove(postFiles.map(f => `posts/${uid}/${f.name}`));
+      }
+    } catch(e) { console.warn('Storage 삭제 중 오류(무시):', e); }
+
+    // 내 데이터 병렬 삭제 (댓글은 posts CASCADE로 자동 삭제되지만 다른 글에 단 댓글도 삭제)
     await Promise.all([
+      _supabase.from('comments').delete().eq('user_id', uid),
       _supabase.from('posts').delete().eq('user_id', uid),
       _supabase.from('geckos').delete().eq('user_id', uid),
     ]);
+    localStorage.removeItem('mycre_profile_' + uid);
 
     await _supabase.auth.signOut();
 
