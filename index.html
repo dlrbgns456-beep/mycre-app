@@ -1373,7 +1373,7 @@ input[type=file]{display:none}
         <textarea class="form-textarea" id="gecko-memo" placeholder="특징, 먹이 반응, 건강 상태 등 자유롭게..."></textarea>
       </div>
 
-      <button class="btn-primary" onclick="saveGecko()">저장하기</button>
+      <button class="btn-primary" id="btn-save-gecko" onclick="saveGecko()">저장하기</button>
       <button class="btn-outline" id="delete-gecko-btn" onclick="deleteGecko()" style="display:none;margin-top:8px;color:var(--coral);border-color:var(--coral);background:var(--co2)">🗑 이 개체 삭제</button>
     </div>
   </div>
@@ -2808,57 +2808,74 @@ async function saveGecko() {
     return;
   }
 
-  const morph = document.getElementById('gecko-morph').value;
-  const m = MORPHS[morph] || {};
+  const isEdit = !!state.editingGeckoId;
+  const btn = document.getElementById('btn-save-gecko');
 
-  const geckoId = state.editingGeckoId || Date.now().toString();
+  // 버튼 비활성화 + 처리 중 표시
+  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; btn.style.opacity = '.6'; }
 
-  // ── 사진: Storage 업로드 (새 사진이 있을 때만)
-  let photoUrl = currentPhotoData; // 기본값: 기존 데이터 유지
-  if (_pendingPhotoFile) {
-    showToast('📤 사진 업로드 중...');
-    const uploaded = await _uploadPhotoToStorage(_pendingPhotoFile, geckoId);
-    if (uploaded) {
-      photoUrl = uploaded;
-    } else {
-      showToast('⚠️ 사진 업로드 실패 — 로컬 미리보기만 저장됩니다');
+  try {
+    const morph = document.getElementById('gecko-morph').value;
+    const m = MORPHS[morph] || {};
+    const geckoId = state.editingGeckoId || Date.now().toString();
+
+    // ── 사진: Storage 업로드 (새 사진이 있을 때만)
+    let photoUrl = currentPhotoData;
+    if (_pendingPhotoFile) {
+      if (btn) btn.textContent = '사진 업로드 중...';
+      const uploaded = await _uploadPhotoToStorage(_pendingPhotoFile, geckoId);
+      if (uploaded) {
+        photoUrl = uploaded;
+      } else {
+        showToast('⚠️ 사진 업로드 실패 — 로컬 미리보기만 저장됩니다');
+      }
+      _pendingPhotoFile = null;
     }
-    _pendingPhotoFile = null;
+
+    const gecko = {
+      id: geckoId,
+      name,
+      sex: document.getElementById('gecko-sex').value,
+      morph,
+      grade: document.getElementById('gecko-grade').value || m.grade || '',
+      dob: document.getElementById('gecko-dob').value,
+      price: document.getElementById('gecko-price').value,
+      weight: document.getElementById('gecko-weight').value,
+      status: document.getElementById('gecko-status').value,
+      cage: document.getElementById('gecko-cage').value,
+      dad: document.getElementById('gecko-dad').value,
+      mom: document.getElementById('gecko-mom').value,
+      memo: document.getElementById('gecko-memo').value,
+      photo: photoUrl,
+    };
+
+    if (isEdit) {
+      const idx = state.geckos.findIndex(g => g.id === state.editingGeckoId);
+      if (idx !== -1) state.geckos[idx] = gecko;
+    } else {
+      state.geckos.push(gecko);
+    }
+
+    // ── Supabase DB 저장
+    if (btn) btn.textContent = 'DB 저장 중...';
+    await _saveGeckoToDB(gecko);
+
+    // ── 시트 닫고 내 개체 탭으로 이동
+    closeSheetDirect('sheet-add-gecko');
+    renderGeckoList();
+    renderHome();
+    updateCountBadges();
+    populateGeckoSelects();
+    showPage('myge');
+    showToast(isEdit ? '✅ 개체 정보가 수정되었어요' : '✅ 새 개체가 등록되었어요!');
+
+  } catch(err) {
+    console.error('개체 저장 오류:', err);
+    showToast('⚠️ 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+  } finally {
+    // 버튼 원상복구
+    if (btn) { btn.disabled = false; btn.textContent = '저장하기'; btn.style.opacity = '1'; }
   }
-
-  const gecko = {
-    id: geckoId,
-    name,
-    sex: document.getElementById('gecko-sex').value,
-    morph,
-    grade: document.getElementById('gecko-grade').value || m.grade || '',
-    dob: document.getElementById('gecko-dob').value,
-    price: document.getElementById('gecko-price').value,
-    weight: document.getElementById('gecko-weight').value,
-    status: document.getElementById('gecko-status').value,
-    cage: document.getElementById('gecko-cage').value,
-    dad: document.getElementById('gecko-dad').value,
-    mom: document.getElementById('gecko-mom').value,
-    memo: document.getElementById('gecko-memo').value,
-    photo: photoUrl,
-  };
-
-  if (state.editingGeckoId) {
-    const idx = state.geckos.findIndex(g => g.id === state.editingGeckoId);
-    if (idx !== -1) state.geckos[idx] = gecko;
-  } else {
-    state.geckos.push(gecko);
-  }
-
-  // ── Supabase DB 저장
-  await _saveGeckoToDB(gecko);
-
-  closeSheetDirect('sheet-add-gecko');
-  renderGeckoList();
-  renderHome();
-  updateCountBadges();
-  populateGeckoSelects();
-  showToast(state.editingGeckoId ? '✅ 개체 정보가 수정되었어요' : '✅ 새 개체가 등록되었어요!');
 }
 
 let _deleteGeckoStep = 0;
