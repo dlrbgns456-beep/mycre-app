@@ -3534,32 +3534,54 @@ async function signOut() {
   }
 }
 
-// ── 회원 탈퇴 (2단계 확인) ──
+// ── 회원 탈퇴 (2단계 확인 + Storage 정리) ──
 let _deleteConfirmStep = 0;
-let _deleteConfirmTimer = null;
 async function deleteAccount() {
+  if (!_currentUser) return;
   if (_deleteConfirmStep === 0) {
     _deleteConfirmStep = 1;
-    showToast('⚠️ 정말 탈퇴하려면 한 번 더 눌러주세요');
-    // 3초 후 리셋
-    _deleteConfirmTimer = setTimeout(() => { _deleteConfirmStep = 0; }, 3000);
+    showToast('⚠️ 모든 데이터가 삭제됩니다. 한 번 더 클릭 시 확정.');
+    setTimeout(() => { _deleteConfirmStep = 0; }, 3000);
     return;
   }
-  // 2번째 탭 — 실제 탈퇴 실행
-  _deleteConfirmStep = 0;
-  clearTimeout(_deleteConfirmTimer);
-  showToast('탈퇴 처리 중...');
   try {
-    await _supabase.from('posts').delete().eq('user_id', _currentUser.id);
-    await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
-    await _supabase.auth.signOut({ scope: 'local' });
-  } catch(e) {}
-  _currentUser = null;
-  state.geckos = [];
-  state.posts = [];
-  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
-  _showAuthScreen();
-  showToast('탈퇴가 완료됐어요');
+    showToast('데이터 삭제 및 탈퇴 처리 중...');
+    _deleteConfirmStep = 0;
+
+    // 1. Storage 사진 삭제
+    try {
+      const { data: files } = await _supabase.storage
+        .from('gecko-photos')
+        .list(_currentUser.id);
+      if (files && files.length > 0) {
+        const paths = files.map(f => _currentUser.id + '/' + f.name);
+        await _supabase.storage.from('gecko-photos').remove(paths);
+      }
+    } catch(e) {}
+
+    // 2. DB 데이터 삭제 (RLS로 본인 것만 삭제)
+    const { error: postErr } = await _supabase.from('posts').delete().eq('user_id', _currentUser.id);
+    const { error: geckoErr } = await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
+    if (postErr || geckoErr) throw new Error('데이터 삭제 실패');
+
+    // 3. 로그아웃
+    await _supabase.auth.signOut();
+
+    _currentUser = null;
+    state.geckos = [];
+    state.posts = [];
+    try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-') || k.startsWith('mycre_')) localStorage.removeItem(k); }); } catch(e) {}
+    showToast('탈퇴(데이터 삭제) 완료되었습니다.');
+  } catch(e) {
+    console.error('탈퇴 처리 오류:', e.message);
+    // 에러 나도 강제 로그아웃
+    _currentUser = null;
+    state.geckos = [];
+    state.posts = [];
+    try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-') || k.startsWith('mycre_')) localStorage.removeItem(k); }); } catch(ex) {}
+    _showAuthScreen();
+    showToast('처리 중 오류가 발생했습니다.');
+  }
 }
 
 // ── 로그인 성공 후 처리 ──
