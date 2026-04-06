@@ -1897,6 +1897,82 @@ const MORPHS = {
   },
 
   /* ── B급: 기본 인기 모프 ── */
+  '플레임': {
+    grade:'B', price:'3~8만',
+    traits:['할리퀸 게이지 30%','밝은 도살 스트라이프','어두운 옆구리와 대비'],
+    desc:'등(도살) 부분이 크림/옐로우/오렌지로 밝게 빛나고, 옆구리(레터럴)는 어두운 색을 유지하는 패턴. 할리퀸으로 가는 중간 단계로, 등의 밝은 "불꽃" 형태가 이름의 유래.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'플레임 × 플레임 교배로 밝은 도살 강화 / 할리퀸으로의 진화 기반',
+    origin:'바이컬러에서 등 부분의 밝은 색상이 더 넓고 선명하게 발달한 형태. 할리퀸 진화 경로의 중간 단계(30%)로, 옆구리로 밝은 무늬가 번지기 시작하는 시점.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['갈색','다크','올리브','레드'],
+      pattern:['플레임','바이컬러'],
+      pigment:['크림','옐로우','오렌지'],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['밝은도살','할리퀸30','플레임패턴']
+    }
+  },
+  '타이거': {
+    grade:'B', price:'2~5만',
+    traits:['할리퀸 게이지 20%','도살 횡단 호랑이 줄무늬','밴딩 패턴'],
+    desc:'등(도살)을 가로지르는 어두운 호랑이 줄무늬(밴딩)가 특징. 옆구리까지 줄무늬가 내려오며, 갈색/올리브 바탕에 진한 밴드가 교차합니다. 할리퀸 게이지 20%.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'타이거 × 타이거 교배로 밴딩 선명도 강화',
+    origin:'크레스티드 게코의 기본 패턴 변이. 도살을 가로지르는 수평 밴드가 호랑이 줄무늬를 연상시켜 명명. 브린들과 할리퀸의 기초가 되는 패턴.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['갈색','올리브','베이지','다크'],
+      pattern:['타이거','밴딩'],
+      pigment:[],
+      structure:[],
+      spot:[],
+      tail:['밴딩'],
+      special:['횡단줄무늬','할리퀸20','타이거밴드']
+    }
+  },
+  '브린들': {
+    grade:'B', price:'2~5만',
+    traits:['할리퀸 게이지 25%','타이거보다 두껍고 불규칙한 줄무늬','높은 패턴 밀도'],
+    desc:'타이거보다 두껍고 불규칙한 줄무늬가 겹치며 밀도 높은 패턴을 형성. 타이거와 할리퀸 사이의 과도기적 형태. 패턴이 혼잡하고 어수선한 것이 특징.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'타이거 × 타이거 또는 타이거 × 할리퀸',
+    origin:'타이거 밴딩이 더 두껍고 불규칙하게 겹쳐 발전한 형태. 할리퀸 게이지 약 25%로, 타이거(20%)에서 할리퀸(40%)으로 가는 중간 단계.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['갈색','올리브','다크'],
+      pattern:['브린들','타이거'],
+      pigment:[],
+      structure:[],
+      spot:[],
+      tail:['밴딩'],
+      special:['두꺼운밴드','할리퀸25','불규칙줄무늬']
+    }
+  },
+  '바이컬러': {
+    grade:'B', price:'2~5만',
+    traits:['상하 투톤 색상','어두운 도살 + 밝은 옆구리','심플한 2색 구분'],
+    desc:'등(도살)은 어두운 색, 옆구리(레터럴)와 배는 밝은 색으로 깔끔하게 2색 구분되는 기본 패턴. 무늬가 거의 없이 색상의 경계만 존재하는 단순한 형태.',
+    genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
+    parents:'바이컬러 × 바이컬러 교배로 색상 대비 강화',
+    origin:'크레스티드 게코의 가장 기본적인 패턴 구분. 등과 옆구리의 명암 차이만으로 구성되며, 플레임·할리퀸 진화 경로의 시작점.',
+    breedingCaution:'치사 유전자 없음.',
+    lethal:null,
+    visualLayers:{
+      baseColor:['갈색','올리브','다크','베이지'],
+      pattern:['바이컬러','투톤'],
+      pigment:['크림','밝은옆구리'],
+      structure:[],
+      spot:[],
+      tail:['일반'],
+      special:['투톤','2색구분','할리퀸기초']
+    }
+  },
   '할리퀸': {
     grade:'B', price:'3~10만',
     traits:['할리퀸 게이지 40%','하위 레터럴 호랑이 무늬','불규칙한 2·3차 색상 발현'],
@@ -2042,7 +2118,7 @@ const TRAIT_LAYERS = {
   },
   pattern: {
     label:'패턴(Pattern)',
-    options:['무늬 없음(패턴리스)','하위 레터럴 무늬(할리퀸)','상위 레터럴까지 무늬(익스트림)','3색 완전 분리(트익할)','모자이크/파편 무늬','등 무늬 소거(엠티백)','단색/투톤(팬텀)']
+    options:['무늬 없음(패턴리스)','상하 투톤(바이컬러)','횡단 줄무늬(타이거/브린들)','밝은 등 스트라이프(플레임)','하위 레터럴 무늬(할리퀸)','상위 레터럴까지 무늬(익스트림)','3색 완전 분리(트익할)','모자이크/파편 무늬','등 무늬 소거(엠티백)','단색/투톤(팬텀)']
   },
   structure: {
     label:'구조(Structure)',
@@ -2088,6 +2164,9 @@ function calcMultiLayerScores(selections) {
     if (patSel.includes('3색') && sp.some(s => s.includes('3색'))) scores[name] += 25;
     if (patSel.includes('상위') && sp.some(s => s.includes('할리퀸80') || s.includes('상위레터럴'))) scores[name] += 20;
     if (patSel.includes('하위') && sp.some(s => s.includes('할리퀸40') || s.includes('하위레터럴'))) scores[name] += 15;
+    if (patSel.includes('횡단') || patSel.includes('타이거') || patSel.includes('브린들')) { if (sp.some(s => s.includes('횡단줄무늬') || s.includes('타이거밴드') || s.includes('두꺼운밴드') || s.includes('불규칙줄무늬'))) scores[name] += 18; }
+    if (patSel.includes('밝은 등') || patSel.includes('플레임')) { if (sp.some(s => s.includes('밝은도살') || s.includes('플레임패턴') || s.includes('할리퀸30'))) scores[name] += 16; }
+    if (patSel.includes('투톤') && patSel.includes('바이컬러')) { if (sp.some(s => s.includes('투톤') || s.includes('2색구분'))) scores[name] += 14; }
     if (patSel.includes('모자이크') && sp.some(s => s.includes('모자이크'))) scores[name] += 25;
     if (patSel.includes('엠티백') || patSel.includes('등 무늬 소거')) { if (sp.some(s => s.includes('빈등'))) scores[name] += 20; }
     if (patSel.includes('단색') || patSel.includes('팬텀')) { if (sp.some(s => s.includes('패턴소거') || s.includes('모노컬러'))) scores[name] += 18; }
@@ -2490,7 +2569,7 @@ async function _uploadPhotoToStorage(blob, geckoId) {
 const MORPH_LIST_GROUPS = [
   {label:'⭐ S급 — 최희귀 / 복합 유전', items:['아잔틱','릴잔틱','트익할','트익할 릴리','마블링']},
   {label:'🥇 A급 — 하이엔드 유전 모프', items:['릴리화이트','카푸치노','프라푸치노','세이블','루악','차콜','익스트림 할리퀸','슈퍼 달마시안','쿼드 핀']},
-  {label:'🥈 B급 — 인기 기본 모프', items:['할리퀸','달마시안','풀핀','엠티백','팬텀','하이포/핑키']},
+  {label:'🥈 B급 — 인기 기본 모프', items:['플레임','할리퀸','달마시안','풀핀','엠티백','팬텀','타이거','브린들','바이컬러','하이포/핑키']},
   {label:'🥉 C급 — 기본형', items:['노멀']},
   {label:'📝 직접 입력 콤보', items:['릴리화이트 달마시안','릴리화이트 할리퀸','LW 풀핀','아잔틱 할리퀸','카푸치노 달마시안','헷 아잔틱']},
 ];
@@ -3703,8 +3782,12 @@ function openMorphGuide() {
     <div style="display:flex;flex-direction:column;gap:6px">
       ${[
         {name:'노멀',pct:10,color:'#7aab7e',desc:'뚜렷한 무늬 없음'},
-        {name:'할리퀸',pct:40,color:'#f5c842',desc:'하위 레터럴까지 호랑이 무늬'},
-        {name:'익스트림 할리퀸',pct:80,color:'#ff9c27',desc:'상위 레터럴까지 무늬 상승'},
+        {name:'바이컬러',pct:15,color:'#8bc490',desc:'상하 2색 구분'},
+        {name:'타이거',pct:20,color:'#a8c97a',desc:'도살 횡단 줄무늬'},
+        {name:'브린들',pct:25,color:'#c4c05e',desc:'두꺼운 불규칙 줄무늬'},
+        {name:'플레임',pct:30,color:'#ddb84a',desc:'밝은 도살 스트라이프'},
+        {name:'할리퀸',pct:40,color:'#f5c842',desc:'하위 레터럴까지 무늬 발현'},
+        {name:'익할',pct:80,color:'#ff9c27',desc:'상위 레터럴까지 무늬 상승'},
         {name:'트익할',pct:100,color:'#ff5f5f',desc:'1차·2차·3차 완전 분리'},
       ].map(g=>`
       <div style="display:flex;align-items:center;gap:8px">
