@@ -4158,14 +4158,14 @@ function _openInExternalBrowser(url) {
 async function signInWithGoogle() {
   if (_isWebView()) {
     // WebView에서는 Google이 차단하므로 크롬으로 자동 유도
-    const url = window.location.origin || 'https://fascinating-biscuit-a1d132.netlify.app';
+    const url = window.location.origin || 'https://mycre-gecko.netlify.app';
     showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬으로 이동합니다...');
     setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
   }
   const { error } = await _supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: 'https://fascinating-biscuit-a1d132.netlify.app' }
+    options: { redirectTo: 'https://mycre-gecko.netlify.app' }
   });
   if (error) showAuthErr('Google 로그인 실패: ' + error.message);
 }
@@ -4174,7 +4174,7 @@ async function signInWithGoogle() {
 async function signInWithKakao() {
   const { error } = await _supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: { redirectTo: 'https://fascinating-biscuit-a1d132.netlify.app' }
+    options: { redirectTo: 'https://mycre-gecko.netlify.app' }
   });
   if (error) showAuthErr('카카오 로그인 실패: ' + error.message);
 }
