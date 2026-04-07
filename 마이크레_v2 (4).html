@@ -591,8 +591,22 @@ input[type=file]{display:none}
     <div class="auth-logo">🦎</div>
     <div class="auth-title">마이크레</div>
     <div class="auth-sub">내 크레스티드 게코 올인원 관리<br>계정으로 어디서든 내 개체 조회</div>
+
+    <!-- WebView 감지 배너 -->
+    <div id="webview-banner" style="display:none;width:100%;max-width:360px;background:linear-gradient(135deg,#2a1500,#1a0e00);border:1.5px solid var(--am);border-radius:16px;padding:16px 18px;margin-bottom:16px;text-align:center">
+      <div style="font-size:14px;font-weight:800;color:var(--am);margin-bottom:6px">⚠️ 인앱 브라우저 감지</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:12px">
+        카카오톡/인스타 등의 인앱 브라우저에서는<br>Google 로그인이 제한돼요.
+      </div>
+      <button onclick="_openInExternalBrowser('https://mycre-gecko.netlify.app')"
+        style="width:100%;padding:12px;border-radius:12px;background:var(--am);color:#1a0a00;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;margin-bottom:8px">
+        🌐 Safari / Chrome으로 열기
+      </button>
+      <div style="font-size:11px;color:var(--tx3);line-height:1.5">또는 아래에서 <b style="color:var(--tx)">이메일 로그인</b>을 이용하세요</div>
+    </div>
+
     <div class="auth-card">
-      <button class="social-btn google-btn" onclick="signInWithGoogle()">
+      <button class="social-btn google-btn" id="google-login-btn" onclick="signInWithGoogle()">
         <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Google로 로그인
       </button>
@@ -4826,15 +4840,33 @@ function _isWebView() {
 }
 
 function _openInExternalBrowser(url) {
+  const ua = navigator.userAgent || '';
+
+  // 카카오톡 전용: 외부 브라우저 열기 스킴
+  if (/KAKAOTALK/i.test(ua)) {
+    window.location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+    return;
+  }
+
   // Android: intent 스킴으로 크롬에서 열기
-  if (/Android/i.test(navigator.userAgent)) {
+  if (/Android/i.test(ua)) {
     const intentUrl = 'intent://' + url.replace(/^https?:\/\//, '') +
       '#Intent;scheme=https;package=com.android.chrome;end';
     window.location.href = intentUrl;
     return;
   }
-  // iOS/기타: 그냥 열기 시도
-  window.open(url, '_system');
+
+  // iOS: Safari에서 열기 시도
+  if (/(iPhone|iPod|iPad)/i.test(ua)) {
+    // iOS에서는 window.open이 Safari에서 열림 (인앱 브라우저일 때)
+    window.open(url, '_blank');
+    // 실패 대비: 0.5초 후 location으로 이동
+    setTimeout(() => { window.location.href = url; }, 500);
+    return;
+  }
+
+  // 기타
+  window.open(url, '_blank');
 }
 
 // ── Google 로그인 ──
@@ -5170,13 +5202,23 @@ function _showAuthScreen() {
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('auth-loading').style.display = 'none';
   document.getElementById('auth-form').style.display = 'flex';
-  // signout-btn 제거됨
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
   document.getElementById('auth-email') && (document.getElementById('auth-email').value = '');
   document.getElementById('auth-pw') && (document.getElementById('auth-pw').value = '');
   document.getElementById('auth-pw2') && (document.getElementById('auth-pw2').value = '');
   document.getElementById('auth-err') && (document.getElementById('auth-err').textContent = '');
   switchAuthTab('login');
+
+  // WebView(카카오톡/인스타 등) 감지 시 배너 표시
+  if (_isWebView()) {
+    document.getElementById('webview-banner').style.display = 'block';
+    // Google 버튼 흐리게
+    const gBtn = document.getElementById('google-login-btn');
+    if (gBtn) { gBtn.style.opacity = '.4'; gBtn.style.pointerEvents = 'none'; }
+    // 이메일 로그인 자동 펼침
+    document.getElementById('email-login-area').style.display = 'flex';
+    document.getElementById('email-toggle-btn').style.display = 'none';
+  }
 }
 
 // ══════════════════════════════
