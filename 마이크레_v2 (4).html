@@ -3376,7 +3376,7 @@ function showResult(photoCount, fireUp) {
   const barColors = ['var(--ac)','var(--am)','var(--blue)','var(--tx3)','var(--tx3)'];
   document.getElementById('res-candidate-list').innerHTML = candidatesWithProb.map((c, i) => {
     const cg = MORPH_GRADES[c.data.grade] || MORPH_GRADES['C'];
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i < candidatesWithProb.length - 1 ? 'border-bottom:1px solid var(--br);' : ''}" ${i > 0 ? `onclick="showCandidateDetail(${i})" style="cursor:pointer"` : ''}>
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;${i < candidatesWithProb.length - 1 ? 'border-bottom:1px solid var(--br);' : ''}" onclick="showCandidateDetail(${i})">
       <span style="font-size:14px;flex-shrink:0;width:22px;text-align:center">${medals[i] || ''}</span>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
