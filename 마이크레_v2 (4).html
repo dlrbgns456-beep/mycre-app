@@ -2943,7 +2943,8 @@ function handleAddPhoto(e) {
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = () => {
-    const MAX = 600;
+    // ── 더 작게 리사이즈 + 낮은 품질 → 업로드 속도 대폭 향상 ──
+    const MAX = 480;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -2952,15 +2953,17 @@ function handleAddPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    // 미리보기용 data URL
-    currentPhotoData = canvas.toDataURL('image/jpeg', 0.7);
+    // 미리보기용 data URL (낮은 품질)
+    currentPhotoData = canvas.toDataURL('image/jpeg', 0.5);
     document.getElementById('add-photo-preview').src = currentPhotoData;
     document.getElementById('add-photo-zone').classList.add('has-photo');
     URL.revokeObjectURL(url);
-    // Storage 업로드용 Blob 준비
-    canvas.toBlob(blob => { _pendingPhotoFile = blob; }, 'image/jpeg', 0.7);
-    const kb = Math.round(currentPhotoData.length * 0.75 / 1024);
-    showToast(`📷 사진 준비 완료 (${kb}KB)`);
+    // Storage 업로드용 Blob 준비 (동일 품질)
+    canvas.toBlob(blob => {
+      _pendingPhotoFile = blob;
+      const kb = blob ? Math.round(blob.size / 1024) : 0;
+      showToast(`📷 사진 준비 완료 (${kb}KB)`);
+    }, 'image/jpeg', 0.5);
   };
   img.src = url;
 }
@@ -3152,20 +3155,10 @@ async function saveGecko() {
     const morph = document.getElementById('gecko-morph').value;
     const m = MORPHS[morph] || {};
     const geckoId = state.editingGeckoId || Date.now().toString();
+    const pendingBlob = _pendingPhotoFile;
+    _pendingPhotoFile = null;
 
-    // ── 사진: Storage 업로드 (새 사진이 있을 때만)
-    let photoUrl = currentPhotoData;
-    if (_pendingPhotoFile) {
-      if (btn) btn.textContent = '사진 업로드 중...';
-      const uploaded = await _uploadPhotoToStorage(_pendingPhotoFile, geckoId);
-      if (uploaded) {
-        photoUrl = uploaded;
-      } else {
-        showToast('⚠️ 사진 업로드 실패 — 로컬 미리보기만 저장됩니다');
-      }
-      _pendingPhotoFile = null;
-    }
-
+    // ── 즉시 로컬 상태 반영 (체감 속도 향상) ──
     const gecko = {
       id: geckoId,
       name,
@@ -3180,7 +3173,7 @@ async function saveGecko() {
       dad: document.getElementById('gecko-dad').value,
       mom: document.getElementById('gecko-mom').value,
       memo: document.getElementById('gecko-memo').value,
-      photo: photoUrl,
+      photo: currentPhotoData || null, // 일단 로컬 미리보기 사용
       egg_infertile: document.getElementById('gecko-egg-infertile').checked,
       egg_fertile: document.getElementById('gecko-egg-fertile').checked,
     };
@@ -3192,11 +3185,7 @@ async function saveGecko() {
       state.geckos.push(gecko);
     }
 
-    // ── Supabase DB 저장
-    if (btn) btn.textContent = 'DB 저장 중...';
-    await _saveGeckoToDB(gecko);
-
-    // ── 시트 닫고 내 개체 탭으로 이동
+    // ── 즉시 시트 닫고 화면 전환 (사용자 대기 없음) ──
     closeSheetDirect('sheet-add-gecko');
     renderGeckoList();
     renderHome();
@@ -3204,6 +3193,28 @@ async function saveGecko() {
     populateGeckoSelects();
     showPage('myge');
     showToast(isEdit ? '✅ 개체 정보가 수정되었어요' : '✅ 새 개체가 등록되었어요!');
+
+    // ── 백그라운드: 사진 업로드 + DB 저장 (병렬) ──
+    (async () => {
+      try {
+        let photoUrl = null;
+        if (pendingBlob) {
+          photoUrl = await _uploadPhotoToStorage(pendingBlob, geckoId);
+        }
+        // 사진 URL이 있으면 개체 데이터 업데이트
+        if (photoUrl) {
+          gecko.photo = photoUrl;
+          const idx = state.geckos.findIndex(g => String(g.id) === String(geckoId));
+          if (idx !== -1) state.geckos[idx].photo = photoUrl;
+        }
+        await _saveGeckoToDB(gecko);
+        // 목록 갱신 (사진 URL이 업데이트되었으므로)
+        if (photoUrl) renderGeckoList();
+      } catch(e) {
+        console.error('백그라운드 저장 오류:', e);
+        _debugLog('error', 'gecko', '백그라운드 저장 실패: ' + e.message, { geckoId });
+      }
+    })();
 
   } catch(err) {
     console.error('개체 저장 오류:', err);
@@ -3754,7 +3765,7 @@ function showCandidateDetail(index) {
 }
 
 // ── 내 개체로 직접 저장 (이름 + 모프 직접 입력) ──
-function saveDirectToMyGecko() {
+async function saveDirectToMyGecko() {
   if (!lastScanResult) return;
   const name = document.getElementById('save-direct-name').value.trim();
   const morph = document.getElementById('save-direct-morph').value.trim();
@@ -3769,10 +3780,26 @@ function saveDirectToMyGecko() {
     document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
   }
   if (scanPhotos.length > 0) {
+    // 스캔 사진을 리사이즈해서 Blob 준비 (업로드 속도 향상)
     currentPhotoData = scanPhotos[0].data;
     document.getElementById('add-photo-preview').src = scanPhotos[0].data;
     document.getElementById('add-photo-zone').classList.add('has-photo');
-    try { fetch(scanPhotos[0].data).then(r => r.blob()).then(b => { _pendingPhotoFile = b; }); } catch(e) {}
+    try {
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = scanPhotos[0].data; });
+      const MAX = 480;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      currentPhotoData = canvas.toDataURL('image/jpeg', 0.5);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.5));
+      _pendingPhotoFile = blob;
+    } catch(e) { console.error('스캔 사진 변환 오류:', e); }
   }
   updateGeckoGrade();
   showPage('myge');
@@ -3839,29 +3866,8 @@ function resetScan() {
   renderScanGrid();
 }
 
-function saveToMyGecko() {
-  if (!lastScanResult) return;
-  closeSheetDirect('sheet-add-gecko');
-  openAddGecko();
-  document.getElementById('gecko-morph').value = lastScanResult.morph;
-  if (lastScanResult.morph) {
-    document.getElementById('morph-inline-input').value = lastScanResult.morph;
-    document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
-  }
-  if (scanPhotos.length > 0) {
-    currentPhotoData = scanPhotos[0].data;
-    document.getElementById('add-photo-preview').src = scanPhotos[0].data;
-    document.getElementById('add-photo-zone').classList.add('has-photo');
-    // Storage 업로드를 위해 blob 변환
-    try {
-      fetch(scanPhotos[0].data).then(r => r.blob()).then(b => { _pendingPhotoFile = b; });
-    } catch(e) {}
-  }
-  updateGeckoGrade();
-  showPage('myge');
-  setTimeout(() => openSheet('sheet-add-gecko'), 300);
-  showToast('📷 판별된 모프가 자동으로 입력되었어요!');
-}
+// saveToMyGecko는 saveDirectToMyGecko로 대체됨 (하위 호환용)
+function saveToMyGecko() { saveDirectToMyGecko(); }
 
 // ══════════════════════════════
 // COMMUNITY
@@ -5701,11 +5707,9 @@ async function _saveGeckoToDB(gecko) {
   };
   const { error } = await _supabase.from('geckos').upsert(row, { onConflict: 'id' });
   if (error) {
-    showToast('⚠️ 서버 저장 실패 — 로컬에만 저장됨');
     console.error('DB 저장 오류:', error);
     _debugLog('error', 'gecko', 'DB 개체 저장(upsert) 실패', { error: error?.message || error, geckoId: gecko?.id });
   } else {
-    showToast('✅ 저장 완료!');
   }
 }
 
