@@ -4891,22 +4891,48 @@ async function handleAuthSubmit() {
 // ── 로그아웃 ──
 async function signOut() {
   const btn = document.getElementById('btn-signout');
-  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; btn.querySelector('.more-item-title').textContent = '처리 중...'; }
-  try {
-    showToast('로그아웃 중...');
-    await _supabase.auth.signOut();
-  } catch(e) {
-    console.warn('로그아웃 API 오류(무시):', e.message);
+  if (btn) {
+    btn.disabled = true; btn.style.opacity = '.5';
+    const titleEl = btn.querySelector('.more-item-title');
+    if (titleEl) titleEl.textContent = '처리 중...';
   }
-  // 로컬 찌꺼기 전부 제거
-  _currentUser = null;
-  state.geckos = [];
-  state.posts = [];
+  showToast('로그아웃 중...');
+  _debugLog('info', 'auth', '로그아웃 시도');
+
+  // Supabase signOut (최대 3초 대기 후 강제 진행)
+  try {
+    await Promise.race([
+      _supabase.auth.signOut(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+    ]);
+  } catch(e) {
+    console.warn('로그아웃 API 오류(강제 진행):', e.message);
+  }
+
+  // 로컬 찌꺼기 전부 강제 제거
+  _currentUser = null; state.geckos = []; state.posts = [];
+  _forceCleanStorage();
+  // 강제 새로고침 (캐시 무시)
+  window.location.href = '/?_logout=' + Date.now();
+}
+
+function _forceCleanStorage() {
   try { localStorage.clear(); } catch(e) {}
   try { sessionStorage.clear(); } catch(e) {}
   // indexedDB 정리 (Supabase auth 토큰 저장소)
-  try { indexedDB.databases().then(dbs => dbs.forEach(db => indexedDB.deleteDatabase(db.name))); } catch(e) {}
-  window.location.replace('/');
+  try {
+    if (indexedDB.databases) {
+      indexedDB.databases().then(dbs => {
+        dbs.forEach(db => { try { indexedDB.deleteDatabase(db.name); } catch(e) {} });
+      });
+    }
+  } catch(e) {}
+  // Supabase 관련 키만 개별 삭제 (localStorage.clear 실패 대비)
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    keys.forEach(k => { if (k && (k.includes('supabase') || k.includes('sb-') || k.includes('mycre'))) localStorage.removeItem(k); });
+  } catch(e) {}
 }
 
 // ── 회원 탈퇴 (2단계 탭 — PWA standalone에서 confirm() 작동 안 하므로) ──
@@ -4914,19 +4940,25 @@ let _deleteConfirmStep = 0;
 async function deleteAccount() {
   if (!_currentUser) return;
   const btn = document.getElementById('btn-delete-account');
+  const titleEl = btn ? btn.querySelector('.more-item-title') : null;
+
   if (_deleteConfirmStep === 0) {
     _deleteConfirmStep = 1;
     showToast('⚠️ 등록된 모든 데이터가 영구 삭제됩니다. 한 번 더 클릭 시 확정.');
-    setTimeout(() => { _deleteConfirmStep = 0; }, 3000);
+    if (titleEl) titleEl.textContent = '⚠️ 한번 더 누르면 확정';
+    setTimeout(() => { _deleteConfirmStep = 0; if (titleEl) titleEl.textContent = '회원 탈퇴'; }, 4000);
     return;
   }
   _deleteConfirmStep = 0;
-  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; btn.querySelector('.more-item-title').textContent = '처리 중...'; }
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  if (titleEl) titleEl.textContent = '처리 중...';
+  showToast('탈퇴 처리 중...');
+  _debugLog('info', 'auth', '회원 탈퇴 시작');
+
   try {
-    showToast('탈퇴 처리 중...');
     const uid = _currentUser.id;
 
-    // Storage 사진 삭제
+    // Storage 사진 삭제 (실패해도 계속 진행)
     try {
       const { data: files } = await _supabase.storage.from('gecko-photos').list(uid);
       if (files && files.length > 0) {
@@ -4938,31 +4970,38 @@ async function deleteAccount() {
       }
     } catch(e) { console.warn('Storage 삭제 중 오류(무시):', e); }
 
-    // 내 데이터 전부 삭제 (profiles, payments, morph_feedback 포함)
-    await Promise.all([
-      _supabase.from('comments').delete().eq('user_id', uid),
-      _supabase.from('morph_feedback').delete().eq('user_id', uid),
-      _supabase.from('payments').delete().eq('user_id', uid),
-      _supabase.from('posts').delete().eq('user_id', uid),
-      _supabase.from('geckos').delete().eq('user_id', uid),
-    ]);
-    // profiles는 FK 의존이 없으므로 마지막에 삭제
-    await _supabase.from('profiles').delete().eq('id', uid);
+    if (titleEl) titleEl.textContent = '데이터 삭제 중...';
 
-    await _supabase.auth.signOut();
+    // 내 데이터 전부 삭제 (각각 실패해도 계속 진행)
+    const tables = ['comments','morph_feedback','payments','posts','geckos'];
+    for (const t of tables) {
+      try { await _supabase.from(t).delete().eq('user_id', uid); } catch(e) {}
+    }
+    try { await _supabase.from('profiles').delete().eq('id', uid); } catch(e) {}
 
-    // 로컬 찌꺼기 전부 제거
-    try { localStorage.clear(); } catch(e) {}
-    try { sessionStorage.clear(); } catch(e) {}
-    try { indexedDB.databases().then(dbs => dbs.forEach(db => indexedDB.deleteDatabase(db.name))); } catch(e) {}
+    if (titleEl) titleEl.textContent = '계정 정리 중...';
 
-    showToast('탈퇴 완료. 초기화면으로 돌아갑니다.');
-    setTimeout(() => { window.location.replace('/'); }, 1000);
+    // Supabase signOut (최대 3초 대기)
+    try {
+      await Promise.race([
+        _supabase.auth.signOut(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+      ]);
+    } catch(e) {}
+
+    // 로컬 찌꺼기 전부 강제 제거
+    _currentUser = null; state.geckos = []; state.posts = [];
+    _forceCleanStorage();
+
+    showToast('✅ 탈퇴 완료. 초기화면으로 돌아갑니다.');
+    setTimeout(() => { window.location.href = '/?_deleted=' + Date.now(); }, 1000);
   } catch(e) {
     console.error('탈퇴 처리 오류:', e.message);
     _debugLog('error', 'auth', '회원탈퇴 처리 오류: ' + e.message, { stack: e.stack });
-    showToast('오류가 발생했습니다. 다시 시도해주세요.');
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.querySelector('.more-item-title').textContent = '회원탈퇴'; }
+    showToast('⚠️ 오류 발생. 강제 로그아웃합니다.');
+    // 에러가 나도 강제로 로컬 정리 + 리다이렉트
+    _forceCleanStorage();
+    setTimeout(() => { window.location.href = '/?_deleted=' + Date.now(); }, 1500);
   }
 }
 
