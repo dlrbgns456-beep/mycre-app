@@ -737,7 +737,7 @@ input[type=file]{display:none}
 
   <!-- Community preview -->
   <div class="sec-head">
-    <span class="sec-title">최근 분양글</span>
+    <span class="sec-title">최근 커뮤니티</span>
     <span class="sec-more" onclick="showPage('comm')">더보기 →</span>
   </div>
   <div id="home-posts-preview"></div>
@@ -1040,10 +1040,10 @@ input[type=file]{display:none}
 
   <div class="filter-row" style="margin-top:12px" id="comm-filter-row">
     <div class="fp active" onclick="setCommFilter('all')">전체</div>
+    <div class="fp" onclick="setCommFilter('notice')">📢 공지</div>
     <div class="fp" onclick="setCommFilter('sale')">🏷️ 분양</div>
     <div class="fp" onclick="setCommFilter('wanted')">🔍 구합니다</div>
     <div class="fp" onclick="setCommFilter('info')">📚 정보공유</div>
-    <div class="fp" onclick="setCommFilter('qna')">❓ Q&A</div>
   </div>
 
   <div style="padding:0 18px 8px">
@@ -1664,7 +1664,6 @@ input[type=file]{display:none}
           <option value="sale">🏷️ 분양</option>
           <option value="wanted">🔍 구합니다</option>
           <option value="info">📚 정보공유</option>
-          <option value="qna">❓ Q&A</option>
         </select>
       </div>
       <div class="form-group">
@@ -3867,10 +3866,15 @@ function saveToMyGecko() {
 // ══════════════════════════════
 // COMMUNITY
 // ══════════════════════════════
+const ADMIN_EMAIL = 'dlrbgns456@gmail.com'; // 개발자 이메일
+function _isAdmin() {
+  return _currentUser && _currentUser.email === ADMIN_EMAIL;
+}
+
 function setCommFilter(f) {
   state.commFilter = f;
   document.querySelectorAll('#comm-filter-row .fp').forEach(el => el.classList.remove('active'));
-  const fMap = {all:0,sale:1,wanted:2,info:3,qna:4};
+  const fMap = {all:0,notice:1,sale:2,wanted:3,info:4};
   document.querySelectorAll('#comm-filter-row .fp')[fMap[f]]?.classList.add('active');
   renderPosts();
 }
@@ -3917,31 +3921,47 @@ function _timeAgo(dateStr) {
 }
 
 function buildPostCard(p, compact) {
-  const catLabels = {sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',qna:'❓ Q&A'};
+  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보'};
+  const isNotice = p.cat === 'notice';
   const div = document.createElement('div');
   div.className = 'post-card';
+
+  if (isNotice) {
+    // 공지사항 카드 (사진 없이 텍스트)
+    div.style.cssText = 'display:block;padding:14px 18px;cursor:pointer;border-left:3px solid var(--ac)';
+    const preview = p.body ? (p.body.length > 80 ? p.body.substring(0, 80) + '...' : p.body) : '';
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--ac);font-weight:700">📢 공지</span>
+        <span style="font-size:11px;color:var(--tx3);margin-left:auto">${p.time}</span>
+      </div>
+      <div style="font-size:15px;font-weight:800;margin-bottom:4px;color:var(--tx)">${p.title}</div>
+      ${preview ? `<div style="font-size:12px;color:var(--tx2);line-height:1.6">${preview}</div>` : ''}`;
+  } else {
+    // 일반 게시글 카드 (기존 스타일)
+    div.onclick = () => openPostDetail(p);
+    div.innerHTML = `
+      ${!compact ? `<div class="post-card-img">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:14px 0 0 14px">` : (p.emoji || '🦎')}</div>` : ''}
+      <div class="post-card-body">
+        <div class="post-author-row">
+          <div class="post-avatar">${p.avatar}</div>
+          <div class="post-author-name">${p.author}</div>
+        </div>
+        <div class="post-tags">
+          <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
+          ${p.tags ? p.tags.map(t=>`<span class="tag tag-green">${t}</span>`).join('') : ''}
+        </div>
+        <div class="post-title">${p.title}</div>
+        ${p.price ? `<div class="post-price">${p.price}만원</div>` : ''}
+        <div class="post-stats">
+          <span>👁 ${p.views || 0}</span>
+          <span>💬 ${p.comments || 0}</span>
+          <span>❤️ ${p.likes || 0}</span>
+          <span style="margin-left:auto">${p.time}</span>
+        </div>
+      </div>`;
+  }
   div.onclick = () => openPostDetail(p);
-  div.innerHTML = `
-    ${!compact ? `<div class="post-card-img">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:14px 0 0 14px">` : (p.emoji || '🦎')}</div>` : ''}
-    <div class="post-card-body">
-      <div class="post-author-row">
-        <div class="post-avatar">${p.avatar}</div>
-        <div class="post-author-name">${p.author}</div>
-        <button class="btn-sm post-author-follow" onclick="event.stopPropagation();showToast('팔로우했어요 ✅')">팔로우</button>
-      </div>
-      <div class="post-tags">
-        <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
-        ${p.tags ? p.tags.map(t=>`<span class="tag tag-green">${t}</span>`).join('') : ''}
-      </div>
-      <div class="post-title">${p.title}</div>
-      ${p.price ? `<div class="post-price">${p.price}만원</div>` : ''}
-      <div class="post-stats">
-        <span>👁 ${p.views}</span>
-        <span>💬 ${p.comments}</span>
-        <span>❤️ ${p.likes}</span>
-        <span style="margin-left:auto">${p.time}</span>
-      </div>
-    </div>`;
   return div;
 }
 
@@ -3949,23 +3969,24 @@ let _currentPostId = null;
 
 async function openPostDetail(p) {
   _currentPostId = p.id;
-  const catLabels = {sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',qna:'❓ Q&A'};
+  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보'};
+  const isNotice = p.cat === 'notice';
+  const bodyHtml = (p.body || '').replace(/\n/g, '<br>');
+
   document.getElementById('post-detail-body').innerHTML = `
-    <div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : (p.emoji||'🦎')}</div>
-    <div style="padding:16px 18px">
-      <div style="display:flex;gap:6px;margin-bottom:8px">
+    ${isNotice ? '' : `<div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : (p.emoji||'🦎')}</div>`}
+    <div style="padding:${isNotice ? '20px' : '16px'} 18px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
         <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
         ${p.tags ? p.tags.map(t=>`<span class="tag tag-green">${t}</span>`).join('') : ''}
+        <span style="font-size:11px;color:var(--tx3);margin-left:auto">${p.time}</span>
       </div>
-      <div style="font-size:19px;font-weight:800;margin-bottom:6px">${p.title}</div>
+      <div style="font-size:19px;font-weight:800;margin-bottom:6px;line-height:1.4">${p.title}</div>
       ${p.price ? `<div style="font-size:20px;font-weight:900;color:var(--am);margin-bottom:10px">${p.price}만원</div>` : ''}
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-        <div class="post-avatar">${p.avatar}</div>
-        <div style="font-size:13px;font-weight:600">${p.author}</div>
-        <button class="btn-sm" onclick="showToast('팔로우했어요 ✅')">팔로우</button>
-        <div style="font-size:11px;color:var(--tx2);margin-left:auto">${p.time}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--tx2)">✍️ ${p.author}</div>
       </div>
-      <div style="background:var(--sf2);border-radius:12px;padding:13px;font-size:13px;line-height:1.8;color:var(--tx2);margin-bottom:14px">${p.body}</div>
+      <div style="background:var(--sf2);border-radius:12px;padding:14px;font-size:13px;line-height:1.9;color:var(--tx2);margin-bottom:14px;white-space:pre-wrap">${bodyHtml}</div>
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 <span id="comment-count">0</span>개</div>
       <div id="comments-list" style="margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
@@ -3973,7 +3994,7 @@ async function openPostDetail(p) {
         <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="submitComment()">등록</button>
       </div>
       ${p.isOwn ? '<button class="btn-outline" onclick="deletePost(' + p.id + ')" style="color:var(--coral);border-color:var(--coral);background:var(--co2);margin-top:10px;width:100%">🗑 이 게시글 삭제</button>' : ''}
-      ${!p.isOwn ? '<button class="btn-outline" onclick="reportPost(' + p.id + ')" style="color:var(--tx3);border-color:var(--br);margin-top:8px;width:100%;font-size:12px">🚨 이 게시글 신고하기</button>' : ''}
+      ${!p.isOwn && !isNotice ? '<button class="btn-outline" onclick="reportPost(' + p.id + ')" style="color:var(--tx3);border-color:var(--br);margin-top:8px;width:100%;font-size:12px">🚨 이 게시글 신고하기</button>' : ''}
     </div>`;
   openSheet('sheet-post-detail');
   loadComments(p.id);
@@ -4089,6 +4110,18 @@ function filterPosts() {
 
 function openWritePost() {
   populateGeckoSelects();
+  // 관리자만 공지사항 카테고리 추가
+  const catSelect = document.getElementById('post-category');
+  if (catSelect) {
+    const hasNotice = [...catSelect.options].some(o => o.value === 'notice');
+    if (_isAdmin() && !hasNotice) {
+      const opt = document.createElement('option');
+      opt.value = 'notice'; opt.textContent = '📢 공지사항';
+      catSelect.insertBefore(opt, catSelect.firstChild);
+    } else if (!_isAdmin() && hasNotice) {
+      [...catSelect.options].forEach(o => { if (o.value === 'notice') o.remove(); });
+    }
+  }
   openSheet('sheet-write-post');
 }
 
@@ -4122,78 +4155,87 @@ async function submitPost() {
   if (!title) { showToast('⚠️ 제목을 입력해주세요'); return; }
   if (!_currentUser) { showToast('⚠️ 로그인이 필요합니다'); return; }
 
+  const cat = document.getElementById('post-category').value;
+
+  // 공지사항은 관리자만 가능
+  if (cat === 'notice' && !_isAdmin()) {
+    showToast('⚠️ 공지사항은 관리자만 작성할 수 있습니다');
+    return;
+  }
+
   const btn = document.getElementById('btn-submit-post');
   if (btn) { btn.disabled = true; btn.textContent = '게시 중...'; btn.style.opacity = '.6'; }
 
   try {
-    // 연결된 개체 정보 가져오기
-    const geckoId = document.getElementById('post-gecko-link').value;
-    const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
+    let photo = null;
+    let morph = null;
+    const tags = [];
 
-    // 사진 우선순위: 직접 첨부 > 연결된 개체 사진
-    let photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+    // 공지사항이 아닌 경우에만 사진/개체 처리
+    if (cat !== 'notice') {
+      const geckoId = document.getElementById('post-gecko-link')?.value;
+      const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
 
-    // 직접 첨부한 사진이 있으면 Storage에 업로드
-    if (_postPhotoData && _currentUser) {
-      if (btn) btn.textContent = '사진 업로드 중...';
-      try {
-        const resp = await fetch(_postPhotoData);
-        const blob = await resp.blob();
-        const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
-        const { error: upErr } = await _supabase.storage
-          .from('gecko-photos')
-          .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-        if (!upErr) {
-          const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
-          photo = urlData.publicUrl;
-        }
-      } catch(e) { console.error('게시글 사진 업로드 실패:', e); _debugLog('error', 'storage', '게시글 사진 업로드 실패: ' + e.message, { stack: e.stack }); }
+      photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+
+      if (_postPhotoData && _currentUser) {
+        if (btn) btn.textContent = '사진 업로드 중...';
+        try {
+          const resp = await fetch(_postPhotoData);
+          const blob = await resp.blob();
+          const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
+          const { error: upErr } = await _supabase.storage
+            .from('gecko-photos')
+            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+          if (!upErr) {
+            const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+            photo = urlData.publicUrl;
+          }
+        } catch(e) { console.error('게시글 사진 업로드 실패:', e); }
+      }
+
+      morph = linkedGecko ? linkedGecko.morph : null;
+      if (linkedGecko) {
+        if (linkedGecko.morph) tags.push(linkedGecko.morph);
+        if (linkedGecko.name) tags.push(linkedGecko.name);
+      }
     }
 
     if (btn) btn.textContent = '저장 중...';
 
-    const morph = linkedGecko ? linkedGecko.morph : null;
-    const tags = ['내글'];
-    if (linkedGecko) {
-      if (linkedGecko.morph) tags.push(linkedGecko.morph);
-      if (linkedGecko.name) tags.push(linkedGecko.name);
-    }
-
     const row = {
       user_id: _currentUser.id,
-      cat: document.getElementById('post-category').value,
+      cat,
       title,
-      author: _profile.name || '익명',
-      avatar: '🦎',
-      price: document.getElementById('post-price-input').value || null,
+      author: cat === 'notice' ? '마이크레 운영팀' : (_profile.name || '익명'),
+      avatar: cat === 'notice' ? '📢' : '🦎',
+      price: cat !== 'notice' ? (document.getElementById('post-price-input')?.value || null) : null,
       body: document.getElementById('post-body-input').value,
       photo,
       morph,
-      emoji: '🦎',
+      emoji: cat === 'notice' ? '📢' : '🦎',
       tags,
     };
 
     const { error } = await _supabase.from('posts').insert(row);
     if (error) {
       showToast('❌ 게시 실패: ' + error.message);
-      console.error('Post save error:', error);
       _debugLog('error', 'post', 'DB 게시글 INSERT 실패: ' + error.message, { code: error.code, title });
       return;
     }
 
-    // 시트 닫고 커뮤니티 탭으로 이동
     closeSheetDirect('sheet-write-post');
     document.getElementById('post-title-input').value = '';
-    document.getElementById('post-price-input').value = '';
+    const priceInput = document.getElementById('post-price-input');
+    if (priceInput) priceInput.value = '';
     document.getElementById('post-body-input').value = '';
     removePostPhoto();
     await renderPosts();
     showPage('comm');
-    showToast('✅ 게시글이 등록되었어요!');
+    showToast(cat === 'notice' ? '📢 공지사항이 등록되었어요!' : '✅ 게시글이 등록되었어요!');
 
   } catch(err) {
     console.error('게시글 저장 오류:', err);
-    _debugLog('error', 'post', '게시글 저장 실패: ' + err.message, { stack: err.stack });
     showToast('⚠️ 게시 중 오류가 발생했습니다');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '게시하기'; btn.style.opacity = '1'; }
