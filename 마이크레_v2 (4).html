@@ -5513,63 +5513,76 @@ async function deleteAccount() {
 
 // ── 로그인 성공 후 처리 ──
 async function _onSignedIn() {
-  // 세션 유효성 확인
-  const { data: sessionCheck } = await _supabase.auth.getSession();
-  console.log('[Auth] 세션 상태:', !!sessionCheck?.session, 'uid:', sessionCheck?.session?.user?.id?.slice(0,8));
-  _debugLog('info', 'auth', '로그인 성공', { email: _currentUser?.email, provider: _currentUser?.app_metadata?.provider });
+  console.log('[Auth] _onSignedIn 시작', _currentUser?.email);
+
+  // ── 1) 즉시 화면 전환 (await 없이) ──
   document.getElementById('auth-screen').style.display = 'none';
   const homePage = document.getElementById('page-home');
   homePage.style.display = '';
   homePage.classList.add('active');
   history.replaceState({ page: 'home' }, '', '#home');
 
-  // 새 사용자 감지 (Google OAuth 등 — profiles에 없으면 신규)
-  try {
-    const { data: existCheck } = await _supabase.from('profiles').select('id').eq('id', _currentUser.id).maybeSingle();
-    if (!existCheck) {
-      // 새 프로필 생성
-      const randomNick = _currentUser.user_metadata?.full_name || _generateRandomNickname();
-      await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick });
-      _notifyAdmin('new_signup', '새 회원가입 (Google)',
-        `이메일: ${_currentUser.email}\nProvider: ${_currentUser.app_metadata?.provider || 'unknown'}\n시간: ${new Date().toLocaleString('ko-KR')}`);
-    }
-  } catch(e) { console.warn('프로필 체크 실패:', e); }
-
-  // PRO 상태 로드
-  try {
-    const { data: prof } = await _supabase.from('profiles').select('is_pro, pro_until').eq('id', _currentUser.id).maybeSingle();
-    if (prof && prof.is_pro && (!prof.pro_until || new Date(prof.pro_until) > new Date())) {
-      state.isPro = true;
-    } else {
-      state.isPro = false;
-      // 만료된 PRO 자동 해제
-      if (prof && prof.is_pro && prof.pro_until && new Date(prof.pro_until) <= new Date()) {
-        _supabase.from('profiles').update({ is_pro: false }).eq('id', _currentUser.id);
-      }
-    }
-  } catch(e) { state.isPro = false; }
-
-  // 일일 판별 횟수 초기화 (자정 기준)
-  _loadDailyScanCount();
-
-  // PRO면 배지 숨기기, 무료면 잔여 횟수 표시
-  _updateScanBadge();
-
+  // 로컬 데이터 먼저 복원 (동기, 빠름)
   _loadProfile();
-  // DB에서 닉네임 로드 (로컬에 없으면)
+  _loadDailyScanCount();
+  _updateScanBadge();
+  renderScanGrid();
+
+  // 로컬 개체 즉시 표시
   try {
-    const { data: dbProf } = await _supabase.from('profiles').select('nickname').eq('id', _currentUser.id).maybeSingle();
-    if (dbProf && dbProf.nickname) {
-      _profile.name = dbProf.nickname;
-      _saveProfileLocal();
-      _updateProfileUI();
+    const localData = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+    if (localData) {
+      const parsed = JSON.parse(localData);
+      if (parsed.length > 0) { state.geckos = parsed; }
     }
   } catch(e) {}
-  await _loadGeckosFromDB();
   renderHome();
-  renderPosts();
   renderGeckoList();
-  renderScanGrid();
+
+  // ── 2) 백그라운드: DB 동기화 (화면은 이미 떠 있음) ──
+  (async () => {
+    try {
+      // 프로필 체크 + 신규 사용자 처리
+      const { data: existCheck } = await _supabase.from('profiles').select('id,nickname,is_pro,pro_until').eq('id', _currentUser.id).maybeSingle();
+      if (!existCheck) {
+        const randomNick = _currentUser.user_metadata?.full_name || _generateRandomNickname();
+        await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick });
+        _profile.name = randomNick;
+        _saveProfileLocal();
+        _updateProfileUI();
+        _notifyAdmin('new_signup', '새 회원가입',
+          `이메일: ${_currentUser.email}\nProvider: ${_currentUser.app_metadata?.provider || 'unknown'}\n시간: ${new Date().toLocaleString('ko-KR')}`);
+      } else {
+        // 기존 사용자 — 닉네임, PRO 상태 반영
+        if (existCheck.nickname) {
+          _profile.name = existCheck.nickname;
+          _saveProfileLocal();
+          _updateProfileUI();
+        }
+        if (existCheck.is_pro && (!existCheck.pro_until || new Date(existCheck.pro_until) > new Date())) {
+          state.isPro = true;
+        } else {
+          state.isPro = false;
+          if (existCheck.is_pro && existCheck.pro_until && new Date(existCheck.pro_until) <= new Date()) {
+            _supabase.from('profiles').update({ is_pro: false }).eq('id', _currentUser.id);
+          }
+        }
+        _loadDailyScanCount();
+        _updateScanBadge();
+      }
+    } catch(e) { console.warn('프로필 로드 실패:', e); }
+
+    // DB에서 개체 로드
+    try { await _loadGeckosFromDB(); } catch(e) { console.warn('개체 로드 실패:', e); }
+    renderHome();
+    renderGeckoList();
+
+    // 커뮤니티 글 로드
+    try { await renderPosts(); } catch(e) { console.warn('게시글 로드 실패:', e); }
+
+    _debugLog('info', 'auth', '로그인 완료', { email: _currentUser?.email });
+    console.log('[Auth] DB 동기화 완료');
+  })();
 }
 
 // ── 일일 판별 횟수 관리 (localStorage, 자정 리셋) ──
