@@ -3922,7 +3922,16 @@ async function renderPosts() {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">게시글이 없어요</div><div class="empty-sub">첫 번째 글을 작성해보세요!</div></div>`;
     return;
   }
-  all.forEach(p => list.appendChild(buildPostCard(p, false)));
+
+  // 전체 탭일 때: 공지를 맨 위에 고정, 나머지는 시간순
+  if (state.commFilter === 'all') {
+    const notices = all.filter(p => p.cat === 'notice');
+    const others = all.filter(p => p.cat !== 'notice');
+    notices.forEach(p => list.appendChild(buildPostCard(p, false)));
+    others.forEach(p => list.appendChild(buildPostCard(p, false)));
+  } else {
+    all.forEach(p => list.appendChild(buildPostCard(p, false)));
+  }
 }
 
 function _timeAgo(dateStr) {
