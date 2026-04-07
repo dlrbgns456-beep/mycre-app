@@ -4782,8 +4782,27 @@ function startProPayment() {
 const SUPABASE_URL = 'https://fatjjjwfauujgrvcihwd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhdGpqandmYXV1amdydmNpaHdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxOTM1NTksImV4cCI6MjA5MDc2OTU1OX0.xinT1D_FVBLyN149yTdOEvAZzskIZJn1lg8sRL9i98M';
 
+// Supabase SDK 로드 실패 감지
+if (typeof window.supabase === 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auth-loading');
+    if (el) el.innerHTML = `
+      <div style="font-size:52px;margin-bottom:16px">⚠️</div>
+      <div style="font-size:16px;color:var(--coral);font-weight:700;margin-bottom:8px">연결 오류</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:20px">서버에 연결할 수 없어요.<br>네트워크를 확인하고 새로고침해 주세요.</div>
+      <button onclick="location.reload()" style="padding:12px 28px;border-radius:12px;background:var(--ac);color:#071508;font-weight:800;border:none;font-size:14px;cursor:pointer;font-family:inherit">새로고침</button>
+    `;
+  });
+  throw new Error('Supabase SDK not loaded');
+}
+
 const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { flowType: 'implicit' }
+  auth: {
+    flowType: 'pkce',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  }
 });
 let _currentUser = null;
 let _authMode = 'login'; // 'login' | 'signup'
@@ -4801,8 +4820,9 @@ function toggleEmailLogin() {
 function _isWebView() {
   const ua = navigator.userAgent || '';
   // 카카오톡, 네이버, 인스타그램, 페이스북 등 인앱 브라우저 감지
-  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|wv|WebView/i.test(ua)
-    || (ua.includes('Android') && ua.includes('Version/') && !ua.includes('Chrome'));
+  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|wv|WebView/i.test(ua)
+    || (ua.includes('Android') && ua.includes('Version/') && !ua.includes('Chrome'))
+    || (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua)); // iOS WebView (Safari 아닌 경우)
 }
 
 function _openInExternalBrowser(url) {
@@ -4820,17 +4840,29 @@ function _openInExternalBrowser(url) {
 // ── Google 로그인 ──
 async function signInWithGoogle() {
   if (_isWebView()) {
-    // WebView에서는 Google이 차단하므로 크롬으로 자동 유도
     const url = window.location.origin || 'https://mycre-gecko.netlify.app';
-    showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬으로 이동합니다...');
+    showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬/사파리로 이동합니다...');
     setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
   }
-  const { error } = await _supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: 'https://mycre-gecko.netlify.app' }
-  });
-  if (error) showAuthErr('Google 로그인 실패: ' + error.message);
+  try {
+    showAuthErr('Google 로그인 중...');
+    document.getElementById('auth-err').style.color = 'var(--tx2)';
+    const { error } = await _supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'https://mycre-gecko.netlify.app',
+        skipBrowserRedirect: false, // 항상 redirect 방식
+      }
+    });
+    if (error) {
+      showAuthErr('Google 로그인 실패: ' + error.message);
+      _debugLog('error', 'auth', 'Google OAuth 실패: ' + error.message);
+    }
+  } catch(e) {
+    showAuthErr('Google 로그인 오류: ' + e.message);
+    _debugLog('error', 'auth', 'Google OAuth 예외: ' + e.message, { stack: e.stack });
+  }
 }
 
 // ── Kakao 로그인 ──
@@ -5265,26 +5297,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     return; // 공유 페이지만 표시, 나머지 앱 로직 실행 안 함
   }
 
-  // ── 안전장치: 4초 안에 아무것도 안 되면 강제로 로그인 화면 표시
+  // ── 안전장치: 6초 안에 아무것도 안 되면 강제로 로그인 화면 표시
+  // (iOS PKCE 교환은 시간이 더 걸릴 수 있으므로 여유 확보)
+  const hasAuthCode = window.location.search.includes('code=') || window.location.hash.includes('access_token');
   const authTimeout = setTimeout(() => {
     if (!_currentUser) _showAuthScreen();
-  }, 4000);
+  }, hasAuthCode ? 10000 : 6000);
 
   // ── onAuthStateChange: 모든 세션 변화 감지
   _supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('[Auth]', event, !!session);
     if (session && !_currentUser) {
       // 세션 있음 → 앱 진입 (Google OAuth, 이메일 로그인, 기존 세션 모두 포함)
       clearTimeout(authTimeout);
       _currentUser = session.user;
+      // PKCE 콜백 후 URL 정리 (?code= 파라미터 제거)
+      if (window.location.search.includes('code=')) {
+        history.replaceState(null, '', window.location.pathname + '#home');
+      }
       await _onSignedIn();
     } else if (!session && event === 'SIGNED_OUT') {
-      // 로그아웃
       _currentUser = null;
       _showAuthScreen();
     } else if (!session && event === 'INITIAL_SESSION') {
       // 최초 로드인데 세션 없음
-      // URL에 access_token이 있으면 SIGNED_IN이 곧 올 것이므로 잠깐 대기
-      if (!window.location.hash.includes('access_token')) {
+      // PKCE: URL에 code= 또는 access_token이 있으면 곧 SIGNED_IN이 올 것이므로 대기
+      const hasAuthCallback = window.location.search.includes('code=')
+        || window.location.hash.includes('access_token');
+      if (!hasAuthCallback) {
         clearTimeout(authTimeout);
         _showAuthScreen();
       }

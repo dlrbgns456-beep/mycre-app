@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mycre-v4';
+const CACHE_NAME = 'mycre-v5';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.svg',
@@ -26,8 +26,9 @@ self.addEventListener('activate', (e) => {
 
 // 요청 가로채기
 self.addEventListener('fetch', (e) => {
-  // Supabase API, Google Fonts → 네트워크 직접
+  // Supabase API, Google Fonts, auth callback → 네트워크 직접 (가로채지 않음)
   if (e.request.url.includes('supabase.co') || e.request.url.includes('googleapis.com')) return;
+  if (e.request.url.includes('code=') || e.request.url.includes('access_token=') || e.request.url.includes('_logout=') || e.request.url.includes('_deleted=')) return;
 
   // HTML 요청 → 항상 네트워크 (최신 코드 보장)
   if (e.request.mode === 'navigate' || e.request.url.endsWith('.html')) {
