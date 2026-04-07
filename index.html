@@ -53,9 +53,11 @@ img{display:block}
 button{cursor:pointer;border:none;background:none;font-family:inherit}
 
 /* ─── Pages ─── */
-.page{display:none;padding-bottom:80px;min-height:100vh;animation:fadeIn .18s ease}
-.page.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.page{display:none;padding-bottom:80px;min-height:100vh}
+.page.active{display:block;animation:pageFadeIn .25s cubic-bezier(.22,1,.36,1)}
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page.page-exit{display:block;animation:pageFadeOut .15s ease forwards;pointer-events:none}
+@keyframes pageFadeOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-6px)}}
 
 /* ─── Top Bar ─── */
 .topbar{
@@ -127,8 +129,16 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 .btn-primary:active{transform:scale(.97);box-shadow:none}
 .btn-outline{background:var(--sf2);border:1.5px solid var(--br);color:var(--tx);border-radius:12px;padding:12px;font-size:14px;font-weight:600;transition:all .15s}
 .btn-outline:active{border-color:var(--ac);color:var(--ac)}
-.btn-sm{background:var(--ac2);border:1px solid var(--ac);color:var(--ac);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700}
-.btn-coral{background:var(--co2);border:1px solid var(--coral);color:var(--coral);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700}
+.btn-sm{background:var(--ac2);border:1px solid var(--ac);color:var(--ac);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;transition:transform .12s}
+.btn-sm:active{transform:scale(.95)}
+.btn-coral{background:var(--co2);border:1px solid var(--coral);color:var(--coral);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;transition:transform .12s}
+.btn-coral:active{transform:scale(.95)}
+
+/* ─── Smooth interactions ─── */
+.card{transition:transform .12s}
+.card:active{transform:scale(.98)}
+.nb{transition:color .15s}
+.bnav{transition:background .2s}
 
 /* ─── Tags ─── */
 .tag{font-family:"DM Mono",monospace;font-size:10px;padding:3px 7px;border-radius:6px;display:inline-block}
@@ -140,10 +150,12 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 .tag-gray{background:var(--sf2);color:var(--tx2)}
 
 /* ─── Sheets (bottom modal) ─── */
-.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
-.sheet-overlay.show{display:flex}
-.sheet{background:var(--sf);border-radius:26px 26px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);animation:sheetUp .22s cubic-bezier(.25,.9,.5,1)}
-@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(0px);transition:background .25s ease,backdrop-filter .25s ease}
+.sheet-overlay.show{display:flex;background:rgba(0,0,0,.7);backdrop-filter:blur(4px)}
+.sheet{background:var(--sf);border-radius:26px 26px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);transform:translateY(100%);transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.sheet-overlay.show .sheet{transform:translateY(0)}
+.sheet-overlay.closing{display:flex;background:rgba(0,0,0,0);backdrop-filter:blur(0px)}
+.sheet-overlay.closing .sheet{transform:translateY(100%)}
 .sheet-handle{width:38px;height:4px;background:var(--br);border-radius:2px;margin:13px auto 0}
 .sheet-title{font-size:20px;font-weight:800;padding:14px 18px 4px}
 .sheet-body{padding:12px 18px 20px}
@@ -1327,6 +1339,29 @@ input[type=file]{display:none}
         </div>
       </div>
 
+      <!-- Egg tracking (암컷 전용) -->
+      <div id="egg-tracking-section" style="display:none;margin-bottom:14px">
+        <div style="background:var(--bg);border:1.5px solid #ff8fb1;border-radius:12px;padding:13px 14px">
+          <div style="font-size:10px;font-family:'DM Mono',monospace;color:#ff8fb1;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🥚 산란 기록</div>
+          <div style="display:flex;gap:12px">
+            <label style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--sf2);border:1.5px solid var(--br);border-radius:10px;padding:10px 12px;transition:border-color .15s" id="egg-infertile-label">
+              <input type="checkbox" id="gecko-egg-infertile" style="width:18px;height:18px;accent-color:var(--am);cursor:pointer" onchange="updateEggStyle()">
+              <div>
+                <div style="font-size:13px;font-weight:700">무정란</div>
+                <div style="font-size:10px;color:var(--tx3)">Infertile</div>
+              </div>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--sf2);border:1.5px solid var(--br);border-radius:10px;padding:10px 12px;transition:border-color .15s" id="egg-fertile-label">
+              <input type="checkbox" id="gecko-egg-fertile" style="width:18px;height:18px;accent-color:var(--ac);cursor:pointer" onchange="updateEggStyle()">
+              <div>
+                <div style="font-size:13px;font-weight:700">유정란</div>
+                <div style="font-size:10px;color:var(--tx3)">Fertile</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
       <!-- Cage + breeding auto-info -->
       <div id="cage-breeding-info" style="display:none;margin-bottom:14px">
         <div style="background:var(--bg);border:1px solid var(--br);border-radius:12px;padding:12px 13px">
@@ -2355,9 +2390,20 @@ const SAMPLE_POSTS = [
 // NAVIGATION
 // ══════════════════════════════
 function showPage(p, pushHistory = true) {
-  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  const oldPage = document.querySelector('.page.active');
+  const newPage = document.getElementById('page-' + p);
+  if (oldPage === newPage) return;
+
+  // 나가는 페이지 exit 애니메이션
+  if (oldPage) {
+    oldPage.classList.remove('active');
+    oldPage.classList.add('page-exit');
+    oldPage.addEventListener('animationend', () => oldPage.classList.remove('page-exit'), { once: true });
+  }
+
+  // 들어오는 페이지 활성화
   document.querySelectorAll('.nb, .nb-scan').forEach(el => el.classList.remove('active'));
-  document.getElementById('page-' + p).classList.add('active');
+  newPage.classList.add('active');
   const nav = document.getElementById('nav-' + p);
   if (nav) nav.classList.add('active');
   state.currentPage = p;
@@ -2365,15 +2411,14 @@ function showPage(p, pushHistory = true) {
   if (p === 'myge') renderGeckoList();
   if (p === 'comm') renderPosts();
   if (p === 'scan') resetScanPage();
-  // 뒤로가기 히스토리 등록
   if (pushHistory) history.pushState({ page: p }, '', '#' + p);
 }
 
 // 뒤로가기 버튼 처리 (앱 종료 방지)
 window.addEventListener('popstate', (e) => {
   // 열린 시트가 있으면 먼저 닫기
-  const openSheet = document.querySelector('.sheet-overlay.show');
-  if (openSheet) { openSheet.classList.remove('show'); history.pushState({}, ''); return; }
+  const openSheetEl = document.querySelector('.sheet-overlay.show');
+  if (openSheetEl) { _animateSheetClose(openSheetEl); history.pushState({}, ''); return; }
   // 페이지 이동
   const page = e.state?.page || 'home';
   showPage(page, false);
@@ -2514,15 +2559,30 @@ function showToast(msg) {
 // SHEETS
 // ══════════════════════════════
 function openSheet(id) {
-  document.getElementById(id).classList.add('show');
+  const el = document.getElementById(id);
+  el.classList.remove('closing');
+  el.style.display = 'flex';
+  // force reflow for transition
+  void el.offsetHeight;
+  el.classList.add('show');
+}
+function _animateSheetClose(el) {
+  if (!el || !el.classList.contains('show')) return;
+  el.classList.remove('show');
+  el.classList.add('closing');
+  setTimeout(() => {
+    el.classList.remove('closing');
+    el.style.display = '';
+  }, 300);
 }
 function closeSheet(id, e) {
-  if (!e || e.target === document.getElementById(id)) {
-    document.getElementById(id).classList.remove('show');
+  const el = document.getElementById(id);
+  if (!e || e.target === el) {
+    _animateSheetClose(el);
   }
 }
 function closeSheetDirect(id) {
-  document.getElementById(id).classList.remove('show');
+  _animateSheetClose(document.getElementById(id));
 }
 
 // ══════════════════════════════
@@ -2599,6 +2659,10 @@ function openAddGecko() {
   document.getElementById('delete-gecko-btn').style.display = 'none';
   document.getElementById('grade-suggestion').style.display = 'none';
   document.getElementById('cage-breeding-info').style.display = 'none';
+  document.getElementById('egg-tracking-section').style.display = 'none';
+  document.getElementById('gecko-egg-infertile').checked = false;
+  document.getElementById('gecko-egg-fertile').checked = false;
+  updateEggStyle();
   selectGrade('');
   resetAddPhoto();
   openSheet('sheet-add-gecko');
@@ -2715,11 +2779,21 @@ function updateGeckoGrade() {
 }
 
 // 몸무게 → 케이지 자동추천 + 번식가능 판정
+function updateEggStyle() {
+  const inf = document.getElementById('gecko-egg-infertile');
+  const fer = document.getElementById('gecko-egg-fertile');
+  document.getElementById('egg-infertile-label').style.borderColor = inf.checked ? 'var(--am)' : 'var(--br)';
+  document.getElementById('egg-fertile-label').style.borderColor = fer.checked ? 'var(--ac)' : 'var(--br)';
+}
+
 function updateCageAndBreeding() {
   const weightRaw = document.getElementById('gecko-weight').value;
   const weight = parseFloat(weightRaw);
   const dob = document.getElementById('gecko-dob').value;
   const sex = document.getElementById('gecko-sex').value;
+
+  // 암컷일 때만 산란 기록 표시
+  document.getElementById('egg-tracking-section').style.display = sex === '암컷' ? 'block' : 'none';
   const infoBox = document.getElementById('cage-breeding-info');
 
   if (!weightRaw && !dob) { infoBox.style.display = 'none'; return; }
@@ -2847,6 +2921,8 @@ async function saveGecko() {
       mom: document.getElementById('gecko-mom').value,
       memo: document.getElementById('gecko-memo').value,
       photo: photoUrl,
+      egg_infertile: document.getElementById('gecko-egg-infertile').checked,
+      egg_fertile: document.getElementById('gecko-egg-fertile').checked,
     };
 
     if (isEdit) {
@@ -3006,6 +3082,15 @@ function openGeckoDetail(id) {
         ${detailItem('시세 범위', m.price || '—')}
       </div>
 
+      ${(g.sex === '암컷' && (g.egg_infertile || g.egg_fertile)) ? `
+        <div style="background:var(--sf2);border:1.5px solid #ff8fb1;border-radius:12px;padding:12px 13px;margin-bottom:12px">
+          <div style="font-size:10px;font-family:'DM Mono',monospace;color:#ff8fb1;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">🥚 산란 기록</div>
+          <div style="display:flex;gap:10px">
+            ${g.egg_infertile ? '<span style="background:var(--am2);color:var(--am);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700">무정란</span>' : ''}
+            ${g.egg_fertile ? '<span style="background:var(--ac2);color:var(--ac);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700">유정란</span>' : ''}
+          </div>
+        </div>` : ''}
+
       ${(g.dad || g.mom) ? `
         <div style="background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:12px 13px;margin-bottom:12px">
           <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">🧬 혈통</div>
@@ -3091,6 +3176,10 @@ function editGecko(id) {
   document.getElementById('gecko-dad').value = g.dad || '';
   document.getElementById('gecko-mom').value = g.mom || '';
   document.getElementById('gecko-memo').value = g.memo || '';
+  document.getElementById('gecko-egg-infertile').checked = !!g.egg_infertile;
+  document.getElementById('gecko-egg-fertile').checked = !!g.egg_fertile;
+  document.getElementById('egg-tracking-section').style.display = g.sex === '암컷' ? 'block' : 'none';
+  updateEggStyle();
   document.getElementById('delete-gecko-btn').style.display = 'block';
   if (g.photo) {
     document.getElementById('add-photo-preview').src = g.photo;
@@ -4965,6 +5054,8 @@ async function _saveGeckoToDB(gecko) {
     mom:     gecko.mom || null,
     memo:    gecko.memo || null,
     photo:   dbPhoto,
+    egg_infertile: gecko.egg_infertile || false,
+    egg_fertile:   gecko.egg_fertile || false,
   };
   const { error } = await _supabase.from('geckos').upsert(row, { onConflict: 'id' });
   if (error) {
