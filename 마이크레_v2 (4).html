@@ -4979,7 +4979,26 @@ async function deleteAccount() {
     }
     try { await _supabase.from('profiles').delete().eq('id', uid); } catch(e) {}
 
-    if (titleEl) titleEl.textContent = '계정 정리 중...';
+    if (titleEl) titleEl.textContent = '계정 삭제 중...';
+
+    // auth.users에서 계정 완전 삭제 (Edge Function)
+    try {
+      const session = (await _supabase.auth.getSession()).data.session;
+      if (session) {
+        const res = await Promise.race([
+          fetch(SUPABASE_URL + '/functions/v1/delete-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + session.access_token,
+            },
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
+        ]);
+        const result = await res.json();
+        if (result.error) console.warn('계정 삭제 오류:', result.error);
+      }
+    } catch(e) { console.warn('auth 계정 삭제 실패(계속 진행):', e.message); }
 
     // Supabase signOut (최대 3초 대기)
     try {
