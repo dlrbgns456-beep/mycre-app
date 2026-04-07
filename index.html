@@ -1651,7 +1651,7 @@ input[type=file]{display:none}
           <option value="">— 개체 선택 안 함 —</option>
         </select>
       </div>
-      <button class="btn-primary" onclick="submitPost()">게시하기</button>
+      <button class="btn-primary" id="btn-submit-post" onclick="submitPost()">게시하기</button>
     </div>
   </div>
 </div>
@@ -2926,7 +2926,7 @@ async function saveGecko() {
     };
 
     if (isEdit) {
-      const idx = state.geckos.findIndex(g => g.id === state.editingGeckoId);
+      const idx = state.geckos.findIndex(g => String(g.id) === String(state.editingGeckoId));
       if (idx !== -1) state.geckos[idx] = gecko;
     } else {
       state.geckos.push(gecko);
@@ -3051,7 +3051,7 @@ function renderGeckoList() {
 }
 
 function openGeckoDetail(id) {
-  const g = state.geckos.find(x => x.id === id);
+  const g = state.geckos.find(x => String(x.id) === String(id));
   if (!g) return;
   const m = MORPHS[g.morph] || {};
   const grade = m.grade || 'C';
@@ -3154,41 +3154,45 @@ function getAge(dob) {
 }
 
 function editGecko(id) {
-  const g = state.geckos.find(x => x.id === id);
+  const g = state.geckos.find(x => String(x.id) === String(id));
   if (!g) return;
-  state.editingGeckoId = id;
+  state.editingGeckoId = g.id;
   currentPhotoData = g.photo || null;
+
+  // 상세 시트 닫은 뒤 수정 시트 열기 (애니메이션 충돌 방지)
   closeSheetDirect('sheet-gecko-detail');
-  document.getElementById('add-gecko-title').textContent = '개체 정보 수정';
-  document.getElementById('gecko-name').value = g.name;
-  document.getElementById('gecko-sex').value = g.sex;
-  document.getElementById('gecko-morph').value = g.morph || '';
-  document.getElementById('morph-inline-input').value = g.morph || '';
-  document.getElementById('morph-inline-input').style.borderColor = g.morph ? 'var(--ac)' : '';
-  hideMorphInline();
-  selectGrade(g.grade || '');
-  document.getElementById('grade-suggestion').style.display = 'none';
-  document.getElementById('gecko-dob').value = g.dob || '';
-  document.getElementById('gecko-price').value = g.price || '';
-  document.getElementById('gecko-status').value = g.status || '정상';
-  document.getElementById('gecko-weight').value = g.weight || '';
-  document.getElementById('gecko-cage').value = g.cage || '소형 (30cm 이하)';
-  document.getElementById('gecko-dad').value = g.dad || '';
-  document.getElementById('gecko-mom').value = g.mom || '';
-  document.getElementById('gecko-memo').value = g.memo || '';
-  document.getElementById('gecko-egg-infertile').checked = !!g.egg_infertile;
-  document.getElementById('gecko-egg-fertile').checked = !!g.egg_fertile;
-  document.getElementById('egg-tracking-section').style.display = g.sex === '암컷' ? 'block' : 'none';
-  updateEggStyle();
-  document.getElementById('delete-gecko-btn').style.display = 'block';
-  if (g.photo) {
-    document.getElementById('add-photo-preview').src = g.photo;
-    document.getElementById('add-photo-zone').classList.add('has-photo');
-  } else {
-    resetAddPhoto();
-  }
-  updateGeckoGrade();
-  openSheet('sheet-add-gecko');
+  setTimeout(() => {
+    document.getElementById('add-gecko-title').textContent = '개체 정보 수정';
+    document.getElementById('gecko-name').value = g.name;
+    document.getElementById('gecko-sex').value = g.sex;
+    document.getElementById('gecko-morph').value = g.morph || '';
+    document.getElementById('morph-inline-input').value = g.morph || '';
+    document.getElementById('morph-inline-input').style.borderColor = g.morph ? 'var(--ac)' : '';
+    hideMorphInline();
+    selectGrade(g.grade || '');
+    document.getElementById('grade-suggestion').style.display = 'none';
+    document.getElementById('gecko-dob').value = g.dob || '';
+    document.getElementById('gecko-price').value = g.price || '';
+    document.getElementById('gecko-status').value = g.status || '정상';
+    document.getElementById('gecko-weight').value = g.weight || '';
+    document.getElementById('gecko-cage').value = g.cage || '소형 (30cm 이하)';
+    document.getElementById('gecko-dad').value = g.dad || '';
+    document.getElementById('gecko-mom').value = g.mom || '';
+    document.getElementById('gecko-memo').value = g.memo || '';
+    document.getElementById('gecko-egg-infertile').checked = !!g.egg_infertile;
+    document.getElementById('gecko-egg-fertile').checked = !!g.egg_fertile;
+    document.getElementById('egg-tracking-section').style.display = g.sex === '암컷' ? 'block' : 'none';
+    updateEggStyle();
+    document.getElementById('delete-gecko-btn').style.display = 'block';
+    if (g.photo) {
+      document.getElementById('add-photo-preview').src = g.photo;
+      document.getElementById('add-photo-zone').classList.add('has-photo');
+    } else {
+      resetAddPhoto();
+    }
+    updateGeckoGrade();
+    openSheet('sheet-add-gecko');
+  }, 320);
 }
 
 function updateCountBadges() {
@@ -3773,64 +3777,80 @@ async function submitPost() {
   if (!title) { showToast('⚠️ 제목을 입력해주세요'); return; }
   if (!_currentUser) { showToast('⚠️ 로그인이 필요합니다'); return; }
 
-  // 연결된 개체 정보 가져오기
-  const geckoId = document.getElementById('post-gecko-link').value;
-  const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
+  const btn = document.getElementById('btn-submit-post');
+  if (btn) { btn.disabled = true; btn.textContent = '게시 중...'; btn.style.opacity = '.6'; }
 
-  // 사진 우선순위: 직접 첨부 > 연결된 개체 사진
-  let photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+  try {
+    // 연결된 개체 정보 가져오기
+    const geckoId = document.getElementById('post-gecko-link').value;
+    const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
 
-  // 직접 첨부한 사진이 있으면 Storage에 업로드
-  if (_postPhotoData && _currentUser) {
-    try {
-      const resp = await fetch(_postPhotoData);
-      const blob = await resp.blob();
-      const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
-      const { error: upErr } = await _supabase.storage
-        .from('gecko-photos')
-        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-      if (!upErr) {
-        const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
-        photo = urlData.publicUrl;
-      }
-    } catch(e) { console.error('게시글 사진 업로드 실패:', e); }
+    // 사진 우선순위: 직접 첨부 > 연결된 개체 사진
+    let photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+
+    // 직접 첨부한 사진이 있으면 Storage에 업로드
+    if (_postPhotoData && _currentUser) {
+      if (btn) btn.textContent = '사진 업로드 중...';
+      try {
+        const resp = await fetch(_postPhotoData);
+        const blob = await resp.blob();
+        const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
+        const { error: upErr } = await _supabase.storage
+          .from('gecko-photos')
+          .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+        if (!upErr) {
+          const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+          photo = urlData.publicUrl;
+        }
+      } catch(e) { console.error('게시글 사진 업로드 실패:', e); }
+    }
+
+    if (btn) btn.textContent = '저장 중...';
+
+    const morph = linkedGecko ? linkedGecko.morph : null;
+    const tags = ['내글'];
+    if (linkedGecko) {
+      if (linkedGecko.morph) tags.push(linkedGecko.morph);
+      if (linkedGecko.name) tags.push(linkedGecko.name);
+    }
+
+    const row = {
+      user_id: _currentUser.id,
+      cat: document.getElementById('post-category').value,
+      title,
+      author: _profile.name || '익명',
+      avatar: '🦎',
+      price: document.getElementById('post-price-input').value || null,
+      body: document.getElementById('post-body-input').value,
+      photo,
+      morph,
+      emoji: '🦎',
+      tags,
+    };
+
+    const { error } = await _supabase.from('posts').insert(row);
+    if (error) {
+      showToast('❌ 게시 실패: ' + error.message);
+      console.error('Post save error:', error);
+      return;
+    }
+
+    // 시트 닫고 커뮤니티 탭으로 이동
+    closeSheetDirect('sheet-write-post');
+    document.getElementById('post-title-input').value = '';
+    document.getElementById('post-price-input').value = '';
+    document.getElementById('post-body-input').value = '';
+    removePostPhoto();
+    await renderPosts();
+    showPage('comm');
+    showToast('✅ 게시글이 등록되었어요!');
+
+  } catch(err) {
+    console.error('게시글 저장 오류:', err);
+    showToast('⚠️ 게시 중 오류가 발생했습니다');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '게시하기'; btn.style.opacity = '1'; }
   }
-
-  const morph = linkedGecko ? linkedGecko.morph : null;
-  const tags = ['내글'];
-  if (linkedGecko) {
-    if (linkedGecko.morph) tags.push(linkedGecko.morph);
-    if (linkedGecko.name) tags.push(linkedGecko.name);
-  }
-
-  const row = {
-    user_id: _currentUser.id,
-    cat: document.getElementById('post-category').value,
-    title,
-    author: _profile.name || '익명',
-    avatar: '🦎',
-    price: document.getElementById('post-price-input').value || null,
-    body: document.getElementById('post-body-input').value,
-    photo,
-    morph,
-    emoji: '🦎',
-    tags,
-  };
-
-  const { error } = await _supabase.from('posts').insert(row);
-  if (error) {
-    showToast('❌ 게시 실패: ' + error.message);
-    console.error('Post save error:', error);
-    return;
-  }
-
-  closeSheetDirect('sheet-write-post');
-  document.getElementById('post-title-input').value = '';
-  document.getElementById('post-price-input').value = '';
-  document.getElementById('post-body-input').value = '';
-  removePostPhoto();
-  await renderPosts();
-  showToast('✅ 게시글이 등록되었어요!');
 }
 
 // ══════════════════════════════
