@@ -3185,6 +3185,15 @@ async function saveGecko() {
       state.geckos.push(gecko);
     }
 
+    // ── 즉시 로컬 저장 (앱 종료해도 데이터 보존) ──
+    try {
+      const localSafe = state.geckos.map(g => ({
+        ...g,
+        photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null
+      }));
+      localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(localSafe));
+    } catch(e) {}
+
     // ── 즉시 시트 닫고 화면 전환 (사용자 대기 없음) ──
     closeSheetDirect('sheet-add-gecko');
     renderGeckoList();
@@ -3194,21 +3203,19 @@ async function saveGecko() {
     showPage('myge');
     showToast(isEdit ? '✅ 개체 정보가 수정되었어요' : '✅ 새 개체가 등록되었어요!');
 
-    // ── 백그라운드: 사진 업로드 + DB 저장 (병렬) ──
+    // ── 백그라운드: 사진 업로드 + DB 저장 ──
     (async () => {
       try {
         let photoUrl = null;
         if (pendingBlob) {
           photoUrl = await _uploadPhotoToStorage(pendingBlob, geckoId);
         }
-        // 사진 URL이 있으면 개체 데이터 업데이트
         if (photoUrl) {
           gecko.photo = photoUrl;
           const idx = state.geckos.findIndex(g => String(g.id) === String(geckoId));
           if (idx !== -1) state.geckos[idx].photo = photoUrl;
         }
         await _saveGeckoToDB(gecko);
-        // 목록 갱신 (사진 URL이 업데이트되었으므로)
         if (photoUrl) renderGeckoList();
       } catch(e) {
         console.error('백그라운드 저장 오류:', e);
@@ -4133,22 +4140,38 @@ function openWritePost() {
 
 let _postPhotoData = null;
 
+let _postPhotoBlob = null; // 리사이즈된 Blob (업로드용)
+
 function handlePostPhoto(e) {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    _postPhotoData = ev.target.result;
+  // 리사이즈해서 미리보기 + 업로드용 Blob 준비
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    const MAX = 480;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    _postPhotoData = canvas.toDataURL('image/jpeg', 0.5);
+    canvas.toBlob(blob => { _postPhotoBlob = blob; }, 'image/jpeg', 0.5);
     document.getElementById('post-photo-preview').src = _postPhotoData;
     document.getElementById('post-photo-preview').style.display = 'block';
     document.getElementById('post-photo-placeholder').style.display = 'none';
     document.getElementById('post-photo-remove-btn').style.display = 'inline-block';
+    URL.revokeObjectURL(url);
   };
-  reader.readAsDataURL(file);
+  img.src = url;
 }
 
 function removePostPhoto() {
   _postPhotoData = null;
+  _postPhotoBlob = null;
   document.getElementById('post-photo-preview').style.display = 'none';
   document.getElementById('post-photo-preview').src = '';
   document.getElementById('post-photo-placeholder').style.display = 'block';
@@ -4176,30 +4199,14 @@ async function submitPost() {
     let photo = null;
     let morph = null;
     const tags = [];
+    const pendingPostBlob = _postPhotoBlob; // 사진 Blob 캡처
+    _postPhotoBlob = null;
 
-    // 공지사항이 아닌 경우에만 사진/개체 처리
+    // 공지사항이 아닌 경우 개체 연결 처리
     if (cat !== 'notice') {
       const geckoId = document.getElementById('post-gecko-link')?.value;
       const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
-
       photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
-
-      if (_postPhotoData && _currentUser) {
-        if (btn) btn.textContent = '사진 업로드 중...';
-        try {
-          const resp = await fetch(_postPhotoData);
-          const blob = await resp.blob();
-          const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
-          const { error: upErr } = await _supabase.storage
-            .from('gecko-photos')
-            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-          if (!upErr) {
-            const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
-            photo = urlData.publicUrl;
-          }
-        } catch(e) { console.error('게시글 사진 업로드 실패:', e); }
-      }
-
       morph = linkedGecko ? linkedGecko.morph : null;
       if (linkedGecko) {
         if (linkedGecko.morph) tags.push(linkedGecko.morph);
@@ -4207,8 +4214,7 @@ async function submitPost() {
       }
     }
 
-    if (btn) btn.textContent = '저장 중...';
-
+    // ── 먼저 텍스트만 DB에 즉시 저장 (사진 없이) ──
     const row = {
       user_id: _currentUser.id,
       cat,
@@ -4223,13 +4229,14 @@ async function submitPost() {
       tags,
     };
 
-    const { error } = await _supabase.from('posts').insert(row);
+    const { data: inserted, error } = await _supabase.from('posts').insert(row).select('id').single();
     if (error) {
       showToast('❌ 게시 실패: ' + error.message);
       _debugLog('error', 'post', 'DB 게시글 INSERT 실패: ' + error.message, { code: error.code, title });
       return;
     }
 
+    // ── 즉시 시트 닫고 화면 전환 ──
     closeSheetDirect('sheet-write-post');
     document.getElementById('post-title-input').value = '';
     const priceInput = document.getElementById('post-price-input');
@@ -4239,6 +4246,23 @@ async function submitPost() {
     await renderPosts();
     showPage('comm');
     showToast(cat === 'notice' ? '📢 공지사항이 등록되었어요!' : '✅ 게시글이 등록되었어요!');
+
+    // ── 백그라운드: 사진 업로드 후 게시글 업데이트 ──
+    if (pendingPostBlob && inserted?.id && cat !== 'notice') {
+      (async () => {
+        try {
+          const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
+          const { error: upErr } = await _supabase.storage
+            .from('gecko-photos')
+            .upload(fileName, pendingPostBlob, { contentType: 'image/jpeg', upsert: true });
+          if (!upErr) {
+            const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+            await _supabase.from('posts').update({ photo: urlData.publicUrl }).eq('id', inserted.id);
+            renderPosts(); // 사진 반영
+          }
+        } catch(e) { console.error('게시글 사진 백그라운드 업로드 실패:', e); }
+      })();
+    }
 
   } catch(err) {
     console.error('게시글 저장 오류:', err);
@@ -5653,6 +5677,8 @@ async function _loadGeckosFromDB() {
       grade: row.grade, dob: row.dob, price: row.price, weight: row.weight,
       status: row.status, cage: row.cage, dad: row.dad, mom: row.mom,
       memo: row.memo, photo: row.photo,
+      egg_infertile: row.egg_infertile || false,
+      egg_fertile: row.egg_fertile || false,
     }));
     // 로컬도 최신화
     try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(state.geckos)); } catch(e) {}
