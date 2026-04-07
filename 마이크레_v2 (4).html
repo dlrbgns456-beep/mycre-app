@@ -606,6 +606,21 @@ input[type=file]{display:none}
     </div>
 
     <div class="auth-card">
+      <!-- 이메일 로그인/회원가입 (항상 표시) -->
+      <div class="auth-tab-row">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
+      </div>
+      <div id="email-login-area" style="display:flex;flex-direction:column;gap:10px">
+        <input class="auth-input" id="auth-email" type="email" placeholder="이메일 주소" autocomplete="email">
+        <input class="auth-input" id="auth-pw" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="current-password">
+        <input class="auth-input" id="auth-pw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" style="display:none">
+        <div class="auth-err" id="auth-err"></div>
+        <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">로그인</button>
+      </div>
+
+      <div class="auth-divider-line"><span>간편 로그인</span></div>
+
       <button class="social-btn google-btn" id="google-login-btn" onclick="signInWithGoogle()">
         <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Google로 로그인
@@ -614,19 +629,6 @@ input[type=file]{display:none}
         <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0"><path fill="#3C1E1E" d="M12 3C6.477 3 2 6.477 2 10.5c0 2.544 1.394 4.788 3.5 6.186L4.5 20.5l4.229-2.797C9.584 17.9 10.775 18 12 18c5.523 0 10-3.477 10-7.5S17.523 3 12 3z"/></svg>
         카카오 로그인 <span style="font-size:11px;font-weight:400;color:#bbb;margin-left:4px">준비 중</span>
       </button>
-      <div class="auth-divider-line"><span>또는 이메일로</span></div>
-      <div id="email-login-area" style="display:none;flex-direction:column;gap:10px">
-        <div class="auth-tab-row">
-          <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
-          <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
-        </div>
-        <input class="auth-input" id="auth-email" type="email" placeholder="이메일 주소" autocomplete="email">
-        <input class="auth-input" id="auth-pw" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="current-password">
-        <input class="auth-input" id="auth-pw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" style="display:none">
-        <div class="auth-err" id="auth-err"></div>
-        <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">이메일 로그인</button>
-      </div>
-      <button onclick="toggleEmailLogin()" style="background:var(--sf2);border:1.5px solid var(--br);color:var(--tx2);font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;padding:12px;border-radius:12px;width:100%;transition:all .15s" id="email-toggle-btn">✉️ 이메일로 로그인 ▾</button>
     </div>
   </div>
 </div>
@@ -4956,6 +4958,7 @@ function switchAuthTab(mode) {
   document.getElementById('tab-signup').classList.toggle('active', isSignup);
   document.getElementById('auth-pw2').style.display = isSignup ? 'block' : 'none';
   document.getElementById('auth-submit-btn').textContent = isSignup ? '회원가입' : '로그인';
+  document.getElementById('auth-pw').placeholder = isSignup ? '비밀번호 설정 (8자 이상)' : '비밀번호 (8자 이상)';
   document.getElementById('auth-err').textContent = '';
 }
 
@@ -4972,11 +4975,29 @@ async function handleAuthSubmit() {
 
   if (_authMode === 'signup') {
     if (pw !== pw2) { errEl.textContent = '⚠️ 비밀번호가 일치하지 않아요'; return; }
-    const { error } = await _supabase.auth.signUp({ email, password: pw });
-    if (error) { errEl.textContent = '❌ ' + (error.message || '가입 실패'); return; }
+    const submitBtn = document.getElementById('auth-submit-btn');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '가입 중...'; }
+    const { data, error } = await _supabase.auth.signUp({
+      email, password: pw,
+      options: { emailRedirectTo: 'https://mycre-gecko.netlify.app' }
+    });
+    if (error) {
+      errEl.textContent = '❌ ' + (error.message || '가입 실패');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '회원가입'; }
+      return;
+    }
+    _notifyAdmin('new_signup', '새 회원가입 (이메일)', `이메일: ${email}\n시간: ${new Date().toLocaleString('ko-KR')}`);
+
+    // 세션이 바로 반환되면 즉시 로그인 (이메일 인증 비활성화된 경우)
+    if (data?.session) {
+      _currentUser = data.session.user;
+      await _onSignedIn();
+      return;
+    }
+    // 이메일 인증 필요한 경우
     errEl.style.color = 'var(--ac)';
-    errEl.textContent = '✅ 가입 완료! 이메일을 확인해 로그인하세요';
-    _notifyAdmin('new_signup', '새 회원가입', `이메일: ${email}\n시간: ${new Date().toLocaleString('ko-KR')}`);
+    errEl.innerHTML = '✅ 가입 완료!<br>📧 인증 메일을 확인하고 링크를 클릭해주세요.<br><span style="font-size:11px;color:var(--tx3)">(스팸함도 확인해 보세요)</span>';
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '회원가입'; }
     return;
   }
 
@@ -5261,9 +5282,6 @@ function _showAuthScreen() {
     // Google 버튼 흐리게
     const gBtn = document.getElementById('google-login-btn');
     if (gBtn) { gBtn.style.opacity = '.4'; gBtn.style.pointerEvents = 'none'; }
-    // 이메일 로그인 자동 펼침
-    document.getElementById('email-login-area').style.display = 'flex';
-    document.getElementById('email-toggle-btn').style.display = 'none';
   }
 }
 
