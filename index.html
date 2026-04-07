@@ -2715,6 +2715,7 @@ async function _uploadPhotoToStorage(blob, geckoId) {
     .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
   if (error) {
     console.error('사진 업로드 실패:', error);
+    _debugLog('error', 'storage', '사진 Storage 업로드 실패: ' + (error.message || error), { fileName });
     return null;
   }
   const { data } = _supabase.storage
@@ -2947,6 +2948,7 @@ async function saveGecko() {
 
   } catch(err) {
     console.error('개체 저장 오류:', err);
+    _debugLog('error', 'gecko', '개체 저장 실패: ' + err.message, { stack: err.stack, geckoName: document.getElementById('gecko-name')?.value });
     showToast('⚠️ 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
   } finally {
     // 버튼 원상복구
@@ -3802,7 +3804,7 @@ async function submitPost() {
           const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
           photo = urlData.publicUrl;
         }
-      } catch(e) { console.error('게시글 사진 업로드 실패:', e); }
+      } catch(e) { console.error('게시글 사진 업로드 실패:', e); _debugLog('error', 'storage', '게시글 사진 업로드 실패: ' + e.message, { stack: e.stack }); }
     }
 
     if (btn) btn.textContent = '저장 중...';
@@ -3832,6 +3834,7 @@ async function submitPost() {
     if (error) {
       showToast('❌ 게시 실패: ' + error.message);
       console.error('Post save error:', error);
+      _debugLog('error', 'post', 'DB 게시글 INSERT 실패: ' + error.message, { code: error.code, title });
       return;
     }
 
@@ -3847,6 +3850,7 @@ async function submitPost() {
 
   } catch(err) {
     console.error('게시글 저장 오류:', err);
+    _debugLog('error', 'post', '게시글 저장 실패: ' + err.message, { stack: err.stack });
     showToast('⚠️ 게시 중 오류가 발생했습니다');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '게시하기'; btn.style.opacity = '1'; }
@@ -4370,18 +4374,102 @@ async function _notifyAdmin(type, subject, body) {
   }
 }
 
-// 결제 에러 로깅
-async function _logPaymentError(merchantUid, errorMsg, detail) {
+// ══════════════════════════════
+// 🔍 DEBUG LOGGING SYSTEM (전역 에러 수집)
+// ══════════════════════════════
+const APP_VERSION = '2.5.0';
+let _debugLogQueue = [];
+let _debugLogTimer = null;
+
+// level: 'error' | 'warn' | 'info'
+// category: 'payment' | 'auth' | 'gecko' | 'post' | 'scan' | 'storage' | 'network' | 'ui' | 'general'
+async function _debugLog(level, category, message, extra = {}) {
+  const entry = {
+    user_id: _currentUser?.id || null,
+    user_email: _currentUser?.email || null,
+    level,
+    category,
+    message: String(message).substring(0, 500),
+    stack: extra.stack ? String(extra.stack).substring(0, 2000) : null,
+    context: {
+      ...extra,
+      stack: undefined, // context에는 stack 중복 저장 안 함
+      timestamp: new Date().toISOString(),
+    },
+    page: state?.currentPage || null,
+    user_agent: navigator.userAgent.substring(0, 300),
+    app_version: APP_VERSION,
+  };
+
+  // 큐에 모아서 배치 전송 (디바운스 2초)
+  _debugLogQueue.push(entry);
+  if (_debugLogTimer) clearTimeout(_debugLogTimer);
+  _debugLogTimer = setTimeout(_flushDebugLogs, 2000);
+}
+
+async function _flushDebugLogs() {
+  if (_debugLogQueue.length === 0) return;
+  const batch = _debugLogQueue.splice(0, 20); // 최대 20개씩
   try {
-    await _supabase.from('error_logs').insert({
-      user_id: _currentUser?.id || null,
-      type: 'payment_error',
-      message: errorMsg,
-      detail: { merchant_uid: merchantUid, error: detail, timestamp: new Date().toISOString() }
-    });
-    _notifyAdmin('payment_error', '결제 오류 발생',
-      `사용자: ${_currentUser?.email || '알 수 없음'}\n주문번호: ${merchantUid}\n오류: ${errorMsg}\n상세: ${JSON.stringify(detail)}`);
-  } catch(e) { console.warn('에러 로깅 실패:', e); }
+    await _supabase.from('debug_logs').insert(batch);
+  } catch(e) {
+    console.warn('[DebugLog] DB 저장 실패:', e);
+  }
+
+  // 심각한 에러면 admin 알림
+  const criticals = batch.filter(b => b.level === 'error');
+  if (criticals.length > 0) {
+    const summary = criticals.map(c => `[${c.category}] ${c.message}`).join('\n');
+    _notifyAdmin('app_error', `앱 에러 ${criticals.length}건 발생`,
+      `사용자: ${criticals[0].user_email || '비로그인'}\n페이지: ${criticals[0].page || '?'}\n\n${summary}`);
+  }
+}
+
+// 페이지 이탈 시 남은 로그 전송
+window.addEventListener('beforeunload', () => {
+  if (_debugLogQueue.length > 0) {
+    const batch = _debugLogQueue.splice(0, 20);
+    const blob = new Blob([JSON.stringify(batch)], { type: 'application/json' });
+    navigator.sendBeacon && navigator.sendBeacon(
+      SUPABASE_URL + '/rest/v1/debug_logs',
+      blob
+    );
+  }
+});
+
+// ── 전역 에러 핸들러 (잡히지 않는 모든 에러) ──
+window.addEventListener('error', (e) => {
+  _debugLog('error', 'general', e.message || 'Unknown error', {
+    stack: e.error?.stack || null,
+    filename: e.filename,
+    lineno: e.lineno,
+    colno: e.colno,
+  });
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = e.reason?.message || String(e.reason) || 'Unhandled Promise rejection';
+  _debugLog('error', 'general', msg, {
+    stack: e.reason?.stack || null,
+    type: 'unhandledrejection',
+  });
+});
+
+// ── 네트워크 에러 감지 ──
+window.addEventListener('offline', () => {
+  _debugLog('warn', 'network', '네트워크 연결 끊김');
+});
+window.addEventListener('online', () => {
+  _debugLog('info', 'network', '네트워크 재연결');
+  _flushDebugLogs(); // 재연결 시 밀린 로그 전송
+});
+
+// 결제 에러 로깅 (기존 호환)
+async function _logPaymentError(merchantUid, errorMsg, detail) {
+  _debugLog('error', 'payment', errorMsg, {
+    merchant_uid: merchantUid,
+    detail: detail,
+  });
 }
 
 // 게시물 신고
@@ -4506,6 +4594,7 @@ async function _showSharedGeckoPage(geckoId, ownerId) {
       <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--tx3)">이 프로필은 마이크레 앱에서 QR코드로 공유되었습니다.</div>`;
   } catch(err) {
     console.error('공유 페이지 로드 오류:', err);
+    _debugLog('error', 'general', '공유 페이지 로드 실패: ' + err.message, { stack: err.stack });
     content.innerHTML = '<div style="text-align:center;padding:30px;color:#ff4444">데이터를 불러올 수 없습니다.</div>';
   }
 }
@@ -4673,6 +4762,7 @@ function startProPayment() {
 
       } catch (err) {
         console.error('결제 후처리 오류:', err);
+        _debugLog('error', 'payment', 'PC 결제 후처리 오류: ' + err.message, { stack: err.stack });
         showToast('결제는 완료되었으나 활성화 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
       }
     } else {
@@ -4792,7 +4882,7 @@ async function handleAuthSubmit() {
 
   // 로그인
   const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pw });
-  if (error) { errEl.textContent = '❌ 이메일 또는 비밀번호가 틀렸어요'; return; }
+  if (error) { errEl.textContent = '❌ 이메일 또는 비밀번호가 틀렸어요'; _debugLog('warn', 'auth', '로그인 실패: ' + error.message, { email }); return; }
   _currentUser = data.user;
   await _onSignedIn();
 }
@@ -4870,6 +4960,7 @@ async function deleteAccount() {
     setTimeout(() => { window.location.replace('/'); }, 1000);
   } catch(e) {
     console.error('탈퇴 처리 오류:', e.message);
+    _debugLog('error', 'auth', '회원탈퇴 처리 오류: ' + e.message, { stack: e.stack });
     showToast('오류가 발생했습니다. 다시 시도해주세요.');
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.querySelector('.more-item-title').textContent = '회원탈퇴'; }
   }
@@ -4877,6 +4968,7 @@ async function deleteAccount() {
 
 // ── 로그인 성공 후 처리 ──
 async function _onSignedIn() {
+  _debugLog('info', 'auth', '로그인 성공', { email: _currentUser?.email, provider: _currentUser?.app_metadata?.provider });
   document.getElementById('auth-screen').style.display = 'none';
   const homePage = document.getElementById('page-home');
   homePage.style.display = '';
@@ -5013,6 +5105,7 @@ async function _loadGeckosFromDB() {
   if (error || !data) {
     // DB 실패 시 localStorage 폴백
     console.error('DB 로드 실패, 로컬 데이터 사용:', error);
+    _debugLog('error', 'gecko', 'DB에서 개체 로드 실패 → 로컬 폴백', { error: error?.message || error });
     try {
       const local = localStorage.getItem('mycre_geckos_' + _currentUser.id);
       if (local) { state.geckos = JSON.parse(local); renderHome(); renderGeckoList(); renderScanGrid(); }
@@ -5081,6 +5174,7 @@ async function _saveGeckoToDB(gecko) {
   if (error) {
     showToast('⚠️ 서버 저장 실패 — 로컬에만 저장됨');
     console.error('DB 저장 오류:', error);
+    _debugLog('error', 'gecko', 'DB 개체 저장(upsert) 실패', { error: error?.message || error, geckoId: gecko?.id });
   } else {
     showToast('✅ 저장 완료!');
   }
@@ -5199,6 +5293,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           setTimeout(() => { location.reload(); }, 1200);
         } catch(err) {
           console.error('모바일 결제 후처리 오류:', err);
+          _debugLog('error', 'payment', '모바일 결제 후처리 오류: ' + err.message, { stack: err.stack });
           showToast('결제는 완료되었으나 활성화 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
         }
       };
