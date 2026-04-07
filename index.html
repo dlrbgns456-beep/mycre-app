@@ -1097,7 +1097,7 @@ input[type=file]{display:none}
     <div class="more-item" onclick="openQRSheet()">
       <div class="more-icon" style="background:var(--ac2)">📱</div>
       <div class="more-item-info">
-        <div class="more-item-title">QR 개체 프로필</div>
+        <div class="more-item-title">QR 개체 프로필 <span style="font-size:10px;color:var(--am);font-weight:700">PRO</span></div>
         <div class="more-item-sub">거래·분양 시 스캔 한 번으로 개체 정보 공유</div>
       </div>
       <div class="more-item-arrow">›</div>
@@ -4279,6 +4279,10 @@ async function submitPost() {
 // QR PROFILE
 // ══════════════════════════════
 function openQRSheet() {
+  if (!state.isPro) {
+    _showProUpgradePopup('QR코드 생성은 PRO 전용 기능이에요.<br>개체 프로필 카드를 QR로 만들어<br>저장하고 인쇄할 수 있어요!');
+    return;
+  }
   populateGeckoSelects();
   openSheet('sheet-qr');
   if (state.geckos.length > 0) {
