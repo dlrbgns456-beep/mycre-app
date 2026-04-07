@@ -3203,7 +3203,7 @@ async function saveGecko() {
     showPage('myge');
     showToast(isEdit ? '✅ 개체 정보가 수정되었어요' : '✅ 새 개체가 등록되었어요!');
 
-    // ── 백그라운드: 사진 업로드 + DB 저장 ──
+    // ── 서버 저장 (사진 업로드 + DB) ──
     (async () => {
       try {
         let photoUrl = null;
@@ -3214,12 +3214,17 @@ async function saveGecko() {
           gecko.photo = photoUrl;
           const idx = state.geckos.findIndex(g => String(g.id) === String(geckoId));
           if (idx !== -1) state.geckos[idx].photo = photoUrl;
+          // 로컬도 사진 URL 업데이트
+          try {
+            const ls = state.geckos.map(g => ({...g, photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null }));
+            localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(ls));
+          } catch(e2) {}
         }
         await _saveGeckoToDB(gecko);
         if (photoUrl) renderGeckoList();
       } catch(e) {
-        console.error('백그라운드 저장 오류:', e);
-        _debugLog('error', 'gecko', '백그라운드 저장 실패: ' + e.message, { geckoId });
+        console.error('서버 저장 오류:', e);
+        showToast('⚠️ 서버 동기화 실패 — 로컬에만 저장됨');
       }
     })();
 
@@ -4229,14 +4234,29 @@ async function submitPost() {
       tags,
     };
 
-    const { data: inserted, error } = await _supabase.from('posts').insert(row).select('id').single();
+    // ── 사진이 있으면 먼저 업로드 (리사이즈 되어있으므로 빠름) ──
+    if (pendingPostBlob && cat !== 'notice') {
+      try {
+        const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
+        const { error: upErr } = await _supabase.storage
+          .from('gecko-photos')
+          .upload(fileName, pendingPostBlob, { contentType: 'image/jpeg', upsert: true });
+        if (!upErr) {
+          const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+          row.photo = urlData.publicUrl;
+        }
+      } catch(e) { console.error('사진 업로드 실패:', e); }
+    }
+
+    // ── DB 저장 ──
+    const { error } = await _supabase.from('posts').insert(row);
     if (error) {
       showToast('❌ 게시 실패: ' + error.message);
-      _debugLog('error', 'post', 'DB 게시글 INSERT 실패: ' + error.message, { code: error.code, title });
+      console.error('Post insert error:', error);
       return;
     }
 
-    // ── 즉시 시트 닫고 화면 전환 ──
+    // ── 시트 닫고 화면 전환 ──
     closeSheetDirect('sheet-write-post');
     document.getElementById('post-title-input').value = '';
     const priceInput = document.getElementById('post-price-input');
@@ -4246,23 +4266,6 @@ async function submitPost() {
     await renderPosts();
     showPage('comm');
     showToast(cat === 'notice' ? '📢 공지사항이 등록되었어요!' : '✅ 게시글이 등록되었어요!');
-
-    // ── 백그라운드: 사진 업로드 후 게시글 업데이트 ──
-    if (pendingPostBlob && inserted?.id && cat !== 'notice') {
-      (async () => {
-        try {
-          const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
-          const { error: upErr } = await _supabase.storage
-            .from('gecko-photos')
-            .upload(fileName, pendingPostBlob, { contentType: 'image/jpeg', upsert: true });
-          if (!upErr) {
-            const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
-            await _supabase.from('posts').update({ photo: urlData.publicUrl }).eq('id', inserted.id);
-            renderPosts(); // 사진 반영
-          }
-        } catch(e) { console.error('게시글 사진 백그라운드 업로드 실패:', e); }
-      })();
-    }
 
   } catch(err) {
     console.error('게시글 저장 오류:', err);
@@ -5510,6 +5513,9 @@ async function deleteAccount() {
 
 // ── 로그인 성공 후 처리 ──
 async function _onSignedIn() {
+  // 세션 유효성 확인
+  const { data: sessionCheck } = await _supabase.auth.getSession();
+  console.log('[Auth] 세션 상태:', !!sessionCheck?.session, 'uid:', sessionCheck?.session?.user?.id?.slice(0,8));
   _debugLog('info', 'auth', '로그인 성공', { email: _currentUser?.email, provider: _currentUser?.app_metadata?.provider });
   document.getElementById('auth-screen').style.display = 'none';
   const homePage = document.getElementById('page-home');
@@ -5655,6 +5661,20 @@ function _showAuthScreen() {
 // DB에서 개체 목록 불러오기
 async function _loadGeckosFromDB() {
   if (!_currentUser) return;
+
+  // 먼저 로컬 데이터 복원 (항상 — DB 로딩 중에도 화면에 표시되도록)
+  try {
+    const localData = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+    if (localData) {
+      const parsed = JSON.parse(localData);
+      if (parsed.length > 0) {
+        state.geckos = parsed;
+        renderHome(); renderGeckoList();
+      }
+    }
+  } catch(e) {}
+
+  // DB에서 최신 데이터 시도
   const { data, error } = await _supabase
     .from('geckos')
     .select('*')
@@ -5662,16 +5682,12 @@ async function _loadGeckosFromDB() {
     .order('created_at', { ascending: true });
 
   if (error || !data) {
-    // DB 실패 시 localStorage 폴백
-    console.error('DB 로드 실패, 로컬 데이터 사용:', error);
-    _debugLog('error', 'gecko', 'DB에서 개체 로드 실패 → 로컬 폴백', { error: error?.message || error });
-    try {
-      const local = localStorage.getItem('mycre_geckos_' + _currentUser.id);
-      if (local) { state.geckos = JSON.parse(local); renderHome(); renderGeckoList(); renderScanGrid(); }
-    } catch(e) {}
+    console.error('DB 로드 실패, 로컬 데이터 유지:', error);
+    // 로컬 데이터가 이미 로드되어 있으므로 그대로 사용
     return;
   }
   if (data.length > 0) {
+    // DB에 데이터 있음 → DB 데이터를 최신으로 사용
     state.geckos = data.map(row => ({
       id: row.id, name: row.name, sex: row.sex, morph: row.morph,
       grade: row.grade, dob: row.dob, price: row.price, weight: row.weight,
@@ -5680,21 +5696,14 @@ async function _loadGeckosFromDB() {
       egg_infertile: row.egg_infertile || false,
       egg_fertile: row.egg_fertile || false,
     }));
-    // 로컬도 최신화
     try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(state.geckos)); } catch(e) {}
-  } else {
-    // DB 비어있으면 로컬 확인
-    try {
-      const local = localStorage.getItem('mycre_geckos_' + _currentUser.id);
-      if (local) {
-        const parsed = JSON.parse(local);
-        if (parsed.length > 0) {
-          state.geckos = parsed;
-          // 로컬 데이터를 DB에 복구
-          for (const g of parsed) { await _saveGeckoToDB(g); }
-        }
-      }
-    } catch(e) {}
+    renderHome(); renderGeckoList();
+  } else if (state.geckos.length > 0) {
+    // DB 비어있는데 로컬에 데이터 있음 → DB에 복구 시도
+    console.log('DB 비어있음, 로컬 데이터 ' + state.geckos.length + '건 DB 복구 시도');
+    for (const g of state.geckos) {
+      try { await _saveGeckoToDB(g); } catch(e) {}
+    }
   }
 }
 
@@ -5734,8 +5743,7 @@ async function _saveGeckoToDB(gecko) {
   const { error } = await _supabase.from('geckos').upsert(row, { onConflict: 'id' });
   if (error) {
     console.error('DB 저장 오류:', error);
-    _debugLog('error', 'gecko', 'DB 개체 저장(upsert) 실패', { error: error?.message || error, geckoId: gecko?.id });
-  } else {
+    showToast('⚠️ DB 동기화 실패: ' + (error.message || '알 수 없는 오류'));
   }
 }
 
