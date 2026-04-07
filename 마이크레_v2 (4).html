@@ -1042,10 +1042,10 @@ input[type=file]{display:none}
 
   <!-- Profile -->
   <div style="padding:18px 18px 10px;display:flex;align-items:center;gap:14px">
-    <div style="width:56px;height:56px;border-radius:18px;background:var(--ac2);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🦎</div>
+    <div id="more-profile-avatar" style="width:56px;height:56px;border-radius:18px;background:var(--ac2);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🦎</div>
     <div>
       <div id="more-profile-name" style="font-size:17px;font-weight:800;margin-bottom:3px">게코키퍼님</div>
-      <div id="more-profile-sub" style="font-size:12px;color:var(--tx2)">@crestiegekko · 팔로워 12명</div>
+      <div id="more-profile-sub" style="font-size:12px;color:var(--tx2)">@user</div>
     </div>
     <button class="btn-sm" style="margin-left:auto" onclick="openProfileEdit()">프로필 수정</button>
   </div>
@@ -2510,7 +2510,24 @@ document.addEventListener('touchstart', function(e) {
 }, { passive: true });
 
 // ══ 프로필 수정 ══
-let _profile = { name: '게코키퍼님', bio: '' };
+const _RANDOM_NICKNAMES = [
+  '레오파드러버','크레키퍼','게코마스터','도마뱀친구','모프헌터',
+  '파충류덕후','릴리화이트팬','달마시안러버','할리퀸키퍼','핀스트라이퍼',
+  '게코라이프','크레사랑','겔크탐험가','리틀게코','슈퍼달메이션',
+  '트라이컬러','비컬러브리더','브린들키퍼','아잔틱헌터','레드게코',
+];
+const _RANDOM_AVATARS = ['🦎','🐊','🦕','🐉','🌿','🍃','🪴','🌱','🥚','🐣','🔬','⭐','🌙','🎯','🏆'];
+
+function _generateRandomNickname() {
+  const name = _RANDOM_NICKNAMES[Math.floor(Math.random() * _RANDOM_NICKNAMES.length)];
+  const num = Math.floor(Math.random() * 900) + 100;
+  return name + num;
+}
+function _getRandomAvatar() {
+  return _RANDOM_AVATARS[Math.floor(Math.random() * _RANDOM_AVATARS.length)];
+}
+
+let _profile = { name: '', bio: '', avatar: '' };
 
 function _loadProfile() {
   if (!_currentUser) return;
@@ -2518,22 +2535,35 @@ function _loadProfile() {
     const saved = localStorage.getItem('mycre_profile_' + _currentUser.id);
     if (saved) {
       const p = JSON.parse(saved);
-      _profile.name = p.name || '게코키퍼님';
+      _profile.name = p.name || '';
       _profile.bio = p.bio || '';
+      _profile.avatar = p.avatar || '';
     }
   } catch(e) {}
+  // 닉네임이 없으면 랜덤 생성 (유저별 고정 — id 기반 시드)
+  if (!_profile.name) {
+    const seed = _currentUser.id.charCodeAt(0) + _currentUser.id.charCodeAt(1);
+    _profile.name = _RANDOM_NICKNAMES[seed % _RANDOM_NICKNAMES.length] + String(seed * 7 % 900 + 100);
+    _profile.avatar = _RANDOM_AVATARS[seed % _RANDOM_AVATARS.length];
+  }
+  if (!_profile.avatar) {
+    const seed2 = _currentUser.id.charCodeAt(2) + _currentUser.id.charCodeAt(3);
+    _profile.avatar = _RANDOM_AVATARS[seed2 % _RANDOM_AVATARS.length];
+  }
   _updateProfileUI();
 }
 
 function _updateProfileUI() {
   const nameEl = document.getElementById('more-profile-name');
-  if (nameEl) nameEl.textContent = _profile.name;
+  if (nameEl) nameEl.textContent = _profile.name || '게코키퍼';
   const subEl = document.getElementById('more-profile-sub');
   if (subEl && _currentUser) {
     const email = _currentUser.email || '';
     const handle = email.split('@')[0] || 'user';
     subEl.textContent = '@' + handle;
   }
+  const avatarEl = document.getElementById('more-profile-avatar');
+  if (avatarEl && _profile.avatar) avatarEl.textContent = _profile.avatar;
 }
 
 function _saveProfileLocal() {
@@ -2548,13 +2578,19 @@ function openProfileEdit() {
   openSheet('sheet-profile-edit');
 }
 
-function saveProfile() {
-  _profile.name = document.getElementById('profile-name').value.trim() || '게코키퍼님';
+async function saveProfile() {
+  _profile.name = document.getElementById('profile-name').value.trim() || _generateRandomNickname();
   _profile.bio  = document.getElementById('profile-bio').value.trim();
   _saveProfileLocal();
   _updateProfileUI();
   closeSheetDirect('sheet-profile-edit');
   showToast('✅ 프로필이 수정됐어요');
+  // DB에도 닉네임 저장
+  if (_currentUser) {
+    try {
+      await _supabase.from('profiles').update({ nickname: _profile.name }).eq('id', _currentUser.id);
+    } catch(e) {}
+  }
 }
 
 // ══════════════════════════════
@@ -5102,7 +5138,8 @@ async function _onSignedIn() {
     const { data: existCheck } = await _supabase.from('profiles').select('id').eq('id', _currentUser.id).maybeSingle();
     if (!existCheck) {
       // 새 프로필 생성
-      await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: _currentUser.user_metadata?.full_name || _currentUser.email?.split('@')[0] || 'User' });
+      const randomNick = _currentUser.user_metadata?.full_name || _generateRandomNickname();
+      await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick });
       _notifyAdmin('new_signup', '새 회원가입 (Google)',
         `이메일: ${_currentUser.email}\nProvider: ${_currentUser.app_metadata?.provider || 'unknown'}\n시간: ${new Date().toLocaleString('ko-KR')}`);
     }
@@ -5129,6 +5166,15 @@ async function _onSignedIn() {
   _updateScanBadge();
 
   _loadProfile();
+  // DB에서 닉네임 로드 (로컬에 없으면)
+  try {
+    const { data: dbProf } = await _supabase.from('profiles').select('nickname').eq('id', _currentUser.id).maybeSingle();
+    if (dbProf && dbProf.nickname) {
+      _profile.name = dbProf.nickname;
+      _saveProfileLocal();
+      _updateProfileUI();
+    }
+  } catch(e) {}
   await _loadGeckosFromDB();
   renderHome();
   renderPosts();
