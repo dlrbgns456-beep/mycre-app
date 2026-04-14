@@ -1074,6 +1074,7 @@ input[type=file]{display:none}
     <!-- populated by JS -->
   </div>
 
+  <button class="fab" onclick="openQuickAdd()" title="고속 등록" style="right:86px;background:linear-gradient(135deg,var(--ac),#4caf50);font-size:22px">⚡</button>
   <button class="fab" onclick="openAddGecko()">＋</button>
 </div>
 
@@ -1506,6 +1507,73 @@ input[type=file]{display:none}
 
       <button class="btn-primary" id="btn-save-gecko" onclick="saveGecko()">저장하기</button>
       <button class="btn-outline" id="delete-gecko-btn" onclick="deleteGecko()" style="display:none;margin-top:8px;color:var(--coral);border-color:var(--coral);background:var(--co2)">🗑 이 개체 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: ⚡ 고속 등록 모드 (사진 + 이름만)
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-quick-add" onclick="closeSheet('sheet-quick-add',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">⚡ 고속 등록 모드</div>
+    <div class="sheet-body">
+      <!-- 안내 -->
+      <div style="background:linear-gradient(135deg,rgba(93,220,106,.1),rgba(93,220,106,.03));border:1.5px solid rgba(93,220,106,.3);border-radius:14px;padding:11px 13px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.65">
+        <div style="font-weight:800;color:var(--ac);font-size:12px;margin-bottom:3px">📸 사진과 이름만 입력하면 저장!</div>
+        모프·성별·출생일은 나중에 <b style="color:var(--tx)">내 개체 탭</b>에서 한 번에 수정할 수 있어요.
+      </div>
+
+      <!-- 진행 카운터 -->
+      <div id="quick-add-counter" style="display:none;background:var(--sf2);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--tx2);text-align:center">
+        지금까지 <b id="quick-add-count" style="color:var(--ac)">0</b>마리 등록 완료
+      </div>
+
+      <!-- 사진 -->
+      <div class="form-group">
+        <label class="form-label">📸 사진</label>
+        <div class="photo-zone" id="quick-photo-zone" style="cursor:default">
+          <div class="photo-zone-placeholder">
+            <div class="photo-zone-icon">📷</div>
+            <div class="photo-zone-title">아래 버튼으로 사진 추가</div>
+          </div>
+          <img class="photo-preview" id="quick-photo-preview" src="" alt="">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" onclick="document.getElementById('quick-photo-gallery').click()"
+            style="flex:1;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:11px;color:var(--tx);font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif">
+            🖼 갤러리
+          </button>
+          <button type="button" onclick="document.getElementById('quick-photo-camera').click()"
+            style="flex:1;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:11px;color:var(--tx);font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif">
+            📷 카메라
+          </button>
+        </div>
+        <input type="file" id="quick-photo-gallery" accept="image/*" onchange="handleQuickPhoto(event)" style="display:none">
+        <input type="file" id="quick-photo-camera" accept="image/*" capture="camera" onchange="handleQuickPhoto(event)" style="display:none">
+      </div>
+
+      <!-- 이름 -->
+      <div class="form-group">
+        <label class="form-label">이름 / ID <span style="color:var(--coral);font-weight:700">*</span></label>
+        <input class="form-input" id="quick-gecko-name" type="text" placeholder="예: 몽뜨" autocomplete="off">
+      </div>
+
+      <!-- 액션 버튼 -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+        <button class="btn-primary" id="btn-quick-save-next" onclick="quickSaveAndNext()" style="background:linear-gradient(135deg,var(--ac),#4caf50)">
+          💾 저장 후 다음 등록 →
+        </button>
+        <button class="btn-outline" onclick="quickSaveAndClose()">
+          ✅ 저장 후 닫기
+        </button>
+      </div>
+
+      <!-- 미완성 표시 안내 -->
+      <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:10px;line-height:1.6">
+        모프/성별 미입력 개체는 내 개체 탭에서 <span style="color:var(--am);font-weight:700">⚠️ 정보 미완성</span> 표시로 한눈에 구분됩니다
+      </div>
     </div>
   </div>
 </div>
@@ -3610,6 +3678,22 @@ async function saveGecko() {
       egg_fertile: document.getElementById('gecko-egg-fertile').checked,
     };
 
+    // AI 판별 이력 (스캔에서 직접 저장 흐름일 때만 세팅됨)
+    if (!isEdit && state._pendingAI) {
+      gecko.ai_morph = state._pendingAI.ai_morph;
+      gecko.ai_prob = state._pendingAI.ai_prob;
+      gecko.ai_scanned_at = state._pendingAI.ai_scanned_at;
+      state._pendingAI = null;
+    } else if (isEdit) {
+      // 편집 시 기존 AI 이력 유지
+      const existing = state.geckos.find(g => String(g.id) === String(state.editingGeckoId));
+      if (existing) {
+        gecko.ai_morph = existing.ai_morph || null;
+        gecko.ai_prob = existing.ai_prob || null;
+        gecko.ai_scanned_at = existing.ai_scanned_at || null;
+      }
+    }
+
     if (isEdit) {
       const idx = state.geckos.findIndex(g => String(g.id) === String(state.editingGeckoId));
       if (idx !== -1) state.geckos[idx] = gecko;
@@ -3668,6 +3752,174 @@ async function saveGecko() {
     // 버튼 원상복구
     if (btn) { btn.disabled = false; btn.textContent = '저장하기'; btn.style.opacity = '1'; }
   }
+}
+
+// ══════════════════════════════════════
+// ⚡ 고속 등록 모드 (Fast Registration)
+// ══════════════════════════════════════
+let _quickAddSession = 0;          // 현재 세션 등록 카운터
+let _quickPendingBlob = null;      // Storage 업로드용 Blob
+let _quickPhotoData = null;        // 로컬 미리보기 data URL
+
+function openQuickAdd() {
+  // 무료/Lite 등급 제한
+  if (!isBreeder() && state.geckos.length >= _tier().geckoLimit) {
+    const tLabel = _tier().label;
+    _showProUpgradePopup(`${tLabel} 등급은 최대 ${_tier().geckoLimit}마리까지 등록할 수 있어요.<br>브리더 등급으로 업그레이드하면 무제한 + 고속 등록이 가능해요!`);
+    return;
+  }
+  _quickAddSession = 0;
+  _resetQuickAddForm();
+  document.getElementById('quick-add-counter').style.display = 'none';
+  openSheet('sheet-quick-add');
+  setTimeout(() => document.getElementById('quick-gecko-name').focus(), 250);
+}
+
+function _resetQuickAddForm() {
+  _quickPendingBlob = null;
+  _quickPhotoData = null;
+  const name = document.getElementById('quick-gecko-name');
+  const gal  = document.getElementById('quick-photo-gallery');
+  const cam  = document.getElementById('quick-photo-camera');
+  const prev = document.getElementById('quick-photo-preview');
+  const zone = document.getElementById('quick-photo-zone');
+  if (name) name.value = '';
+  if (gal)  gal.value  = '';
+  if (cam)  cam.value  = '';
+  if (prev) prev.src   = '';
+  if (zone) zone.classList.remove('has-photo');
+}
+
+function handleQuickPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    const MAX = 480;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    _quickPhotoData = canvas.toDataURL('image/jpeg', 0.5);
+    document.getElementById('quick-photo-preview').src = _quickPhotoData;
+    document.getElementById('quick-photo-zone').classList.add('has-photo');
+    URL.revokeObjectURL(url);
+    canvas.toBlob(blob => {
+      _quickPendingBlob = blob;
+    }, 'image/jpeg', 0.5);
+  };
+  img.src = url;
+}
+
+async function _quickSaveCore() {
+  const name = document.getElementById('quick-gecko-name').value.trim();
+  if (!name) { showToast('⚠️ 이름을 입력해주세요'); return false; }
+
+  // 등급 제한 재확인 (연속 등록 중에도 체크)
+  if (!isBreeder() && state.geckos.length >= _tier().geckoLimit) {
+    const tLabel = _tier().label;
+    _showProUpgradePopup(`${tLabel} 등급은 최대 ${_tier().geckoLimit}마리까지 등록할 수 있어요.`);
+    return false;
+  }
+
+  const geckoId = Date.now().toString() + Math.floor(Math.random()*1000);
+  const pendingBlob = _quickPendingBlob;
+  const photoLocal = _quickPhotoData;
+
+  // 최소 필드만 채워서 저장 — 나머지는 나중에 수정
+  const gecko = {
+    id: geckoId,
+    name,
+    sex: '미판별',
+    morph: '',
+    grade: '',
+    dob: '',
+    price: '',
+    weight: '',
+    status: '정상',
+    cage: '소형 (30cm 이하)',
+    dad: '', mom: '', memo: '',
+    photo: photoLocal || null,
+    egg_infertile: false,
+    egg_fertile: false,
+  };
+
+  state.geckos.push(gecko);
+
+  // 로컬 즉시 저장
+  try {
+    const localSafe = state.geckos.map(g => ({
+      ...g,
+      photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null
+    }));
+    localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(localSafe));
+  } catch(e) {}
+
+  renderGeckoList();
+  renderHome();
+  updateCountBadges();
+  populateGeckoSelects();
+
+  // 서버 저장 비동기
+  (async () => {
+    try {
+      let photoUrl = null;
+      if (pendingBlob) photoUrl = await _uploadPhotoToStorage(pendingBlob, geckoId);
+      if (photoUrl) {
+        gecko.photo = photoUrl;
+        const idx = state.geckos.findIndex(g => String(g.id) === String(geckoId));
+        if (idx !== -1) state.geckos[idx].photo = photoUrl;
+        try {
+          const ls = state.geckos.map(g => ({...g, photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null}));
+          localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(ls));
+        } catch(e2) {}
+      }
+      await _saveGeckoToDB(gecko);
+      if (photoUrl) renderGeckoList();
+    } catch(err) {
+      console.error('고속 등록 서버 저장 오류:', err);
+    }
+  })();
+
+  _quickAddSession++;
+  return true;
+}
+
+async function quickSaveAndNext() {
+  const btn = document.getElementById('btn-quick-save-next');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+  try {
+    const ok = await _quickSaveCore();
+    if (!ok) return;
+    showToast(`✅ "${_quickAddSession}번째" 개체 등록 완료!`);
+    // 폼 리셋 후 시트 유지
+    _resetQuickAddForm();
+    const counter = document.getElementById('quick-add-counter');
+    const count   = document.getElementById('quick-add-count');
+    if (counter) counter.style.display = 'block';
+    if (count)   count.textContent = _quickAddSession;
+    setTimeout(() => {
+      const inp = document.getElementById('quick-gecko-name');
+      if (inp) inp.focus();
+    }, 100);
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+async function quickSaveAndClose() {
+  const ok = await _quickSaveCore();
+  if (!ok) return;
+  closeSheetDirect('sheet-quick-add');
+  showPage('myge');
+  const total = _quickAddSession;
+  showToast(total > 1 ? `✅ 총 ${total}마리 등록 완료!` : '✅ 개체가 등록되었어요!');
+  _quickAddSession = 0;
 }
 
 let _deleteGeckoStep = 0;
@@ -3744,6 +3996,9 @@ function renderGeckoList() {
                      g.status === '분양예정' ? `<span class="tag tag-coral">분양 예정</span>` :
                      g.status === '격리중' ? `<span class="tag tag-amber">격리 중</span>` : '';
     const cageTag = g.cage ? `<span class="tag tag-blue">케이지 ${g.cage.split(' ')[0]}</span>` : '';
+    // 모프 또는 성별이 비어있으면 "정보 미완성" 태그 표시 (고속 등록 모드 후 수정 유도)
+    const incomplete = !g.morph || g.sex === '미판별';
+    const incompleteTag = incomplete ? `<span class="tag tag-amber" style="font-weight:800">⚠️ 정보 미완성</span>` : '';
 
     const card = document.createElement('div');
     card.className = `gecko-card g${grade}`;
@@ -3756,7 +4011,7 @@ function renderGeckoList() {
           <span style="font-size:12px;color:${sexColor};font-weight:700">${sexEmoji}</span>
         </div>
         <div class="gecko-morph">${g.morph || '📷 모프 미판별'}</div>
-        <div class="gecko-tags">${statusTag}${cageTag}</div>
+        <div class="gecko-tags">${incompleteTag}${statusTag}${cageTag}</div>
       </div>
       <div class="gecko-right">
         <div class="gecko-grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${grade}</div>
@@ -4263,6 +4518,14 @@ async function saveDirectToMyGecko() {
   // 2) 개체 등록 시트 열기 + 자동 채우기
   showPage('myge');
   openAddGecko();
+
+  // AI 판별 이력을 개체에 연결 (저장 시 함께 저장됨)
+  const _aiTopProb = (lastScanResult.candidates && lastScanResult.candidates[0]?.prob) || null;
+  state._pendingAI = {
+    ai_morph: lastScanResult.morph || null,
+    ai_prob: _aiTopProb != null ? Math.round(_aiTopProb) : null,
+    ai_scanned_at: new Date().toISOString(),
+  };
 
   // 이름 & 모프 자동 입력
   const finalMorph = morph || lastScanResult.morph;
@@ -5106,6 +5369,7 @@ async function submitPost() {
     // 공지사항이 아닌 경우 개체 연결 처리
     let isVerified = false;
     let linkedGeckoIdForRow = null;
+    let aiPrefix = '';
     if (cat !== 'notice') {
       const geckoId = document.getElementById('post-gecko-link')?.value;
       const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
@@ -5119,6 +5383,12 @@ async function submitPost() {
           isVerified = true;
           linkedGeckoIdForRow = linkedGecko.id;
         }
+        // AI 판별 이력이 있으면 본문 상단에 자동 블록 추가 (도용 아님 증명)
+        if (linkedGecko.ai_morph) {
+          const probTxt = linkedGecko.ai_prob ? ` · 신뢰도 ${linkedGecko.ai_prob}%` : '';
+          const scannedDate = linkedGecko.ai_scanned_at ? new Date(linkedGecko.ai_scanned_at).toLocaleDateString('ko-KR') : '';
+          aiPrefix = `🤖 AI 모프 판별 이력: ${linkedGecko.ai_morph}${probTxt}${scannedDate ? ` (${scannedDate} 측정)` : ''}\n────────────────────\n\n`;
+        }
       }
     }
 
@@ -5130,7 +5400,7 @@ async function submitPost() {
       author: cat === 'notice' ? '마이크레 운영팀' : (_profile.name || '익명'),
       avatar: cat === 'notice' ? '📢' : '🦎',
       price: cat !== 'notice' ? (document.getElementById('post-price-input')?.value || null) : null,
-      body: document.getElementById('post-body-input').value,
+      body: aiPrefix + document.getElementById('post-body-input').value,
       photo,
       morph,
       emoji: cat === 'notice' ? '📢' : '🦎',
@@ -5351,7 +5621,13 @@ function populateGeckoSelects() {
     sel.innerHTML = '';
     sel.appendChild(firstOpt || new Option('— 개체 선택 —', ''));
     state.geckos.forEach(g => {
-      sel.appendChild(new Option(`${g.name} (${g.morph||'미판별'})`, g.id));
+      let label = `${g.name} (${g.morph||'미판별'})`;
+      // 글쓰기용 select에는 AI 판별 이력 노출 (도용 아님 증명)
+      if (selId === 'post-gecko-link' && g.ai_morph) {
+        const probTxt = g.ai_prob ? ` ${g.ai_prob}%` : '';
+        label += `  🤖 AI: ${g.ai_morph}${probTxt}`;
+      }
+      sel.appendChild(new Option(label, g.id));
     });
   });
 }
@@ -6708,6 +6984,9 @@ async function _loadGeckosFromDB() {
       memo: row.memo, photo: row.photo,
       egg_infertile: row.egg_infertile || false,
       egg_fertile: row.egg_fertile || false,
+      ai_morph: row.ai_morph || null,
+      ai_prob: row.ai_prob || null,
+      ai_scanned_at: row.ai_scanned_at || null,
     }));
     try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(state.geckos)); } catch(e) {}
     renderHome(); renderGeckoList();
@@ -6752,6 +7031,9 @@ async function _saveGeckoToDB(gecko) {
     photo:   dbPhoto,
     egg_infertile: gecko.egg_infertile || false,
     egg_fertile:   gecko.egg_fertile || false,
+    ai_morph:      gecko.ai_morph || null,
+    ai_prob:       gecko.ai_prob || null,
+    ai_scanned_at: gecko.ai_scanned_at || null,
   };
   const { error } = await _supabase.from('geckos').upsert(row, { onConflict: 'id' });
   if (error) {

@@ -50,3 +50,15 @@ UPDATE posts
 
 -- 7) 인덱스 (인증 게시글 필터링용)
 CREATE INDEX IF NOT EXISTS idx_posts_is_verified ON posts(is_verified) WHERE is_verified = true;
+
+-- ══════════════════════════════════════════════════════════
+-- AI 판별 이력 (개체별 — 커뮤니티 글 도용 증명용)
+-- ══════════════════════════════════════════════════════════
+
+-- 8) geckos 테이블에 AI 판별 이력 컬럼 추가
+ALTER TABLE geckos
+  ADD COLUMN IF NOT EXISTS ai_morph TEXT DEFAULT NULL;
+ALTER TABLE geckos
+  ADD COLUMN IF NOT EXISTS ai_prob INTEGER DEFAULT NULL;
+ALTER TABLE geckos
+  ADD COLUMN IF NOT EXISTS ai_scanned_at TIMESTAMPTZ DEFAULT NULL;
