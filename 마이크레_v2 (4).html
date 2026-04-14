@@ -4756,15 +4756,23 @@ async function renderPosts() {
           }
         } catch(e) {}
       }
-      state.posts = data.map(row => ({
-        ...row,
-        tags: row.tags || [],
-        time: _timeAgo(row.created_at),
-        isOwn: _currentUser && row.user_id === _currentUser.id,
-        authorIsPro: breederUserSet.has(row.user_id),     // 하위 호환
-        authorIsBreeder: breederUserSet.has(row.user_id), // Breeder 전용 인증 배지
-        hasLinkedGecko: !!(row.morph && row.photo && row.cat === 'sale'),
-      }));
+      state.posts = data.map(row => {
+        // ── 인증 개체 판정 ──
+        // 1) DB에 is_verified 컬럼이 있고 true면 그대로 사용
+        // 2) 컬럼이 없으면 레거시 폴백: morph + photo + sale 카테고리 동시 보유 시 인증
+        const legacyLinked = !!(row.morph && row.photo && row.cat === 'sale');
+        const isVerified = row.is_verified === true || (row.is_verified === undefined && legacyLinked);
+        return {
+          ...row,
+          tags: row.tags || [],
+          time: _timeAgo(row.created_at),
+          isOwn: _currentUser && row.user_id === _currentUser.id,
+          authorIsPro: breederUserSet.has(row.user_id),     // 하위 호환
+          authorIsBreeder: breederUserSet.has(row.user_id), // Breeder 전용 인증 배지
+          is_verified: isVerified,
+          hasLinkedGecko: isVerified, // 하위 호환
+        };
+      });
     }
   } catch(e) {}
 
@@ -4816,7 +4824,9 @@ function buildPostCard(p, compact) {
   }
 
   const proBadge = p.authorIsBreeder ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;margin-left:3px;letter-spacing:.3px">🧬 브리더</span>` : '';
-  const certBadge = p.hasLinkedGecko ? `<span style="font-size:9px;font-weight:700;color:var(--ac);background:var(--ac2);border:1px solid rgba(93,220,106,.3);border-radius:6px;padding:1px 5px;letter-spacing:.3px">✅ 인증 개체</span>` : '';
+  // ✅ 마이크레 인증 배지 — 닉네임 바로 옆 (더 눈에 띄게)
+  const verifiedBadge = p.is_verified ? `<span title="마이크레에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:1px 6px;margin-left:3px;letter-spacing:.2px;box-shadow:0 0 6px rgba(74,222,128,.15)">✅ 마이크레 인증</span>` : '';
+  const certBadge = ''; // 배지가 닉네임 옆으로 이동했으므로 태그 라인에서는 비움
 
   if (isNotice) {
     // 공지사항 카드 (사진 없이 텍스트)
@@ -4837,7 +4847,7 @@ function buildPostCard(p, compact) {
       <div class="post-card-body">
         <div class="post-author-row">
           <div class="post-avatar">${p.avatar}</div>
-          <div class="post-author-name">${p.author}${proBadge}</div>
+          <div class="post-author-name">${p.author}${proBadge}${verifiedBadge}</div>
         </div>
         <div class="post-tags">
           <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
@@ -4866,7 +4876,14 @@ async function openPostDetail(p) {
   const isNotice = p.cat === 'notice';
   const bodyHtml = (p.body || '').replace(/\n/g, '<br>');
   const proBadge = p.authorIsBreeder ? `<span style="font-size:10px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:2px 6px;letter-spacing:.3px">🧬 브리더 인증</span>` : '';
-  const certBadge = p.hasLinkedGecko ? `<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(93,220,106,.08);border:1px solid rgba(93,220,106,.25);border-radius:8px;padding:5px 10px;margin-bottom:10px;font-size:11px;font-weight:700;color:var(--ac)">✅ 마이크레 인증 개체</div>` : '';
+  const verifiedInlineBadge = p.is_verified ? `<span title="마이크레에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:2px 7px;letter-spacing:.2px;box-shadow:0 0 8px rgba(74,222,128,.18)">✅ 마이크레 인증</span>` : '';
+  const certBadge = p.is_verified ? `<div style="display:flex;align-items:flex-start;gap:8px;background:linear-gradient(135deg,rgba(74,222,128,.08),rgba(34,197,94,.04));border:1.5px solid rgba(74,222,128,.35);border-radius:12px;padding:10px 12px;margin-bottom:12px">
+    <span style="font-size:16px;flex-shrink:0">🛡️</span>
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px">마이크레 인증 개체</div>
+      <div style="font-size:10.5px;color:var(--tx2);line-height:1.55">이 게시글은 작성자가 마이크레에 등록한 실제 개체와 연결되어 있어요. 도용된 사진이 아닙니다.</div>
+    </div>
+  </div>` : '';
 
   document.getElementById('post-detail-body').innerHTML = `
     ${isNotice ? '' : `<div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : (p.emoji||'🦎')}</div>`}
@@ -4879,8 +4896,9 @@ async function openPostDetail(p) {
       <div style="font-size:19px;font-weight:800;margin-bottom:6px;line-height:1.4">${p.title}</div>
       ${p.price ? `<div style="font-size:20px;font-weight:900;color:var(--am);margin-bottom:10px">${p.price}만원</div>` : ''}
       ${certBadge}
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:600;color:var(--tx2)">✍️ ${p.author} ${proBadge}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:600;color:var(--tx2)">✍️ ${p.author}</span>
+        ${proBadge} ${verifiedInlineBadge}
       </div>
       <div style="background:var(--sf2);border-radius:12px;padding:14px;font-size:13px;line-height:1.9;color:var(--tx2);margin-bottom:14px;white-space:pre-wrap">${bodyHtml}</div>
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 <span id="comment-count">0</span>개</div>
@@ -5086,6 +5104,8 @@ async function submitPost() {
     _postPhotoBlob = null;
 
     // 공지사항이 아닌 경우 개체 연결 처리
+    let isVerified = false;
+    let linkedGeckoIdForRow = null;
     if (cat !== 'notice') {
       const geckoId = document.getElementById('post-gecko-link')?.value;
       const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
@@ -5094,6 +5114,11 @@ async function submitPost() {
       if (linkedGecko) {
         if (linkedGecko.morph) tags.push(linkedGecko.morph);
         if (linkedGecko.name) tags.push(linkedGecko.name);
+        // 연결된 개체 + 실제 업로드 사진 URL(+ 모프 정보) 모두 있을 때만 인증
+        if (photo && morph) {
+          isVerified = true;
+          linkedGeckoIdForRow = linkedGecko.id;
+        }
       }
     }
 
@@ -5110,6 +5135,8 @@ async function submitPost() {
       morph,
       emoji: cat === 'notice' ? '📢' : '🦎',
       tags,
+      is_verified: isVerified,
+      linked_gecko_id: linkedGeckoIdForRow,
     };
 
     // ── 사진이 있으면 먼저 업로드 (리사이즈 되어있으므로 빠름) ──

@@ -29,3 +29,24 @@ CREATE INDEX IF NOT EXISTS idx_payments_tier ON payments(tier);
 
 -- 확인 쿼리
 -- SELECT tier, COUNT(*) FROM profiles GROUP BY tier;
+
+-- ══════════════════════════════════════════════════════════
+-- 인증 배지 시스템 (게시글 ↔ 내 개체 연결)
+-- ══════════════════════════════════════════════════════════
+
+-- 5) posts 테이블에 is_verified, linked_gecko_id 컬럼 추가
+ALTER TABLE posts
+  ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false;
+ALTER TABLE posts
+  ADD COLUMN IF NOT EXISTS linked_gecko_id BIGINT DEFAULT NULL;
+
+-- 6) 기존 게시글 중 morph + photo + sale 카테고리면 인증으로 자동 변환
+UPDATE posts
+  SET is_verified = true
+  WHERE morph IS NOT NULL
+    AND photo IS NOT NULL
+    AND cat = 'sale'
+    AND (is_verified IS NULL OR is_verified = false);
+
+-- 7) 인덱스 (인증 게시글 필터링용)
+CREATE INDEX IF NOT EXISTS idx_posts_is_verified ON posts(is_verified) WHERE is_verified = true;
