@@ -1947,9 +1947,9 @@ let state = {
 const TIERS = {
   free: {
     key: 'free', label: '무료', emoji: '🆓',
-    geckoLimit: 5,        // 개체 등록 5마리
-    monthlyScans: 3,      // AI 판별 총 3회 (한 번만)
-    monthlyScansLabel: '총 3회',
+    geckoLimit: 0,        // 개체 등록 불가 (Lite/Breeder 업그레이드 필요)
+    monthlyScans: 3,      // AI 판별 일 3회 (매일 자정 자동 충전)
+    monthlyScansLabel: '일 3회',
     hasBreederBadge: false,
     hasGeneticCalc: false,
     hasPDFExport: false,
@@ -3638,10 +3638,14 @@ async function saveGecko() {
   const name = document.getElementById('gecko-name').value.trim();
   if (!name) { showToast('⚠️ 이름을 입력해주세요'); return; }
 
-  // 개체 등록 제한 (tier별): free/lite=5마리, breeder=무제한 (수정은 허용)
+  // 개체 등록 제한 (tier별): free=0마리, lite=5마리, breeder=무제한 (수정은 허용)
   if (!state.editingGeckoId && !isBreeder() && state.geckos.length >= _tier().geckoLimit) {
     const tLabel = _tier().label;
-    _showProUpgradePopup(`${tLabel} 등급은 최대 ${_tier().geckoLimit}마리까지 등록할 수 있어요.<br>더 많은 개체를 등록하고 싶으신가요?<br><b>🧬 Breeder로 업그레이드하세요!</b>`);
+    const limit = _tier().geckoLimit;
+    const msg = limit === 0
+      ? `${tLabel} 등급은 개체 등록이 불가해요.<br>AI 판별은 매일 3회 무료 제공되지만,<br>개체 관리는 유료 등급부터 가능합니다.<br><b>🌱 Lite(월 1,900원) 또는 🧬 Breeder로 업그레이드하세요!</b>`
+      : `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.<br>더 많은 개체를 등록하고 싶으신가요?<br><b>🧬 Breeder로 업그레이드하세요!</b>`;
+    _showProUpgradePopup(msg);
     return;
   }
 
@@ -3766,7 +3770,11 @@ function openQuickAdd() {
   // 무료/Lite 등급 제한
   if (!isBreeder() && state.geckos.length >= _tier().geckoLimit) {
     const tLabel = _tier().label;
-    _showProUpgradePopup(`${tLabel} 등급은 최대 ${_tier().geckoLimit}마리까지 등록할 수 있어요.<br>브리더 등급으로 업그레이드하면 무제한 + 고속 등록이 가능해요!`);
+    const limit = _tier().geckoLimit;
+    const msg = limit === 0
+      ? `${tLabel} 등급은 개체 등록이 불가해요.<br>고속 등록은 브리더 전용 기능입니다.<br><b>🧬 Breeder로 업그레이드하세요!</b>`
+      : `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.<br>브리더 등급으로 업그레이드하면 무제한 + 고속 등록이 가능해요!`;
+    _showProUpgradePopup(msg);
     return;
   }
   _quickAddSession = 0;
@@ -3824,7 +3832,10 @@ async function _quickSaveCore() {
   // 등급 제한 재확인 (연속 등록 중에도 체크)
   if (!isBreeder() && state.geckos.length >= _tier().geckoLimit) {
     const tLabel = _tier().label;
-    _showProUpgradePopup(`${tLabel} 등급은 최대 ${_tier().geckoLimit}마리까지 등록할 수 있어요.`);
+    const limit = _tier().geckoLimit;
+    _showProUpgradePopup(limit === 0
+      ? `${tLabel} 등급은 개체 등록이 불가해요.`
+      : `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.`);
     return false;
   }
 
@@ -6336,8 +6347,8 @@ function selectBilling(plan) {
 // 비교 테이블 렌더링
 function _renderCompareTable() {
   const rows = [
-    { label: '개체 등록', free: '5마리', lite: '5마리', breeder: '무제한' },
-    { label: 'AI 모프 판별', free: '총 3회', lite: '월 10회', breeder: '무제한' },
+    { label: '개체 등록', free: '—', lite: '5마리', breeder: '무제한' },
+    { label: 'AI 모프 판별', free: '일 3회', lite: '월 10회', breeder: '무제한' },
     { label: '성장 그래프', free: '—', lite: '기본', breeder: '전체' },
     { label: '분양 게시판 배지', free: '—', lite: '—', breeder: '🧬 인증' },
     { label: '유전자 조합 계산기', free: '—', lite: '—', breeder: '✅' },
@@ -6898,7 +6909,7 @@ function _updateScanBadge() {
     badge.style.borderColor = left > 0 ? 'var(--ac)' : '#ff4444';
     badge.style.color = left > 0 ? 'var(--ac)' : '#ff4444';
   } else {
-    badge.textContent = '잔여 ' + state.freeScansLeft + '회';
+    badge.textContent = `오늘 ${state.freeScansLeft}/3회 (자정 리셋)`;
     badge.style.background = state.freeScansLeft > 0 ? 'var(--ac2)' : 'rgba(255,60,60,.1)';
     badge.style.borderColor = state.freeScansLeft > 0 ? 'var(--ac)' : '#ff4444';
     badge.style.color = state.freeScansLeft > 0 ? 'var(--ac)' : '#ff4444';
