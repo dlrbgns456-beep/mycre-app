@@ -1165,10 +1165,10 @@ input[type=file]{display:none}
       <div class="more-item-arrow">›</div>
     </div>
 
-    <div class="more-item" onclick="showToast('준비 중인 기능입니다')">
+    <div class="more-item" onclick="handleGeneticCalc()">
       <div class="more-icon" style="background:var(--pu2)">🧬</div>
       <div class="more-item-info">
-        <div class="more-item-title">브리딩 유전자 계산기</div>
+        <div class="more-item-title">브리딩 유전자 계산기 <span style="font-size:9px;color:var(--am);font-weight:800;background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.3);border-radius:5px;padding:1px 5px;margin-left:4px">Breeder</span></div>
         <div class="more-item-sub">부모 조합으로 자녀 모프 확률 예측</div>
       </div>
       <div class="more-item-arrow">›</div>
@@ -1587,7 +1587,7 @@ input[type=file]{display:none}
         </div>
       </div>
 
-      <button class="btn-primary" onclick="openProSheet()">PDF로 출력하기 (PRO)</button>
+      <button class="btn-primary" onclick="handlePDFExport()">PDF로 출력하기 (🧬 Breeder 전용)</button>
       <a href="https://wims.mcee.go.kr/wims/minwon/main/main.do" target="_blank" rel="noopener"
         style="display:flex;align-items:center;gap:12px;background:var(--bl2);border:1.5px solid var(--blue);border-radius:14px;padding:14px 15px;text-decoration:none;color:var(--tx);margin-top:10px">
         <span style="font-size:24px;flex-shrink:0">🏛️</span>
@@ -1770,56 +1770,84 @@ input[type=file]{display:none}
     <div class="sheet-handle"></div>
     <div class="sheet-body" style="padding-top:0">
       <!-- 헤더 -->
-      <div style="text-align:center;padding:20px 0 16px">
+      <div style="text-align:center;padding:20px 0 14px">
         <div style="font-size:40px;margin-bottom:8px">⭐</div>
-        <div style="font-size:22px;font-weight:900;color:var(--am)">마이크레 PRO</div>
-        <div style="font-size:13px;color:#c9a850;margin-top:4px">크레스티드 게코 관리의 모든 것</div>
+        <div style="font-size:22px;font-weight:900;color:var(--am)">마이크레 멤버십</div>
+        <div style="font-size:13px;color:#c9a850;margin-top:4px">나에게 맞는 등급을 선택하세요</div>
       </div>
 
-      <!-- 기능 목록 -->
-      <div style="background:var(--sf2);border-radius:16px;padding:16px;margin-bottom:16px">
-        <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:10px;font-family:'DM Mono',monospace">PRO 전용 기능</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
-            <span style="font-size:16px">🔍</span> AI 모프 판별 <b>무제한</b>
+      <!-- 월간/연간 토글 -->
+      <div style="display:flex;background:var(--sf2);border-radius:12px;padding:4px;margin-bottom:14px">
+        <button id="billing-monthly" onclick="selectBilling('monthly')" style="flex:1;background:transparent;color:var(--tx2);border:none;border-radius:9px;padding:9px 0;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">월간</button>
+        <button id="billing-yearly" onclick="selectBilling('yearly')" style="flex:1;background:var(--am);color:#1a0a00;border:none;border-radius:9px;padding:9px 0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;position:relative;transition:all .15s">연간 <span style="font-size:9px;background:#1a0a00;color:var(--am);padding:1px 5px;border-radius:5px;margin-left:3px">2개월 무료</span></button>
+      </div>
+
+      <!-- 2개 티어 카드 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+        <!-- Lite 카드 -->
+        <div style="background:var(--card);border:2px solid var(--br);border-radius:16px;padding:14px 12px;position:relative">
+          <div style="font-size:11px;color:var(--tx3);font-weight:700;margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase">🌱 Lite</div>
+          <div style="font-size:13px;font-weight:900;color:var(--tx);margin-bottom:8px">일반 사육자용</div>
+          <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:10px">
+            <span style="font-size:22px;font-weight:900;color:var(--tx)" id="price-lite">1,900</span>
+            <span style="font-size:11px;color:var(--tx3)">원/월</span>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
-            <span style="font-size:16px">📱</span> QR 개체 프로필 카드 생성
+          <div id="price-lite-sub" style="font-size:10px;color:var(--tx3);min-height:14px;margin-bottom:10px"></div>
+          <ul style="list-style:none;padding:0;margin:0 0 12px;font-size:11px;color:var(--tx2);line-height:1.9">
+            <li>✅ 개체 등록 <b>5마리</b></li>
+            <li>✅ AI 판별 <b>월 10회</b></li>
+            <li>✅ 기본 성장 그래프</li>
+            <li style="color:var(--tx3)">⚪ 유전자 계산기 제외</li>
+          </ul>
+          <button onclick="startPayment('lite')" style="width:100%;background:var(--sf2);color:var(--tx);font-weight:800;font-size:12px;border:1.5px solid var(--br);border-radius:10px;padding:10px;cursor:pointer;font-family:inherit">Lite 시작</button>
+        </div>
+
+        <!-- Breeder 카드 (추천) -->
+        <div style="background:linear-gradient(160deg,rgba(245,200,66,.1),rgba(255,156,39,.05));border:2px solid var(--am);border-radius:16px;padding:14px 12px;position:relative">
+          <div style="position:absolute;top:-9px;right:12px;background:var(--am);color:#1a0a00;font-size:9px;font-weight:900;padding:2px 8px;border-radius:6px;letter-spacing:.3px">추천</div>
+          <div style="font-size:11px;color:var(--am);font-weight:700;margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase">🧬 Breeder</div>
+          <div style="font-size:13px;font-weight:900;color:var(--am);margin-bottom:8px">전문 브리더용</div>
+          <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:10px">
+            <span style="font-size:22px;font-weight:900;color:var(--am)" id="price-breeder">4,900</span>
+            <span style="font-size:11px;color:#c9a850">원/월</span>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
-            <span style="font-size:16px">📄</span> 환경부 신고서 PDF 자동 출력
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
-            <span style="font-size:16px">🧬</span> 브리딩 조합 유전자 예측
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx)">
-            <span style="font-size:16px">📋</span> 개체 이력서 PDF 출력
-          </div>
+          <div id="price-breeder-sub" style="font-size:10px;color:#c9a850;min-height:14px;margin-bottom:10px"></div>
+          <ul style="list-style:none;padding:0;margin:0 0 12px;font-size:11px;color:var(--tx);line-height:1.9">
+            <li>✅ 개체 등록 <b>무제한</b></li>
+            <li>✅ AI 판별 <b>무제한</b></li>
+            <li>✅ 분양 게시판 <b>🧬 인증 배지</b></li>
+            <li>✅ 부모 유전자 조합 계산기</li>
+            <li>✅ 모든 리포트 PDF 출력</li>
+          </ul>
+          <button onclick="startPayment('breeder')" style="width:100%;background:linear-gradient(135deg,#f5c842,#ff9c27);color:#1a0a00;font-weight:900;font-size:12px;border:none;border-radius:10px;padding:10px;cursor:pointer;font-family:inherit">Breeder 시작</button>
         </div>
       </div>
 
-      <!-- 가격 옵션 -->
-      <div style="display:flex;gap:10px;margin-bottom:16px">
-        <div id="plan-monthly" onclick="selectPlan('monthly')" style="flex:1;background:var(--card);border:2px solid var(--br);border-radius:14px;padding:14px;text-align:center;cursor:pointer;transition:border-color .15s">
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">월간</div>
-          <div style="font-size:20px;font-weight:900;color:var(--tx)">4,900<span style="font-size:12px;font-weight:400;color:var(--tx2)">원/월</span></div>
+      <!-- 멤버십 비교 테이블 -->
+      <div style="background:var(--sf2);border-radius:14px;padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:800;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          📋 <span>멤버십 비교 테이블</span>
         </div>
-        <div id="plan-yearly" onclick="selectPlan('yearly')" style="flex:1;background:var(--card);border:2px solid var(--am);border-radius:14px;padding:14px;text-align:center;cursor:pointer;position:relative;transition:border-color .15s">
-          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--am);color:#1a0a00;font-size:10px;font-weight:800;padding:2px 10px;border-radius:10px;white-space:nowrap">2개월 무료</div>
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">연간</div>
-          <div style="font-size:20px;font-weight:900;color:var(--am)">3,900<span style="font-size:12px;font-weight:400;color:#c9a850">원/월</span></div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:2px">연 46,800원 (16,800원 절약)</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:8px 6px;color:var(--tx3);font-weight:700;border-bottom:1px solid var(--br);font-size:10px">기능</th>
+                <th style="text-align:center;padding:8px 4px;color:var(--tx2);font-weight:700;border-bottom:1px solid var(--br);font-size:10px;width:55px">🆓<br>무료</th>
+                <th style="text-align:center;padding:8px 4px;color:var(--tx);font-weight:800;border-bottom:1px solid var(--br);font-size:10px;width:60px">🌱<br>Lite</th>
+                <th style="text-align:center;padding:8px 4px;color:var(--am);font-weight:900;border-bottom:1.5px solid var(--am);font-size:10px;width:70px">🧬<br>Breeder</th>
+              </tr>
+            </thead>
+            <tbody id="compare-table-body">
+              <!-- 채워짐 -->
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <!-- 결제 버튼 -->
-      <button onclick="startProPayment()" style="width:100%;background:linear-gradient(135deg,#f5c842,#ff9c27);color:#1a0a00;font-weight:900;font-size:15px;border:none;border-radius:14px;padding:15px;font-family:inherit;cursor:pointer;margin-bottom:10px">
-        PRO 시작하기
-      </button>
 
       <!-- 안내 -->
       <div style="text-align:center;font-size:11px;color:var(--tx3);line-height:1.6;padding:4px 0 8px">
-        카카오페이 · 카드 결제 지원 · 즉시 활성화<br>
+        카카오페이 · 카드 결제 지원 · 즉시 활성화 · 언제든 해지 가능<br>
         문의: <span style="color:var(--ac);text-decoration:underline;cursor:pointer" onclick="navigator.clipboard.writeText('dlrbgns456@gmail.com').then(()=>showToast('이메일 복사됨'))">dlrbgns456@gmail.com</span>
       </div>
     </div>
@@ -1839,10 +1867,83 @@ let state = {
   commFilter: 'all',
   scanPhotoData: null,
   freeScansLeft: 3,
-  isPro: false,
+  isPro: false,         // deprecated alias — tier !== 'free'
+  tier: 'free',         // 'free' | 'lite' | 'breeder'
   nextGeckoId: 1,
   nextPostId: 1,
 };
+
+// ══════════════════════════════
+// 멤버십 티어 정의
+// ══════════════════════════════
+const TIERS = {
+  free: {
+    key: 'free', label: '무료', emoji: '🆓',
+    geckoLimit: 5,        // 개체 등록 5마리
+    monthlyScans: 3,      // AI 판별 총 3회 (한 번만)
+    monthlyScansLabel: '총 3회',
+    hasBreederBadge: false,
+    hasGeneticCalc: false,
+    hasPDFExport: false,
+    hasQRCard: false,
+    price: { monthly: 0, yearly: 0 },
+  },
+  lite: {
+    key: 'lite', label: 'Lite', emoji: '🌱',
+    geckoLimit: 5,        // 개체 등록 5마리
+    monthlyScans: 10,     // AI 판별 월 10회
+    monthlyScansLabel: '월 10회',
+    hasBreederBadge: false,
+    hasGeneticCalc: false,
+    hasPDFExport: false,
+    hasQRCard: false,
+    hasGrowthChart: true, // 기본 성장 그래프
+    price: { monthly: 1900, yearly: 19000 }, // 월 1,900 / 연 19,000 (2개월 무료 수준)
+  },
+  breeder: {
+    key: 'breeder', label: 'Breeder', emoji: '🧬',
+    geckoLimit: Infinity, // 무제한
+    monthlyScans: Infinity,
+    monthlyScansLabel: '무제한',
+    hasBreederBadge: true,     // 분양 게시판 '인증 배지'
+    hasGeneticCalc: true,      // 부모 유전자 조합 계산기
+    hasPDFExport: true,        // 모든 리포트 PDF 출력
+    hasQRCard: true,
+    hasGrowthChart: true,
+    price: { monthly: 4900, yearly: 46800 }, // 현재 가격 유지
+  },
+};
+
+function _tier() { return TIERS[state.tier] || TIERS.free; }
+function isBreeder() { return state.tier === 'breeder'; }
+function isLite() { return state.tier === 'lite'; }
+function isPaidTier() { return state.tier === 'lite' || state.tier === 'breeder'; }
+
+// ── 월별 AI 판별 카운터 (Lite 전용) ──
+function _monthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function _getMonthlyScansUsed() {
+  try {
+    const key = `mycre_scans_${_currentUser?.id || 'anon'}_${_monthKey()}`;
+    return parseInt(localStorage.getItem(key) || '0', 10);
+  } catch(e) { return 0; }
+}
+function _incrementMonthlyScans() {
+  try {
+    const key = `mycre_scans_${_currentUser?.id || 'anon'}_${_monthKey()}`;
+    const cur = _getMonthlyScansUsed();
+    localStorage.setItem(key, String(cur + 1));
+  } catch(e) {}
+}
+function getRemainingScans() {
+  const t = _tier();
+  if (t.monthlyScans === Infinity) return Infinity;
+  if (state.tier === 'lite') return Math.max(0, t.monthlyScans - _getMonthlyScansUsed());
+  // free: 기존 freeScansLeft (total 3)
+  return state.freeScansLeft;
+}
 
 // Morph database
 // ══════════════════════════════════════
@@ -3469,9 +3570,10 @@ async function saveGecko() {
   const name = document.getElementById('gecko-name').value.trim();
   if (!name) { showToast('⚠️ 이름을 입력해주세요'); return; }
 
-  // 무료 등급: 개체 등록 5개 제한 (수정은 허용)
-  if (!state.isPro && !state.editingGeckoId && state.geckos.length >= 5) {
-    _showProUpgradePopup('무료 등급은 최대 5마리까지 등록할 수 있어요.<br>더 많은 개체를 등록하고 싶으신가요?<br><b>PRO로 업그레이드하세요!</b>');
+  // 개체 등록 제한 (tier별): free/lite=5마리, breeder=무제한 (수정은 허용)
+  if (!state.editingGeckoId && !isBreeder() && state.geckos.length >= _tier().geckoLimit) {
+    const tLabel = _tier().label;
+    _showProUpgradePopup(`${tLabel} 등급은 최대 ${_tier().geckoLimit}마리까지 등록할 수 있어요.<br>더 많은 개체를 등록하고 싶으신가요?<br><b>🧬 Breeder로 업그레이드하세요!</b>`);
     return;
   }
 
@@ -3900,9 +4002,21 @@ function removeScanPhoto(idx) {
 
 function startAnalysis() {
   if (scanPhotos.length === 0) { showToast('⚠️ 사진을 최소 1장 이상 올려주세요'); return; }
-  if (!state.isPro && state.freeScansLeft <= 0) {
-    _showProUpgradePopup('오늘의 무료 판별 횟수를 모두 사용했어요.<br>내일 자정에 초기화됩니다.<br><b>PRO는 무제한 판별!</b>');
-    return;
+  // tier별 AI 판별 제한 검사
+  if (isBreeder()) {
+    // Breeder: 무제한
+  } else if (isLite()) {
+    // Lite: 월 10회
+    if (_getMonthlyScansUsed() >= TIERS.lite.monthlyScans) {
+      _showProUpgradePopup(`Lite 등급 AI 판별 월 ${TIERS.lite.monthlyScans}회를 모두 사용했어요.<br>다음 달 1일에 초기화됩니다.<br><b>🧬 Breeder는 무제한 판별!</b>`);
+      return;
+    }
+  } else {
+    // Free: 총 3회 (일일 리셋)
+    if (state.freeScansLeft <= 0) {
+      _showProUpgradePopup('오늘의 무료 판별 횟수를 모두 사용했어요.<br>내일 자정에 초기화됩니다.<br><b>🌱 Lite는 월 10회, 🧬 Breeder는 무제한!</b>');
+      return;
+    }
   }
 
   document.getElementById('scan-upload-area').style.display = 'none';
@@ -4624,18 +4738,20 @@ async function renderPosts() {
     if (state.commFilter !== 'all') query = query.eq('cat', state.commFilter);
     const { data, error } = await query;
     if (!error && data) {
-      // 게시글 작성자들의 PRO 상태 일괄 확인
+      // 게시글 작성자들의 tier 상태 일괄 확인 (Breeder만 인증 배지)
       const userIds = [...new Set(data.map(r => r.user_id).filter(Boolean))];
-      let proUserSet = new Set();
+      let breederUserSet = new Set();
       if (userIds.length > 0) {
         try {
           const { data: profiles } = await _supabase.from('profiles')
-            .select('id,is_pro,pro_until').in('id', userIds);
+            .select('id,is_pro,tier,pro_until').in('id', userIds);
           if (profiles) {
             profiles.forEach(pr => {
-              if (pr.is_pro && (!pr.pro_until || new Date(pr.pro_until) > new Date())) {
-                proUserSet.add(pr.id);
-              }
+              const active = pr.is_pro && (!pr.pro_until || new Date(pr.pro_until) > new Date());
+              if (!active) return;
+              // tier 컬럼이 있으면 breeder만, 없으면 기존 PRO는 breeder로 폴백
+              const effectiveTier = pr.tier || 'breeder';
+              if (effectiveTier === 'breeder') breederUserSet.add(pr.id);
             });
           }
         } catch(e) {}
@@ -4645,7 +4761,8 @@ async function renderPosts() {
         tags: row.tags || [],
         time: _timeAgo(row.created_at),
         isOwn: _currentUser && row.user_id === _currentUser.id,
-        authorIsPro: proUserSet.has(row.user_id),
+        authorIsPro: breederUserSet.has(row.user_id),     // 하위 호환
+        authorIsBreeder: breederUserSet.has(row.user_id), // Breeder 전용 인증 배지
         hasLinkedGecko: !!(row.morph && row.photo && row.cat === 'sale'),
       }));
     }
@@ -4688,8 +4805,8 @@ function buildPostCard(p, compact) {
   const div = document.createElement('div');
   div.className = 'post-card';
 
-  // PRO 사용자 골드 테두리
-  if (p.authorIsPro && !isNotice) {
+  // Breeder 사용자 골드 테두리
+  if (p.authorIsBreeder && !isNotice) {
     div.style.border = '1.5px solid transparent';
     div.style.backgroundClip = 'padding-box';
     div.style.position = 'relative';
@@ -4698,7 +4815,7 @@ function buildPostCard(p, compact) {
     div.style.boxShadow = '0 0 0 1.5px rgba(212,175,55,.45), 0 0 12px rgba(212,175,55,.1)';
   }
 
-  const proBadge = p.authorIsPro ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;margin-left:3px;letter-spacing:.3px">⭐PRO</span>` : '';
+  const proBadge = p.authorIsBreeder ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;margin-left:3px;letter-spacing:.3px">🧬 브리더</span>` : '';
   const certBadge = p.hasLinkedGecko ? `<span style="font-size:9px;font-weight:700;color:var(--ac);background:var(--ac2);border:1px solid rgba(93,220,106,.3);border-radius:6px;padding:1px 5px;letter-spacing:.3px">✅ 인증 개체</span>` : '';
 
   if (isNotice) {
@@ -4748,7 +4865,7 @@ async function openPostDetail(p) {
   const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보'};
   const isNotice = p.cat === 'notice';
   const bodyHtml = (p.body || '').replace(/\n/g, '<br>');
-  const proBadge = p.authorIsPro ? `<span style="font-size:10px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:2px 6px;letter-spacing:.3px">⭐ PRO</span>` : '';
+  const proBadge = p.authorIsBreeder ? `<span style="font-size:10px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:2px 6px;letter-spacing:.3px">🧬 브리더 인증</span>` : '';
   const certBadge = p.hasLinkedGecko ? `<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(93,220,106,.08);border:1px solid rgba(93,220,106,.25);border-radius:8px;padding:5px 10px;margin-bottom:10px;font-size:11px;font-weight:700;color:var(--ac)">✅ 마이크레 인증 개체</div>` : '';
 
   document.getElementById('post-detail-body').innerHTML = `
@@ -5858,25 +5975,93 @@ function openTermsSheet(type) {
 // ══════════════════════════════
 let _selectedPlan = 'yearly';
 
+let _selectedTier = 'breeder';
+
+// ── Breeder 전용 기능 게이트 핸들러 ──
+function handleGeneticCalc() {
+  if (!isBreeder()) {
+    _showProUpgradePopup('부모 유전자 조합 계산기는 <b>🧬 Breeder 전용</b> 기능이에요.<br>자녀 모프 확률을 정밀 예측해드립니다.');
+    return;
+  }
+  showToast('유전자 계산기 준비 중입니다 (곧 오픈)');
+}
+
+function handlePDFExport() {
+  if (!isBreeder()) {
+    _showProUpgradePopup('PDF 리포트 출력은 <b>🧬 Breeder 전용</b> 기능이에요.<br>환경부 신고서, 개체 이력서, 분양 증명서 등 모든 리포트를 PDF로 내려받을 수 있어요.');
+    return;
+  }
+  showToast('PDF 생성 중...');
+  // 실제 PDF 생성은 추후 구현
+}
+
 function openProSheet() {
-  selectPlan('yearly');
+  selectBilling('yearly');
+  _renderCompareTable();
   openSheet('sheet-pro');
 }
 
-function selectPlan(plan) {
+// 월간/연간 토글 — 카드에 표시되는 가격 업데이트
+function selectBilling(plan) {
   _selectedPlan = plan;
-  const m = document.getElementById('plan-monthly');
-  const y = document.getElementById('plan-yearly');
-  if (m) m.style.borderColor = plan === 'monthly' ? 'var(--am)' : 'var(--br)';
-  if (y) y.style.borderColor = plan === 'yearly' ? 'var(--am)' : 'var(--br)';
+  const mBtn = document.getElementById('billing-monthly');
+  const yBtn = document.getElementById('billing-yearly');
+  if (mBtn && yBtn) {
+    mBtn.style.background = plan === 'monthly' ? 'var(--am)' : 'transparent';
+    mBtn.style.color = plan === 'monthly' ? '#1a0a00' : 'var(--tx2)';
+    mBtn.style.fontWeight = plan === 'monthly' ? '800' : '700';
+    yBtn.style.background = plan === 'yearly' ? 'var(--am)' : 'transparent';
+    yBtn.style.color = plan === 'yearly' ? '#1a0a00' : 'var(--tx2)';
+    yBtn.style.fontWeight = plan === 'yearly' ? '800' : '700';
+  }
+  // 가격 라벨 갱신
+  const liteP = TIERS.lite.price[plan];
+  const breederP = TIERS.breeder.price[plan];
+  const liteMonthly = plan === 'yearly' ? Math.round(liteP / 12) : liteP;
+  const breederMonthly = plan === 'yearly' ? Math.round(breederP / 12) : breederP;
+  const liteEl = document.getElementById('price-lite');
+  const liteSub = document.getElementById('price-lite-sub');
+  const brEl = document.getElementById('price-breeder');
+  const brSub = document.getElementById('price-breeder-sub');
+  if (liteEl) liteEl.textContent = liteMonthly.toLocaleString();
+  if (brEl) brEl.textContent = breederMonthly.toLocaleString();
+  if (liteSub) liteSub.textContent = plan === 'yearly' ? `연 ${liteP.toLocaleString()}원` : '';
+  if (brSub) brSub.textContent = plan === 'yearly' ? `연 ${breederP.toLocaleString()}원 (16,800원 절약)` : '';
 }
 
-function startProPayment() {
-  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+// 비교 테이블 렌더링
+function _renderCompareTable() {
+  const rows = [
+    { label: '개체 등록', free: '5마리', lite: '5마리', breeder: '무제한' },
+    { label: 'AI 모프 판별', free: '총 3회', lite: '월 10회', breeder: '무제한' },
+    { label: '성장 그래프', free: '—', lite: '기본', breeder: '전체' },
+    { label: '분양 게시판 배지', free: '—', lite: '—', breeder: '🧬 인증' },
+    { label: '유전자 조합 계산기', free: '—', lite: '—', breeder: '✅' },
+    { label: 'QR 개체 프로필', free: '—', lite: '—', breeder: '✅' },
+    { label: '리포트 PDF 출력', free: '—', lite: '—', breeder: '✅' },
+    { label: '환경부 신고서', free: '—', lite: '—', breeder: '✅' },
+  ];
+  const tbody = document.getElementById('compare-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr style="${i < rows.length - 1 ? 'border-bottom:1px dashed rgba(255,255,255,.05);' : ''}">
+      <td style="padding:7px 6px;color:var(--tx2);font-size:11px">${r.label}</td>
+      <td style="padding:7px 4px;text-align:center;color:var(--tx3);font-size:10.5px">${r.free}</td>
+      <td style="padding:7px 4px;text-align:center;color:var(--tx);font-size:10.5px;font-weight:600">${r.lite}</td>
+      <td style="padding:7px 4px;text-align:center;color:var(--am);font-size:10.5px;font-weight:800">${r.breeder}</td>
+    </tr>
+  `).join('');
+}
 
-  const amounts = { monthly: 4900, yearly: 46800 };
+function startPayment(tier) {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  if (!TIERS[tier] || tier === 'free') { showToast('잘못된 등급입니다'); return; }
+  _selectedTier = tier;
+
+  const t = TIERS[tier];
+  const amount = t.price[_selectedPlan];
   const labels = { monthly: '월간 구독', yearly: '연간 구독' };
-  const amount = amounts[_selectedPlan];
+  const tierLabels = { lite: 'Lite', breeder: 'Breeder' };
   const merchantUid = 'order_' + Date.now();
 
   // 포트원(아임포트) 초기화
@@ -5893,7 +6078,8 @@ function startProPayment() {
   localStorage.setItem('_pending_payment', JSON.stringify({
     merchant_uid: merchantUid,
     amount: amount,
-    plan: _selectedPlan
+    plan: _selectedPlan,
+    tier: tier
   }));
 
   // 팝업 차단 안내 (PC에서 팝업 방식일 때)
@@ -5905,7 +6091,7 @@ function startProPayment() {
     pg: 'kakaopay',
     pay_method: 'card',
     merchant_uid: merchantUid,
-    name: '마이크레 PRO 정기구독 (' + labels[_selectedPlan] + ')',
+    name: `마이크레 ${tierLabels[tier]} 정기구독 (${labels[_selectedPlan]})`,
     amount: amount,
     buyer_email: _currentUser.email || '',
     buyer_name: _currentUser.user_metadata?.nickname || '',
@@ -5921,10 +6107,11 @@ function startProPayment() {
           merchant_uid: rsp.merchant_uid,
           amount: amount,
           plan: _selectedPlan,
+          tier: tier,
           status: 'paid'
         });
 
-        // 2) profiles 테이블 PRO 활성화
+        // 2) profiles 테이블 멤버십 활성화 (tier 포함)
         const proUntil = new Date();
         if (_selectedPlan === 'yearly') {
           proUntil.setFullYear(proUntil.getFullYear() + 1);
@@ -5933,12 +6120,13 @@ function startProPayment() {
         }
         await _supabase.from('profiles').update({
           is_pro: true,
+          tier: tier,
           pro_until: proUntil.toISOString()
         }).eq('id', _currentUser.id);
 
-        showToast('PRO 활성화 완료! 환영합니다 ⭐');
-        _notifyAdmin('payment_success', 'PRO 결제 완료',
-          `사용자: ${_currentUser.email}\n플랜: ${_selectedPlan}\n금액: ${amount}원\nimp_uid: ${rsp.imp_uid}`);
+        showToast(`${tierLabels[tier]} 활성화 완료! 환영합니다 ${t.emoji}`);
+        _notifyAdmin('payment_success', `${tierLabels[tier]} 결제 완료`,
+          `사용자: ${_currentUser.email}\n티어: ${tier}\n플랜: ${_selectedPlan}\n금액: ${amount}원\nimp_uid: ${rsp.imp_uid}`);
 
         // 3) 페이지 새로고침으로 PRO 기능 즉시 반영
         setTimeout(() => { location.reload(); }, 1200);
@@ -6308,28 +6496,34 @@ async function _onSignedIn() {
   (async () => {
     try {
       // 프로필 체크 + 신규 사용자 처리
-      const { data: existCheck } = await _supabase.from('profiles').select('id,nickname,is_pro,pro_until').eq('id', _currentUser.id).maybeSingle();
+      const { data: existCheck } = await _supabase.from('profiles').select('id,nickname,is_pro,tier,pro_until').eq('id', _currentUser.id).maybeSingle();
       if (!existCheck) {
         const randomNick = _currentUser.user_metadata?.full_name || _generateRandomNickname();
-        await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick });
+        await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick, tier: 'free' });
         _profile.name = randomNick;
+        state.tier = 'free';
+        state.isPro = false;
         _saveProfileLocal();
         _updateProfileUI();
         _notifyAdmin('new_signup', '새 회원가입',
           `이메일: ${_currentUser.email}\nProvider: ${_currentUser.app_metadata?.provider || 'unknown'}\n시간: ${new Date().toLocaleString('ko-KR')}`);
       } else {
-        // 기존 사용자 — 닉네임, PRO 상태 반영
+        // 기존 사용자 — 닉네임, 티어 상태 반영
         if (existCheck.nickname) {
           _profile.name = existCheck.nickname;
           _saveProfileLocal();
           _updateProfileUI();
         }
-        if (existCheck.is_pro && (!existCheck.pro_until || new Date(existCheck.pro_until) > new Date())) {
+        const isActive = existCheck.is_pro && (!existCheck.pro_until || new Date(existCheck.pro_until) > new Date());
+        if (isActive) {
+          // tier 컬럼이 있으면 사용, 없으면 is_pro=true → breeder로 폴백(기존 PRO 유저 호환)
+          state.tier = existCheck.tier || 'breeder';
           state.isPro = true;
         } else {
+          state.tier = 'free';
           state.isPro = false;
           if (existCheck.is_pro && existCheck.pro_until && new Date(existCheck.pro_until) <= new Date()) {
-            _supabase.from('profiles').update({ is_pro: false }).eq('id', _currentUser.id);
+            _supabase.from('profiles').update({ is_pro: false, tier: 'free' }).eq('id', _currentUser.id);
           }
         }
         _loadDailyScanCount();
@@ -6366,7 +6560,14 @@ function _loadDailyScanCount() {
 }
 
 function _useDailyScan() {
-  if (state.isPro) return;
+  if (isBreeder()) return; // Breeder: 무제한
+  if (isLite()) {
+    // Lite: 월 카운터 증가
+    _incrementMonthlyScans();
+    _updateScanBadge();
+    return;
+  }
+  // Free: 일일 카운터
   state.freeScansLeft = Math.max(0, state.freeScansLeft - 1);
   const today = new Date().toISOString().slice(0, 10);
   try {
@@ -6380,11 +6581,18 @@ function _useDailyScan() {
 function _updateScanBadge() {
   const badge = document.getElementById('scan-free-badge');
   if (!badge) return;
-  if (state.isPro) {
-    badge.textContent = 'PRO 무제한';
+  if (isBreeder()) {
+    badge.textContent = '🧬 Breeder 무제한';
     badge.style.background = 'rgba(245,200,66,.15)';
     badge.style.borderColor = '#f5c842';
     badge.style.color = '#f5c842';
+  } else if (isLite()) {
+    const used = _getMonthlyScansUsed();
+    const left = Math.max(0, TIERS.lite.monthlyScans - used);
+    badge.textContent = `🌱 Lite 월 ${left}/${TIERS.lite.monthlyScans}회`;
+    badge.style.background = left > 0 ? 'var(--ac2)' : 'rgba(255,60,60,.1)';
+    badge.style.borderColor = left > 0 ? 'var(--ac)' : '#ff4444';
+    badge.style.color = left > 0 ? 'var(--ac)' : '#ff4444';
   } else {
     badge.textContent = '잔여 ' + state.freeScansLeft + '회';
     badge.style.background = state.freeScansLeft > 0 ? 'var(--ac2)' : 'rgba(255,60,60,.1)';
@@ -6622,12 +6830,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => { location.reload(); }, 1000);
             return;
           }
+          const tier = pending.tier || 'breeder'; // 구버전 pending 호환
           await _supabase.from('payments').insert({
             user_id: _currentUser.id,
             imp_uid: impUid,
             merchant_uid: merchantUid || pending.merchant_uid || '',
             amount: pending.amount || 9900,
             plan: pending.plan || 'monthly',
+            tier: tier,
             status: 'paid'
           });
           const proUntil = new Date();
@@ -6638,11 +6848,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           await _supabase.from('profiles').update({
             is_pro: true,
+            tier: tier,
             pro_until: proUntil.toISOString()
           }).eq('id', _currentUser.id);
-          showToast('PRO 활성화 완료! 환영합니다 ⭐');
-          _notifyAdmin('payment_success', 'PRO 결제 완료 (모바일)',
-            `사용자: ${_currentUser.email}\n플랜: ${pending.plan||'unknown'}\n금액: ${pending.amount||'?'}원\nimp_uid: ${impUid}`);
+          const tLabel = TIERS[tier]?.label || 'PRO';
+          const tEmoji = TIERS[tier]?.emoji || '⭐';
+          showToast(`${tLabel} 활성화 완료! 환영합니다 ${tEmoji}`);
+          _notifyAdmin('payment_success', `${tLabel} 결제 완료 (모바일)`,
+            `사용자: ${_currentUser.email}\n티어: ${tier}\n플랜: ${pending.plan||'unknown'}\n금액: ${pending.amount||'?'}원\nimp_uid: ${impUid}`);
           setTimeout(() => { location.reload(); }, 1200);
         } catch(err) {
           console.error('모바일 결제 후처리 오류:', err);
