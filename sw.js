@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mycre-v6';
+const CACHE_NAME = 'mycre-v7';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.svg',

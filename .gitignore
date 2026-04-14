@@ -1,2 +1,12 @@
 # Local Netlify folder
 .netlify
+
+# Node modules (netlify-cli 설치용 — 배포 시 불필요)
+node_modules/
+package.json
+package-lock.json
+
+# 로컬 참고 자료 (PDF, 사진 폴더)
+*.pdf
+크레 수컷/
+크레 암컷/

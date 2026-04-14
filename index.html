@@ -793,6 +793,18 @@ input[type=file]{display:none}
       <!-- 슬롯은 JS로 렌더링 -->
     </div>
 
+    <!-- 게코 가이드라인 오버레이 안내 -->
+    <div id="scan-guideline-hint" style="position:relative;background:var(--sf2);border:1.5px dashed rgba(93,220,106,.3);border-radius:16px;padding:18px 14px;margin-bottom:12px;text-align:center;overflow:hidden">
+      <!-- 게코 실루엣 (점선 가이드) -->
+      <div style="position:relative;width:120px;height:80px;margin:0 auto 10px;border:2px dashed rgba(93,220,106,.35);border-radius:40% 40% 35% 35%;display:flex;align-items:center;justify-content:center">
+        <span style="font-size:40px;opacity:.4">🦎</span>
+        <!-- 중앙 포커스 영역 표시 -->
+        <div style="position:absolute;inset:15%;border:1.5px solid rgba(93,220,106,.5);border-radius:8px"></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--ac);margin-bottom:4px">게코를 중앙에 맞춰주세요!</div>
+      <div style="font-size:10px;color:var(--tx3);line-height:1.5">AI가 사진 <b style="color:var(--ac)">중앙 60% 영역</b>을 집중 분석합니다.<br>배경이 아닌 개체가 중앙에 오도록 촬영하면 정확도가 높아져요.</div>
+    </div>
+
     <!-- 사진 추가 버튼 -->
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button onclick="document.getElementById('scan-file').click()" style="flex:1;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:12px;color:var(--tx);font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif">🖼 갤러리</button>
@@ -881,6 +893,21 @@ input[type=file]{display:none}
       <div id="res-photo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px"></div>
     </div>
 
+    <!-- AI 분석 근거 설명 (왜 이 결과가 나왔는지) -->
+    <div id="res-explanation" class="card card-pad" style="margin-bottom:12px;border:1px solid rgba(93,220,106,.15);display:none">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding-bottom:0" onclick="const b=document.getElementById('explanation-body');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.exp-arrow').textContent=b.style.display==='none'?'▶':'▼'">
+        <span style="font-size:15px">🧠</span>
+        <div class="result-section-title" style="margin:0;flex:1">AI가 이렇게 판단한 이유</div>
+        <span style="font-size:10px;color:var(--tx3);margin-right:2px">탭하여 펼치기</span>
+        <span class="exp-arrow" style="font-size:11px;color:var(--tx3)">▶</span>
+      </div>
+      <div id="explanation-body" style="display:none">
+        <div id="explanation-summary" style="font-size:12px;color:var(--ac);font-weight:700;line-height:1.6;margin-bottom:10px;padding:8px 10px;background:rgba(93,220,106,.06);border-radius:10px"></div>
+        <div id="explanation-details" style="font-size:11px;color:var(--tx2);line-height:1.7"></div>
+        <div id="explanation-metrics" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+      </div>
+    </div>
+
     <!-- 후보 리스트 (확률 순위) -->
     <div class="card card-pad" style="margin-bottom:12px">
       <div class="result-section-title" style="margin-bottom:10px">📊 모프 후보 (확률 순위)</div>
@@ -966,8 +993,9 @@ input[type=file]{display:none}
       <div id="feedback-done" style="display:none;text-align:center;padding:10px;font-size:13px;color:var(--ac);font-weight:700">✅ 소중한 제보 감사합니다!</div>
     </div>
 
-    <div class="result-actions">
-      <button class="btn-outline" onclick="resetScan()">↩ 다시 판별</button>
+    <div class="result-actions" style="display:flex;gap:8px">
+      <button class="btn-outline" onclick="resetScan()" style="flex:1">↩ 다시 판별</button>
+      <button class="btn-primary" onclick="saveResultCard()" style="flex:1;border-radius:12px;font-size:13px">📸 결과 카드 저장</button>
     </div>
     <div style="text-align:center;margin-top:14px;padding:10px;font-size:11px;color:#e74c3c;line-height:1.5;background:rgba(231,76,60,.06);border-radius:10px">
       ⚠️ AI 판별 결과는 참고용이며, 정확한 모프 감정은 전문가 상담을 권장합니다.
@@ -1329,7 +1357,7 @@ input[type=file]{display:none}
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">생년월일</label>
-          <input class="form-input" id="gecko-dob" type="text" placeholder="예: 2024-03-15" inputmode="numeric" onchange="updateCageAndBreeding()" onfocus="this.placeholder='YYYY-MM-DD'" onblur="this.placeholder='예: 2024-03-15'">
+          <input class="form-input" id="gecko-dob" type="text" placeholder="예: 20240315 (숫자만)" inputmode="numeric" maxlength="10" oninput="formatDobInput(this)" onchange="updateCageAndBreeding()" onfocus="this.placeholder='YYYYMMDD (숫자만)'" onblur="this.placeholder='예: 20240315 (숫자만)'">
         </div>
         <div class="form-group">
           <label class="form-label">취득가격 (만원)</label>
@@ -2355,13 +2383,22 @@ function calcMultiLayerScores(selections) {
     if (strSel.includes('핀스트라이프') && st.includes('핀스트라이프')) scores[name] += 10;
   });
 
-  // spot 레이어
+  // spot 레이어 — ⚡ 달마시안 핵심 판별: 가중치 대폭 격상
   const spotSel = selections.spot || '';
+  const hasSpots = spotSel.includes('대량') || spotSel.includes('100개+') || spotSel.includes('중간') || spotSel.includes('소량');
   Object.entries(MORPHS).forEach(([name, m]) => {
     const vs = m.visualLayers.spot;
-    if (spotSel.includes('대량') || spotSel.includes('100개+')) { if (vs.some(s => s.includes('고밀도') || s.includes('100+'))) scores[name] += 25; }
-    else if (spotSel.includes('중간')) { if (vs.some(s => s.includes('잉크점') || s.includes('소~중밀도'))) scores[name] += 15; }
-    else if (spotSel.includes('소량')) { if (vs.some(s => s.includes('잉크점'))) scores[name] += 10; }
+    if (spotSel.includes('대량') || spotSel.includes('100개+')) {
+      if (vs.some(s => s.includes('고밀도') || s.includes('100+'))) scores[name] += 45; // 슈퍼 달마시안 결정적 (기존 25→45)
+      else if (vs.some(s => s.includes('잉크점'))) scores[name] += 25;                  // 일반 달마시안에도 보너스
+    } else if (spotSel.includes('중간')) {
+      if (vs.some(s => s.includes('잉크점') || s.includes('소~중밀도'))) scores[name] += 30; // 달마시안 강화 (기존 15→30)
+      else if (vs.some(s => s.includes('고밀도'))) scores[name] += 15;                    // 슈퍼달마에도 일부 가산
+    } else if (spotSel.includes('소량')) {
+      if (vs.some(s => s.includes('잉크점'))) scores[name] += 18; // 기존 10→18
+    }
+    // 점이 감지되었는데 점 형질이 없는 모프 → 패널티
+    if (hasSpots && vs.length === 0) scores[name] -= 5;
   });
 
   // tail 레이어 — 카푸치노 Y마크/다크테일 가중치 높게
@@ -2371,19 +2408,31 @@ function calcMultiLayerScores(selections) {
     const sp = m.visualLayers.special;
     if (tailSel.includes('우동') && vt.includes('우동꼬리')) scores[name] += 20;
     if (tailSel.includes('다크') && (vt.includes('다크테일') || vt.includes('다크테일혼합'))) scores[name] += 20;
-    if (tailSel.includes('Y자') && (vt.includes('Y자마크') || sp.includes('Y자마크'))) scores[name] += 30; // 카푸치노 핵심 마커 — 높은 가중치
+    if (tailSel.includes('Y자') && (vt.includes('Y자마크') || sp.includes('Y자마크'))) scores[name] += 30;
   });
 
-  // pigment 레이어
+  // pigment 레이어 — 아잔틱 판별 엄격화
   const pigSel = selections.pigment || '';
   Object.entries(MORPHS).forEach(([name, m]) => {
     const sp = m.visualLayers.special;
-    if (pigSel.includes('무채색') || pigSel.includes('아잔틱')) { if (sp.includes('무채색톤') || sp.includes('색소결핍')) scores[name] += 30; }
+    if (pigSel.includes('무채색') || pigSel.includes('아잔틱')) {
+      if (sp.includes('무채색톤') || sp.includes('색소결핍')) scores[name] += 25; // 기존 30→25
+    }
     if (pigSel.includes('반투명') || pigSel.includes('하이포')) { if (sp.includes('색소결핍경미') || sp.includes('핑크톤')) scores[name] += 20; }
     if (pigSel.includes('멜라닌') || pigSel.includes('차콜')) { if (sp.includes('하이퍼멜라닌') || sp.includes('칠흑바탕')) scores[name] += 25; }
     if (pigSel.includes('백색') || pigSel.includes('릴리')) { if (sp.includes('백색덮임') || sp.includes('레터럴커버리지')) scores[name] += 20; }
     if (pigSel.includes('커피') || pigSel.includes('카푸치노')) { if (sp.includes('커피톤') || sp.includes('Y자마크') || sp.includes('다크테일')) scores[name] += 25; }
   });
+
+  // ── 🆕 교차 검증 페널티: 점이 있으면 아잔틱 점수 대폭 깎기 ──
+  if (hasSpots) {
+    // 점이 감지되었으면 아잔틱/릴잔틱 계열 점수 크게 감소
+    ['아잔틱','릴잔틱'].forEach(n => { if (scores[n] !== undefined) scores[n] = Math.max(0, scores[n] - 30); });
+  }
+  // 반대로: pigment이 아잔틱인데 점이 없으면 아잔틱 보너스
+  if ((pigSel.includes('무채색') || pigSel.includes('아잔틱')) && !hasSpots) {
+    ['아잔틱','릴잔틱'].forEach(n => { if (scores[n] !== undefined) scores[n] += 10; });
+  }
 
   return scores;
 }
@@ -2455,133 +2504,367 @@ function _hslToRgb(h, s, l) {
   return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
 }
 
-// ── 이미지 색상 분석 엔진 ──
-// desatRate: 채도 감소 비율 (0 = 원본, 0.2 = 20% 낮춤). 파이어업 보정 시 사용
+// ── 이미지 색상 분석 엔진 v3 (Central Focus + Spot Isolation) ──
+// 중앙 60% 영역에 80% 가중치 → 배경 노이즈 제거
 function _analyzeImageColors(imgDataUrl, desatRate = 0) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const size = 100; // 100x100으로 축소해서 분석
+      const size = 120;
       canvas.width = size; canvas.height = size;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, size, size);
       const data = ctx.getImageData(0, 0, size, size).data;
 
-      let totalR = 0, totalG = 0, totalB = 0;
+      // ── 중앙 포커스 영역 정의 (60% 중앙) ──
+      const cMin = Math.floor(size * 0.2), cMax = Math.floor(size * 0.8); // 중앙 60%
+      const W_CENTER = 4.0, W_EDGE = 1.0; // 중앙 가중치 4배 → 실질 ~80%
+
+      let wTotalR = 0, wTotalG = 0, wTotalB = 0, wSum = 0;
       let darkPx = 0, lightPx = 0, redPx = 0, orangePx = 0, yellowPx = 0;
-      let pinkPx = 0, brownPx = 0, grayPx = 0, whitePx = 0, spotCount = 0;
+      let pinkPx = 0, brownPx = 0, grayPx = 0, whitePx = 0;
       const pxCount = size * size;
       const brightArr = [];
+      const satArr = [];
+      const hueArr = [];
+
+      const regions = { top:{b:0,n:0,w:0}, bottom:{b:0,n:0,w:0}, left:{b:0,n:0,w:0}, right:{b:0,n:0,w:0}, center:{b:0,n:0,w:0} };
+      let tailBright = 0, tailWhite = 0, tailDark = 0, tailPx = 0, tailSat = 0;
+      let lateralWhite = 0, lateralLight = 0, lateralPx = 0;
+      let dorsalBright = 0, dorsalPx = 0;
 
       for (let i = 0; i < data.length; i += 4) {
         let r = data[i], g = data[i+1], b = data[i+2];
+        const px = i / 4;
+        const x = px % size, y = Math.floor(px / size);
+        const isCenter = x >= cMin && x < cMax && y >= cMin && y < cMax;
+        const pw = isCenter ? W_CENTER : W_EDGE; // 픽셀 가중치
 
-        // ── 파이어업 채도 보정: HSL 변환 → S를 desatRate만큼 감소 → RGB 복원 ──
         if (desatRate > 0) {
           const hsl = _rgbToHsl(r, g, b);
-          hsl.s = Math.max(0, hsl.s * (1 - desatRate)); // 채도 20% 감소
+          hsl.s = Math.max(0, hsl.s * (1 - desatRate));
           const adj = _hslToRgb(hsl.h, hsl.s, hsl.l);
           r = adj.r; g = adj.g; b = adj.b;
         }
 
-        totalR += r; totalG += g; totalB += b;
+        const hsl = _rgbToHsl(r, g, b);
+        wTotalR += r * pw; wTotalG += g * pw; wTotalB += b * pw; wSum += pw;
         const bright = (r + g + b) / 3;
         brightArr.push(bright);
+        satArr.push(hsl.s);
+        hueArr.push(hsl.h);
 
-        if (bright < 60) darkPx++;
-        else if (bright > 200) lightPx++;
+        // 색상 분류에 가중치 적용
+        if (bright < 60) darkPx += pw;
+        else if (bright > 200) lightPx += pw;
+        if (bright > 220 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) whitePx += pw;
+        if (r > 160 && g < 100 && b < 100) redPx += pw;
+        if (r > 170 && g > 100 && g < 170 && b < 80) orangePx += pw;
+        if (r > 180 && g > 170 && b < 120) yellowPx += pw;
+        if (r > 170 && g < 140 && b > 130) pinkPx += pw;
+        if (r > 80 && r < 160 && g > 50 && g < 130 && b > 30 && b < 100 && Math.abs(r - g) < 60) brownPx += pw;
+        if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && bright > 60 && bright < 200) grayPx += pw;
 
-        if (bright > 220 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) whitePx++;
+        const isWhitePx = bright > 220 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20;
+        if (y < size * 0.3) { regions.top.b += bright; regions.top.n++; if (isWhitePx) regions.top.w++; }
+        if (y > size * 0.7) { regions.bottom.b += bright; regions.bottom.n++; if (isWhitePx) regions.bottom.w++; }
+        if (x < size * 0.25) { regions.left.b += bright; regions.left.n++; if (isWhitePx) regions.left.w++; }
+        if (x > size * 0.75) { regions.right.b += bright; regions.right.n++; if (isWhitePx) regions.right.w++; }
+        if (isCenter) { regions.center.b += bright; regions.center.n++; if (isWhitePx) regions.center.w++; }
 
-        // 색상 분류
-        if (r > 160 && g < 100 && b < 100) redPx++;
-        if (r > 170 && g > 100 && g < 170 && b < 80) orangePx++;
-        if (r > 180 && g > 170 && b < 120) yellowPx++;
-        if (r > 170 && g < 140 && b > 130) pinkPx++;
-        if (r > 80 && r < 160 && g > 50 && g < 130 && b > 30 && b < 100 && Math.abs(r - g) < 60) brownPx++;
-        if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && bright > 60 && bright < 200) grayPx++;
+        if (y > size * 0.75) { tailBright += bright; tailPx++; tailSat += hsl.s; if (isWhitePx) tailWhite++; if (bright < 60) tailDark++; }
+        if (x < size * 0.25 || x > size * 0.75) { lateralPx++; if (isWhitePx) lateralWhite++; if (bright > 180) lateralLight++; }
+        if (y < size * 0.35 && x > size * 0.3 && x < size * 0.7) { dorsalBright += bright; dorsalPx++; }
       }
 
-      // 점 감지: 주변 밝기 대비 급격한 변화
-      for (let y = 1; y < size - 1; y++) {
-        for (let x = 1; x < size - 1; x++) {
+      // ── 점(Spot) 감지 v3: 독립된 점 추출 (Island Detection) ──
+      // 배경과 대비되는 '작고 독립된 어두운/밝은 점'을 5x5 커널로 추출
+      let spotCount = 0, spotSizeTotal = 0;
+      const spotQuadrants = [0,0,0,0];
+      const halfSize = Math.floor(size / 2);
+      let chromaAroundSpot = 0;
+      let centerSpotCount = 0; // 중앙 영역의 점 수 (배경 제외)
+
+      for (let y = 2; y < size - 2; y++) {
+        for (let x = 2; x < size - 2; x++) {
           const idx = y * size + x;
           const cur = brightArr[idx];
-          const neighbors = [brightArr[idx-1], brightArr[idx+1], brightArr[idx-size], brightArr[idx+size]];
-          const avgN = neighbors.reduce((a,b) => a+b, 0) / 4;
-          if (Math.abs(cur - avgN) > 60) spotCount++;
+          // 5x5 이웃 평균 (자기 제외) — 더 넓은 범위로 '독립된 점' 감지
+          let nSum = 0, nCnt = 0;
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              const ni = (y + dy) * size + (x + dx);
+              if (ni >= 0 && ni < pxCount) { nSum += brightArr[ni]; nCnt++; }
+            }
+          }
+          const avgNeighbor = nSum / nCnt;
+          const diff = Math.abs(cur - avgNeighbor);
+
+          // 점 판정: 주변보다 확연히 다른 독립된 점
+          if (diff > 40) {
+            const isInCenter = x >= cMin && x < cMax && y >= cMin && y < cMax;
+            const spotWeight = isInCenter ? 3 : 1; // 중앙의 점에 3배 가중
+            spotCount += spotWeight;
+            spotSizeTotal += diff * spotWeight;
+            const qi = (y < halfSize ? 0 : 2) + (x < halfSize ? 0 : 1);
+            spotQuadrants[qi] += spotWeight;
+            if (satArr[idx] > 0.15) chromaAroundSpot += spotWeight;
+            if (isInCenter) centerSpotCount++;
+          }
         }
       }
 
+      const maxQ = Math.max(...spotQuadrants, 1);
+      const minQ = Math.min(...spotQuadrants);
+      const spotSpreadUniformity = spotCount > 10 ? minQ / maxQ : 0;
+
+      // ── 대비 분석: 중앙 영역 기준 ──
+      let cBrightSum = 0, cBrightSqSum = 0, cCount = 0;
+      for (let y = cMin; y < cMax; y++) {
+        for (let x = cMin; x < cMax; x++) {
+          const b = brightArr[y * size + x];
+          cBrightSum += b; cBrightSqSum += b * b; cCount++;
+        }
+      }
+      const centerAvgBright = cBrightSum / cCount;
+      const centerBrightStdDev = Math.sqrt(cBrightSqSum / cCount - centerAvgBright ** 2);
+
+      // 전체 대비도 (하위 호환)
+      const avgBright = brightArr.reduce((a,b) => a+b, 0) / pxCount;
+      const brightStdDev = Math.sqrt(brightArr.reduce((s,b) => s + (b - avgBright) ** 2, 0) / pxCount);
+
+      // ── 바탕색과 점의 대비 (Spot Contrast Ratio) ──
+      // 중앙 영역에서 가장 밝은 25% vs 가장 어두운 25%의 밝기 차이
+      const centerBrights = [];
+      for (let y = cMin; y < cMax; y++) {
+        for (let x = cMin; x < cMax; x++) centerBrights.push(brightArr[y * size + x]);
+      }
+      centerBrights.sort((a,b) => a - b);
+      const q1 = centerBrights[Math.floor(centerBrights.length * 0.25)];
+      const q3 = centerBrights[Math.floor(centerBrights.length * 0.75)];
+      const spotContrastRatio = q3 - q1; // 높을수록 바탕/점 대비 큼 → 달마시안
+
+      // ── 횡단 줄무늬 감지 (중앙 기준) ──
+      const rowAvgs = [];
+      for (let y = cMin; y < cMax; y++) {
+        let rowSum = 0;
+        for (let x = cMin; x < cMax; x++) rowSum += brightArr[y * size + x];
+        rowAvgs.push(rowSum / (cMax - cMin));
+      }
+      let hBandChanges = 0;
+      for (let i = 1; i < rowAvgs.length; i++) {
+        if (Math.abs(rowAvgs[i] - rowAvgs[i-1]) > 20) hBandChanges++;
+      }
+
+      // ── 세로 핀 라인 감지 ──
+      const colAvgs = [];
+      for (let x = 0; x < size; x++) {
+        let colSum = 0;
+        for (let y = 0; y < size; y++) colSum += brightArr[y * size + x];
+        colAvgs.push(colSum / size);
+      }
+      let vStripeScore = 0;
+      const midCols = colAvgs.slice(Math.floor(size*0.4), Math.floor(size*0.6));
+      const midAvg = midCols.reduce((a,b)=>a+b,0) / midCols.length;
+      const sideCols = [...colAvgs.slice(0, Math.floor(size*0.25)), ...colAvgs.slice(Math.floor(size*0.75))];
+      const sideAvg = sideCols.reduce((a,b)=>a+b,0) / sideCols.length;
+      if (midAvg - sideAvg > 15) vStripeScore = (midAvg - sideAvg) / 100;
+
+      // ── 색 균일성 (중앙 기준) ──
+      let cSatSum = 0, cSatSqSum = 0;
+      for (let y = cMin; y < cMax; y++) {
+        for (let x = cMin; x < cMax; x++) {
+          const s = satArr[y * size + x];
+          cSatSum += s; cSatSqSum += s * s;
+        }
+      }
+      const avgSat = cSatSum / cCount;
+      const satStdDev = Math.sqrt(cSatSqSum / cCount - avgSat ** 2);
+
+      Object.keys(regions).forEach(k => {
+        const rg = regions[k];
+        if (rg.n > 0) { rg.avgB = rg.b / rg.n; rg.whiteR = rg.w / rg.n; }
+        else { rg.avgB = 0; rg.whiteR = 0; }
+      });
+
+      // 가중치 적용된 비율 (wSum 기준)
       resolve({
-        avgR: Math.round(totalR / pxCount),
-        avgG: Math.round(totalG / pxCount),
-        avgB: Math.round(totalB / pxCount),
-        avgBright: Math.round((totalR + totalG + totalB) / (pxCount * 3)),
-        darkRatio: darkPx / pxCount,
-        lightRatio: lightPx / pxCount,
-        whiteRatio: whitePx / pxCount,
-        redRatio: redPx / pxCount,
-        orangeRatio: orangePx / pxCount,
-        yellowRatio: yellowPx / pxCount,
-        pinkRatio: pinkPx / pxCount,
-        brownRatio: brownPx / pxCount,
-        grayRatio: grayPx / pxCount,
-        spotDensity: spotCount / pxCount,
-        fireUpCorrected: desatRate > 0, // 보정 적용 여부 플래그
+        avgR: Math.round(wTotalR / wSum),
+        avgG: Math.round(wTotalG / wSum),
+        avgB: Math.round(wTotalB / wSum),
+        avgBright: Math.round(centerAvgBright),
+        darkRatio: darkPx / wSum,
+        lightRatio: lightPx / wSum,
+        whiteRatio: whitePx / wSum,
+        redRatio: redPx / wSum,
+        orangeRatio: orangePx / wSum,
+        yellowRatio: yellowPx / wSum,
+        pinkRatio: pinkPx / wSum,
+        brownRatio: brownPx / wSum,
+        grayRatio: grayPx / wSum,
+        spotDensity: spotCount / (cCount * 3), // 중앙 가중 점 밀도
+        spotIntensity: spotCount > 0 ? spotSizeTotal / spotCount : 0,
+        spotSpreadUniformity,
+        spotChromaRatio: spotCount > 0 ? chromaAroundSpot / spotCount : 0,
+        centerSpotDensity: centerSpotCount / cCount, // 중앙 영역만의 순수 점 밀도
+        spotContrastRatio,                             // 바탕 vs 점 밝기 대비 (높을수록 달마시안)
+        fireUpCorrected: desatRate > 0,
+        contrast: centerBrightStdDev,                  // 중앙 기준 대비
+        contrastFull: brightStdDev,                    // 전체 대비 (참고용)
+        hBandScore: hBandChanges / (cMax - cMin),
+        vStripeScore,
+        colorUniformity: 1 - Math.min(satStdDev / 0.3, 1),
+        avgSaturation: avgSat,
+        regions,
+        tail: {
+          avgBright: tailPx > 0 ? tailBright / tailPx : 0,
+          whiteRatio: tailPx > 0 ? tailWhite / tailPx : 0,
+          darkRatio: tailPx > 0 ? tailDark / tailPx : 0,
+          avgSat: tailPx > 0 ? tailSat / tailPx : 0,
+        },
+        lateral: {
+          whiteRatio: lateralPx > 0 ? lateralWhite / lateralPx : 0,
+          lightRatio: lateralPx > 0 ? lateralLight / lateralPx : 0,
+        },
+        dorsal: {
+          avgBright: dorsalPx > 0 ? dorsalBright / dorsalPx : 0,
+        }
       });
     };
     img.src = imgDataUrl;
   });
 }
 
-// 색상 분석 결과 → TRAIT_LAYERS 선택값으로 변환
+// 색상 분석 결과 → TRAIT_LAYERS 선택값으로 변환 (v2: 패턴밀도·대비·영역분석 반영)
 function _colorAnalysisToTraits(ca) {
   const traits = {};
+  // 분석 근거 수집 (사용자 설명용)
+  const reasons = [];
 
-  // ── color (체색)
-  if (ca.darkRatio > 0.4) traits.color = '칠흑/극다크';
-  else if (ca.grayRatio > 0.3 || (ca.avgBright < 90 && ca.darkRatio > 0.2)) traits.color = '흑색/회색';
-  else if (ca.redRatio > 0.08) traits.color = '레드/오렌지';
-  else if (ca.orangeRatio > 0.08) traits.color = '레드/오렌지';
-  else if (ca.yellowRatio > 0.08 || (ca.avgR > 180 && ca.avgG > 160 && ca.avgB < 130)) traits.color = '옐로우/크림';
-  else if (ca.pinkRatio > 0.05) traits.color = '핑크/연분홍';
-  else if (ca.whiteRatio > 0.25 || ca.lightRatio > 0.4) traits.color = '밝은색/화이트';
-  else if (ca.brownRatio > 0.15) traits.color = '커피/밀크초콜릿';
-  else if (ca.brownRatio > 0.05) traits.color = '갈색/올리브';
-  else traits.color = '갈색/올리브';
+  // ── color (체색) ──
+  if (ca.darkRatio > 0.4) { traits.color = '칠흑/극다크'; reasons.push({icon:'⬛',text:`어두운 픽셀 비율 ${(ca.darkRatio*100).toFixed(0)}% — 매우 어두운 체색`}); }
+  else if (ca.grayRatio > 0.3 || (ca.avgBright < 90 && ca.darkRatio > 0.2)) { traits.color = '흑색/회색'; reasons.push({icon:'🩶',text:`회색 톤 ${(ca.grayRatio*100).toFixed(0)}%, 평균 밝기 ${ca.avgBright} — 어두운 무채색 체색`}); }
+  else if (ca.redRatio > 0.08 || ca.orangeRatio > 0.08) { traits.color = '레드/오렌지'; reasons.push({icon:'🔴',text:`붉은/주황 색소 ${((ca.redRatio+ca.orangeRatio)*100).toFixed(1)}% 감지`}); }
+  else if (ca.yellowRatio > 0.08 || (ca.avgR > 180 && ca.avgG > 160 && ca.avgB < 130)) { traits.color = '옐로우/크림'; reasons.push({icon:'🟡',text:`노란/크림 색소 감지, 평균 RGB(${ca.avgR},${ca.avgG},${ca.avgB})`}); }
+  else if (ca.pinkRatio > 0.05) { traits.color = '핑크/연분홍'; reasons.push({icon:'🩷',text:`핑크 색소 ${(ca.pinkRatio*100).toFixed(1)}% 감지`}); }
+  else if (ca.whiteRatio > 0.25 || ca.lightRatio > 0.4) { traits.color = '밝은색/화이트'; reasons.push({icon:'⬜',text:`밝은 픽셀 ${(ca.lightRatio*100).toFixed(0)}% — 전체적으로 밝은 체색`}); }
+  else if (ca.brownRatio > 0.15) { traits.color = '커피/밀크초콜릿'; reasons.push({icon:'🟤',text:`갈색(커피톤) 픽셀 ${(ca.brownRatio*100).toFixed(0)}% — 카푸치노 계열 색감`}); }
+  else if (ca.brownRatio > 0.05) { traits.color = '갈색/올리브'; reasons.push({icon:'🫒',text:`갈색/올리브 톤 감지, 평균 밝기 ${ca.avgBright}`}); }
+  else { traits.color = '갈색/올리브'; reasons.push({icon:'🫒',text:`기본 갈색/올리브 체색, 평균 밝기 ${ca.avgBright}`}); }
 
-  // ── spot (점)
-  if (ca.spotDensity > 0.12) traits.spot = '대량 점(100개+, 슈퍼 달마시안)';
-  else if (ca.spotDensity > 0.06) traits.spot = '중간 점(30~100개)';
-  else if (ca.spotDensity > 0.02) traits.spot = '소량 점(~30개)';
-  else traits.spot = '점 없음';
+  // ── spot (점) — 중앙 영역 점 밀도 + 바탕/점 대비 + 분포 균일성 복합 판단 ──
+  const cSpot = ca.centerSpotDensity || 0; // 중앙 영역 순수 점 밀도
+  const sContrast = ca.spotContrastRatio || 0; // 바탕 vs 점 밝기 대비
+  const effectiveSpot = ca.spotDensity * (1 + Math.min(ca.spotIntensity / 80, 1));
+  // 바탕/점 대비가 높으면 점 점수 부스트 (배경이 밝고 점이 어두우면 = 달마시안)
+  const contrastBoost = sContrast > 40 ? 1.5 : (sContrast > 25 ? 1.2 : 1.0);
+  const boostedSpot = effectiveSpot * contrastBoost;
+  const hasSignificantSpots = boostedSpot > 0.02 || cSpot > 0.01;
 
-  // ── pigment (색소 특이사항)
-  if (ca.grayRatio > 0.35 && ca.redRatio < 0.02 && ca.orangeRatio < 0.02) traits.pigment = '황색·적색 결핍(무채색=아잔틱)';
-  else if (ca.whiteRatio > 0.3) traits.pigment = '백색/크림 덮임(릴리화이트)';
-  else if (ca.darkRatio > 0.5) traits.pigment = '멜라닌 과잉(극다크=차콜)';
-  else if (ca.pinkRatio > 0.08 && ca.lightRatio > 0.3) traits.pigment = '색소 감소(반투명=하이포)';
-  else if (ca.brownRatio > 0.2 && ca.avgR > 100 && ca.avgR < 160) traits.pigment = '커피 톤(카푸치노)';
-  else traits.pigment = '정상';
+  if (boostedSpot > 0.10 || cSpot > 0.04) {
+    traits.spot = '대량 점(100개+, 슈퍼 달마시안)';
+    reasons.push({icon:'⚫',text:`고밀도 독립 반점 감지 — 중앙 점밀도 ${(cSpot*100).toFixed(1)}%, 바탕/점 대비 ${sContrast.toFixed(0)}, 분포 균일도 ${(ca.spotSpreadUniformity*100).toFixed(0)}% → 슈퍼 달마시안`});
+  } else if (boostedSpot > 0.04 || cSpot > 0.02) {
+    traits.spot = '중간 점(30~100개)';
+    reasons.push({icon:'⚫',text:`중간 밀도 반점 감지 — 중앙 점밀도 ${(cSpot*100).toFixed(1)}%, 대비 ${sContrast.toFixed(0)}`});
+  } else if (boostedSpot > 0.015 || cSpot > 0.008) {
+    traits.spot = '소량 점(~30개)';
+    reasons.push({icon:'·',text:`소량 반점 감지(중앙 밀도 ${(cSpot*100).toFixed(1)}%)`});
+  } else { traits.spot = '점 없음'; }
 
-  // ── pattern (패턴) — 밝기 분포로 추정
-  const contrast = ca.lightRatio + ca.darkRatio;
-  if (ca.whiteRatio > 0.2 && ca.darkRatio > 0.15) traits.pattern = '하위 레터럴 무늬(할리퀸)';
-  else if (contrast > 0.5) traits.pattern = '상하 투톤(바이컬러)';
-  else if (ca.lightRatio > 0.3 && ca.darkRatio < 0.1) traits.pattern = '밝은 등 스트라이프(플레임)';
-  else if (ca.darkRatio > 0.3 && contrast > 0.35) traits.pattern = '횡단 줄무늬(타이거/브린들)';
-  else traits.pattern = '무늬 없음(패턴리스)';
+  // ── pigment (색소 특이사항) — 아잔틱 vs 달마시안 엄격 구분 v3 ──
+  // 아잔틱 핵심: 전체가 균일하게 무채색, 국소적 명암 차이(점) 없음, 유채색 0
+  const isFullyAchromatic = ca.grayRatio > 0.35 && ca.redRatio < 0.01 && ca.orangeRatio < 0.01
+    && ca.yellowRatio < 0.01 && ca.brownRatio < 0.03 && ca.avgSaturation < 0.12
+    && ca.colorUniformity > 0.5;
+  // 달마시안 핵심: 바탕과 점의 대비가 큼, 점이 독립적으로 분포
+  const spotDisqualifiesAxanthic = hasSignificantSpots || sContrast > 30; // 점이 있거나 바탕/점 대비가 크면 아잔틱 아님
+  const hasAnyChroma = ca.spotChromaRatio > 0.2; // 점 주변에 유채색 20%+ → 아잔틱 아님
 
-  // ── structure
-  if (ca.whiteRatio > 0.35) traits.structure = '릴리화이트 덮임(백색 레터럴)';
-  else if (ca.lightRatio > 0.15 && ca.spotDensity < 0.03) traits.structure = '핀스트라이프(핀 라인)';
-  else traits.structure = '없음';
+  if (isFullyAchromatic && !spotDisqualifiesAxanthic && !hasAnyChroma && ca.contrast < 35) {
+    // 대비가 낮고(점 없음) + 전체 무채색일 때만 아잔틱
+    traits.pigment = '황색·적색 결핍(무채색=아잔틱)';
+    reasons.push({icon:'🔬',text:`전체 균일 무채색 — 채도 ${(ca.avgSaturation*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}(낮음), 유채색 없음, 독립 점 미감지 → 아잔틱`});
+  } else if (ca.lateral.whiteRatio > 0.25 || ca.whiteRatio > 0.3) {
+    traits.pigment = '백색/크림 덮임(릴리화이트)';
+    reasons.push({icon:'🤍',text:`옆구리 백색 비율 ${(ca.lateral.whiteRatio*100).toFixed(0)}% — 릴리화이트 덮임 패턴`});
+  } else if (ca.darkRatio > 0.5) {
+    traits.pigment = '멜라닌 과잉(극다크=차콜)';
+    reasons.push({icon:'🖤',text:`극도로 어두운 픽셀 ${(ca.darkRatio*100).toFixed(0)}% — 멜라닌 과잉`});
+  } else if (ca.pinkRatio > 0.08 && ca.lightRatio > 0.3) {
+    traits.pigment = '색소 감소(반투명=하이포)';
+    reasons.push({icon:'🩷',text:`핑크 톤 + 밝은 영역 넓음 → 색소 감소 패턴`});
+  } else if (ca.brownRatio > 0.2 && ca.avgR > 100 && ca.avgR < 160) {
+    traits.pigment = '커피 톤(카푸치노)';
+    reasons.push({icon:'☕',text:`갈색 커피톤 ${(ca.brownRatio*100).toFixed(0)}% — 카푸치노 색소 패턴`});
+  } else { traits.pigment = '정상'; }
 
-  // ── tail (사진 전체에서는 판별 어려움 — 랜덤에 가중치)
-  traits.tail = '일반 꼬리';
+  // ── pattern (패턴) — 대비·밴드·영역 복합 판단 ──
+  const lateralCoverage = ca.lateral.lightRatio; // 옆구리 밝은 영역 비율
+  const topBottomDiff = Math.abs((ca.regions.top.avgB || 0) - (ca.regions.bottom.avgB || 0));
+  const leftRightDiff = Math.abs((ca.regions.left.avgB || 0) - (ca.regions.right.avgB || 0));
+  const hasHighContrast = ca.contrast > 50;
 
+  if (ca.lateral.whiteRatio > 0.2 && ca.contrast > 40 && lateralCoverage > 0.35) {
+    // 3색 분리 체크: 좌우 밝고, 대비 높고, 중앙 어두우면
+    if (ca.regions.center.avgB < ca.regions.left.avgB - 20 && (ca.orangeRatio > 0.03 || ca.yellowRatio > 0.03)) {
+      traits.pattern = '3색 완전 분리(트익할)';
+      reasons.push({icon:'🌈',text:`3색 분리 감지: 옆구리 밝은영역 ${(lateralCoverage*100).toFixed(0)}%, 중앙 대비 ${ca.contrast.toFixed(0)}, 오렌지/옐로 색소 존재`});
+    } else {
+      traits.pattern = '상위 레터럴까지 무늬(익스트림)';
+      reasons.push({icon:'📊',text:`높은 레터럴 커버리지(밝은 영역 ${(lateralCoverage*100).toFixed(0)}%), 대비 ${ca.contrast.toFixed(0)} — 익스트림 할리퀸 패턴`});
+    }
+  } else if (ca.lateral.whiteRatio > 0.1 && ca.darkRatio > 0.15 && hasHighContrast) {
+    traits.pattern = '하위 레터럴 무늬(할리퀸)';
+    reasons.push({icon:'🎭',text:`옆구리에 밝고 어두운 영역 혼재(백색 ${(ca.lateral.whiteRatio*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}) — 할리퀸 패턴`});
+  } else if (ca.hBandScore > 0.25 && hasHighContrast) {
+    traits.pattern = '횡단 줄무늬(타이거/브린들)';
+    reasons.push({icon:'🐯',text:`가로 밴드 전환 밀도 ${(ca.hBandScore*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)} — 타이거/브린들 줄무늬`});
+  } else if (ca.vStripeScore > 0.12 && ca.dorsal.avgBright > ca.avgBright + 15) {
+    traits.pattern = '밝은 등 스트라이프(플레임)';
+    reasons.push({icon:'🔥',text:`등(도살) 밝기 ${ca.dorsal.avgBright.toFixed(0)} vs 전체 ${ca.avgBright} — 밝은 등줄 플레임 패턴`});
+  } else if (topBottomDiff > 25 || (ca.lightRatio > 0.2 && ca.darkRatio > 0.2)) {
+    traits.pattern = '상하 투톤(바이컬러)';
+    reasons.push({icon:'◐',text:`상하 밝기 차이 ${topBottomDiff.toFixed(0)}, 밝음/어둠 혼재 — 바이컬러 패턴`});
+  } else if (ca.colorUniformity > 0.7 && ca.contrast < 30) {
+    traits.pattern = '단색/투톤(팬텀)';
+    reasons.push({icon:'🎴',text:`색 균일도 ${(ca.colorUniformity*100).toFixed(0)}%, 낮은 대비 ${ca.contrast.toFixed(0)} — 단색/팬텀 패턴`});
+  } else {
+    traits.pattern = '무늬 없음(패턴리스)';
+    reasons.push({icon:'◻️',text:`뚜렷한 패턴 미감지, 대비 ${ca.contrast.toFixed(0)}`});
+  }
+
+  // ── structure (구조) — 레터럴 백색 + 핀라인 분석 ──
+  if (ca.lateral.whiteRatio > 0.3 || (ca.whiteRatio > 0.3 && ca.lateral.lightRatio > 0.4)) {
+    traits.structure = '릴리화이트 덮임(백색 레터럴)';
+    reasons.push({icon:'🏔️',text:`옆구리 백색 커버리지 높음(${(ca.lateral.whiteRatio*100).toFixed(0)}%) — 릴리화이트 구조`});
+  } else if (ca.vStripeScore > 0.08 && ca.spotDensity < 0.03) {
+    if (ca.vStripeScore > 0.2) {
+      traits.structure = '풀핀(100% 연결)';
+      reasons.push({icon:'📏',text:`세로 핀 라인 강도 ${(ca.vStripeScore*100).toFixed(0)}% — 풀핀 구조`});
+    } else {
+      traits.structure = '핀스트라이프(핀 라인)';
+      reasons.push({icon:'📐',text:`세로 핀 라인 감지(강도 ${(ca.vStripeScore*100).toFixed(0)}%)`});
+    }
+  } else { traits.structure = '없음'; }
+
+  // ── tail (꼬리) — 🆕 하단 영역 분석으로 추정 ──
+  if (ca.tail.whiteRatio > 0.3 && ca.tail.avgSat < 0.12) {
+    traits.tail = '우동 꼬리(하얗고 무늬 없음)';
+    reasons.push({icon:'🍜',text:`하단 영역 백색 ${(ca.tail.whiteRatio*100).toFixed(0)}%, 채도 낮음(${(ca.tail.avgSat*100).toFixed(0)}%) — 우동 꼬리 특징`});
+  } else if (ca.tail.darkRatio > 0.4 && ca.tail.avgBright < 50) {
+    traits.tail = '다크 테일(어두운 꼬리)';
+    reasons.push({icon:'🌑',text:`하단 영역 매우 어두움(밝기 ${ca.tail.avgBright.toFixed(0)}, 어두운 비율 ${(ca.tail.darkRatio*100).toFixed(0)}%) — 다크 테일`});
+  } else if (ca.tail.whiteRatio > 0.15 && ca.tail.avgBright > 150 && ca.brownRatio > 0.1) {
+    traits.tail = 'Y자 마크(꼬리 기부 백색 Y)';
+    reasons.push({icon:'🔱',text:`하단에 부분 백색(${(ca.tail.whiteRatio*100).toFixed(0)}%) + 갈색 배경 — Y자 마크 추정`});
+  } else {
+    traits.tail = '일반 꼬리';
+  }
+
+  traits._reasons = reasons; // 설명 데이터 보존
   return traits;
 }
 
@@ -3047,6 +3330,26 @@ function updateEggStyle() {
   const fer = document.getElementById('gecko-egg-fertile');
   document.getElementById('egg-infertile-label').style.borderColor = inf.checked ? 'var(--am)' : 'var(--br)';
   document.getElementById('egg-fertile-label').style.borderColor = fer.checked ? 'var(--ac)' : 'var(--br)';
+}
+
+// 날짜 입력 자동 포맷 (YYYYMMDD → YYYY-MM-DD)
+function formatDobInput(el) {
+  if (!el) return;
+  // 숫자만 추출, 최대 8자리
+  const digits = (el.value || '').replace(/\D/g, '').slice(0, 8);
+  let out = digits;
+  if (digits.length > 4 && digits.length <= 6) {
+    out = digits.slice(0, 4) + '-' + digits.slice(4);
+  } else if (digits.length > 6) {
+    out = digits.slice(0, 4) + '-' + digits.slice(4, 6) + '-' + digits.slice(6);
+  }
+  if (el.value !== out) {
+    el.value = out;
+  }
+  // 8자리 완성 시 cage/breeding 정보 즉시 갱신
+  if (digits.length === 8) {
+    try { updateCageAndBreeding(); } catch(e){}
+  }
 }
 
 function updateCageAndBreeding() {
@@ -3639,12 +3942,16 @@ function showResult(photoCount, fireUp, colorAnalyses) {
   const layerKeys = Object.keys(TRAIT_LAYERS);
   const scoreArrays = [];
 
+  let allReasons = []; // 모든 사진의 분석 근거 수집
   for (let p = 0; p < photoCount; p++) {
     let selections;
     if (colorAnalyses && colorAnalyses[p]) {
-      // ✅ 실제 이미지 색상 분석 기반 형질 추출
-      // 파이어업이면 이미 채도 20% 낮춘 상태로 분석됨 → 기본 모프 기준 비교
+      // ✅ 실제 이미지 색상 분석 기반 형질 추출 (v2: 패턴 밀도·대비 포함)
       selections = _colorAnalysisToTraits(colorAnalyses[p]);
+      if (selections._reasons) {
+        allReasons = allReasons.concat(selections._reasons);
+        delete selections._reasons; // 스코어링에는 불필요
+      }
     } else {
       // fallback: 분석 실패 시 랜덤 (기존 방식)
       selections = {};
@@ -3657,12 +3964,13 @@ function showResult(photoCount, fireUp, colorAnalyses) {
           selections[key] = opts[Math.floor(Math.random() * opts.length)];
         }
       });
+      allReasons.push({icon:'⚠️',text:'이미지 분석 실패 — 랜덤 기반 추정'});
     }
     scoreArrays.push(calcMultiLayerScores(selections));
   }
 
   const mergedScores = photoCount > 1 ? mergeMultiPhotoScores(scoreArrays) : scoreArrays[0];
-  const topCandidates = getTopCandidates(mergedScores, 5);
+  const topCandidates = getTopCandidates(mergedScores, 3);
 
   // 최소 1개 후보 보장
   if (topCandidates.length === 0) topCandidates.push({ name: '노멀', score: 1, data: MORPHS['노멀'] });
@@ -3680,13 +3988,13 @@ function showResult(photoCount, fireUp, colorAnalyses) {
   const top = candidatesWithProb[0];
   const pickedMorph = top.name;
   const m = top.data;
-  lastScanResult = { morph: pickedMorph, data: m, candidates: candidatesWithProb };
+  lastScanResult = { morph: pickedMorph, data: m, candidates: candidatesWithProb, reasons: allReasons };
 
   const gInfo = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
 
   // ── 후보 리스트 렌더링 (확률 바 차트) ──
-  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-  const barColors = ['var(--ac)','var(--am)','var(--blue)','var(--tx3)','var(--tx3)'];
+  const medals = ['🥇','🥈','🥉'];
+  const barColors = ['var(--ac)','var(--am)','var(--blue)'];
   document.getElementById('res-candidate-list').innerHTML = candidatesWithProb.map((c, i) => {
     const cg = MORPH_GRADES[c.data.grade] || MORPH_GRADES['C'];
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;${i < candidatesWithProb.length - 1 ? 'border-bottom:1px solid var(--br);' : ''}" onclick="showCandidateDetail(${i})">
@@ -3714,6 +4022,9 @@ function showResult(photoCount, fireUp, colorAnalyses) {
       <img src="${p.data}" alt="사진${i+1}" style="width:100%;height:100%;object-fit:cover">
     </div>`
   ).join('');
+
+  // ── AI 분석 근거 설명 렌더링 ──
+  _renderAnalysisExplanation(allReasons, pickedMorph, top.prob, fireUp, colorAnalyses);
 
   // ── 저장 폼 초기화: AI 추천 모프 자동 입력 ──
   document.getElementById('save-direct-name').value = '';
@@ -3783,19 +4094,8 @@ async function saveDirectToMyGecko() {
   const morph = document.getElementById('save-direct-morph').value.trim();
   if (!name) { showToast('⚠️ 개체 이름을 입력해주세요'); document.getElementById('save-direct-name').focus(); return; }
 
-  closeSheetDirect('sheet-add-gecko');
-  openAddGecko();
-  document.getElementById('gecko-name').value = name;
-  document.getElementById('gecko-morph').value = morph || lastScanResult.morph;
-  if (morph || lastScanResult.morph) {
-    document.getElementById('morph-inline-input').value = morph || lastScanResult.morph;
-    document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
-  }
-  if (scanPhotos.length > 0) {
-    // 스캔 사진을 리사이즈해서 Blob 준비 (업로드 속도 향상)
-    currentPhotoData = scanPhotos[0].data;
-    document.getElementById('add-photo-preview').src = scanPhotos[0].data;
-    document.getElementById('add-photo-zone').classList.add('has-photo');
+  // 1) 사진 Blob을 미리 준비 (시트 열기 전에 완료)
+  if (scanPhotos.length > 0 && scanPhotos[0].data) {
     try {
       const img = new Image();
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = scanPhotos[0].data; });
@@ -3805,18 +4105,39 @@ async function saveDirectToMyGecko() {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
         else { w = Math.round(w * MAX / h); h = MAX; }
       }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      currentPhotoData = canvas.toDataURL('image/jpeg', 0.5);
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.5));
-      _pendingPhotoFile = blob;
-    } catch(e) { console.error('스캔 사진 변환 오류:', e); }
+      const cvs = document.createElement('canvas');
+      cvs.width = w; cvs.height = h;
+      cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+      currentPhotoData = cvs.toDataURL('image/jpeg', 0.5);
+      _pendingPhotoFile = await new Promise(r => cvs.toBlob(r, 'image/jpeg', 0.5));
+    } catch(e) {
+      console.error('스캔 사진 변환 오류:', e);
+      currentPhotoData = scanPhotos[0].data; // fallback: 원본 사용
+    }
   }
-  updateGeckoGrade();
+
+  // 2) 개체 등록 시트 열기 + 자동 채우기
   showPage('myge');
-  setTimeout(() => openSheet('sheet-add-gecko'), 300);
-  showToast('📷 개체 정보가 자동으로 입력되었어요!');
+  openAddGecko();
+
+  // 이름 & 모프 자동 입력
+  const finalMorph = morph || lastScanResult.morph;
+  document.getElementById('gecko-name').value = name;
+  document.getElementById('gecko-morph').value = finalMorph;
+  if (finalMorph) {
+    document.getElementById('morph-inline-input').value = finalMorph;
+    document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
+  }
+
+  // 사진 미리보기 자동 세팅
+  if (currentPhotoData) {
+    document.getElementById('add-photo-preview').src = currentPhotoData;
+    document.getElementById('add-photo-zone').classList.add('has-photo');
+  }
+
+  updateGeckoGrade();
+  setTimeout(() => openSheet('sheet-add-gecko'), 200);
+  showToast('📷 사진과 모프가 자동 입력되었어요! 확인 후 저장하세요');
 }
 
 // 피드백 제출 — Supabase morph_feedback 테이블에 저장 (텍스트 직접 입력)
@@ -3837,9 +4158,292 @@ async function submitMorphFeedback() {
     document.getElementById('feedback-form').style.display = 'none';
     document.getElementById('feedback-done').style.display = 'block';
     showToast('🙏 제보가 저장되었습니다. 감사합니다!');
+    // 개발자에게 즉시 알림 전송
+    _notifyAdmin('morph_feedback',
+      '🦎 모프 판별 제보',
+      `AI 결과: ${lastScanResult.morph}\n정답 모프: ${correctMorph}\n사진 수: ${scanPhotos.length}장\n사용자: ${_currentUser.email || _currentUser.id}`
+    );
   } catch(e) {
     showToast('제보 실패: ' + e.message);
   }
+}
+
+// ── 결과 카드 이미지 생성 & 다운로드 ──
+async function saveResultCard() {
+  if (!lastScanResult) { showToast('판별 결과가 없습니다'); return; }
+
+  showToast('🎨 카드 생성 중...');
+
+  const SIZE = 1080; // 1:1 정방형
+  const PAD = 60;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+
+  // ── 배경 ──
+  ctx.fillStyle = '#0d1a12';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // ── 어두운 녹색 테두리 프레임 ──
+  const bw = 12;
+  const grd = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+  grd.addColorStop(0, '#1a5c2e');
+  grd.addColorStop(0.5, '#2ecc71');
+  grd.addColorStop(1, '#1a5c2e');
+  ctx.strokeStyle = grd;
+  ctx.lineWidth = bw;
+  ctx.strokeRect(bw / 2, bw / 2, SIZE - bw, SIZE - bw);
+
+  // 안쪽 얇은 라인
+  ctx.strokeStyle = 'rgba(93,220,106,.15)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bw + 14, bw + 14, SIZE - (bw + 14) * 2, SIZE - (bw + 14) * 2);
+
+  // ── 상단: 로고 영역 ──
+  ctx.fillStyle = '#5ddc6a';
+  ctx.font = 'bold 28px "Pretendard Variable", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('🦎 마이크레', PAD + 10, PAD + 36);
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  ctx.font = '500 14px "DM Mono", monospace';
+  ctx.fillText('MyCre AI Morph Scan', PAD + 10, PAD + 58);
+
+  // 우측 날짜
+  const now = new Date();
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  ctx.font = '13px "DM Mono", monospace';
+  ctx.fillText(now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }), SIZE - PAD - 10, PAD + 42);
+
+  // ── 구분선 ──
+  ctx.strokeStyle = 'rgba(93,220,106,.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD + 10, PAD + 76);
+  ctx.lineTo(SIZE - PAD - 10, PAD + 76);
+  ctx.stroke();
+
+  // ── 게코 사진 (가운데 큰 원형) ──
+  const photoY = PAD + 110;
+  const photoR = 190; // 반지름
+  const photoCX = SIZE / 2;
+  const photoCY = photoY + photoR;
+
+  // 사진 테두리 글로우
+  const glowGrd = ctx.createRadialGradient(photoCX, photoCY, photoR - 10, photoCX, photoCY, photoR + 20);
+  glowGrd.addColorStop(0, 'rgba(93,220,106,.25)');
+  glowGrd.addColorStop(1, 'rgba(93,220,106,0)');
+  ctx.fillStyle = glowGrd;
+  ctx.fillRect(photoCX - photoR - 30, photoCY - photoR - 30, (photoR + 30) * 2, (photoR + 30) * 2);
+
+  // 원형 클리핑으로 사진 그리기
+  if (scanPhotos.length > 0 && scanPhotos[0].data) {
+    try {
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = scanPhotos[0].data; });
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      // 이미지를 원 안에 cover 방식으로 그리기
+      const scale = Math.max(photoR * 2 / img.width, photoR * 2 / img.height);
+      const sw = img.width * scale, sh = img.height * scale;
+      ctx.drawImage(img, photoCX - sw / 2, photoCY - sh / 2, sw, sh);
+      ctx.restore();
+    } catch(e) {
+      // 사진 로드 실패 시 대체 아이콘
+      ctx.fillStyle = 'rgba(93,220,106,.15)';
+      ctx.beginPath();
+      ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = '120px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🦎', photoCX, photoCY + 40);
+    }
+  } else {
+    ctx.fillStyle = 'rgba(93,220,106,.15)';
+    ctx.beginPath();
+    ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = '120px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🦎', photoCX, photoCY + 40);
+  }
+
+  // 원형 테두리
+  ctx.beginPath();
+  ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(93,220,106,.5)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // ── 모프명 (크게) ──
+  const morphY = photoCY + photoR + 50;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 52px "Pretendard Variable", sans-serif';
+  const morphName = lastScanResult.morph;
+  ctx.fillText(morphName, SIZE / 2, morphY);
+
+  // 영문 모프명 (있으면)
+  const mData = lastScanResult.data;
+  if (mData && mData.en) {
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    ctx.font = '500 20px "DM Mono", monospace';
+    ctx.fillText(mData.en, SIZE / 2, morphY + 32);
+  }
+
+  // ── 확률 표시 (큰 숫자) ──
+  const probY = morphY + (mData && mData.en ? 80 : 55);
+  const topProb = lastScanResult.candidates[0].prob;
+  // 확률 배경 pill
+  const probText = topProb + '%';
+  ctx.font = 'bold 64px "DM Mono", monospace';
+  const probW = ctx.measureText(probText).width;
+  const pillW = probW + 50, pillH = 80;
+  const pillX = SIZE / 2 - pillW / 2, pillY = probY - 56;
+
+  // pill 배경
+  const pillGrd = ctx.createLinearGradient(pillX, pillY, pillX + pillW, pillY + pillH);
+  pillGrd.addColorStop(0, 'rgba(46,204,113,.2)');
+  pillGrd.addColorStop(1, 'rgba(93,220,106,.1)');
+  ctx.fillStyle = pillGrd;
+  _roundRect(ctx, pillX, pillY, pillW, pillH, 20);
+  ctx.fill();
+
+  // pill 테두리
+  ctx.strokeStyle = 'rgba(93,220,106,.3)';
+  ctx.lineWidth = 1.5;
+  _roundRect(ctx, pillX, pillY, pillW, pillH, 20);
+  ctx.stroke();
+
+  // 확률 숫자
+  ctx.fillStyle = '#5ddc6a';
+  ctx.font = 'bold 64px "DM Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(probText, SIZE / 2, probY);
+
+  // "일치 확률" 라벨
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  ctx.font = '500 15px "Pretendard Variable", sans-serif';
+  ctx.fillText('AI 일치 확률', SIZE / 2, probY + 28);
+
+  // ── 후보 리스트 (2~3위) ──
+  const candidateY = probY + 65;
+  if (lastScanResult.candidates.length > 1) {
+    ctx.fillStyle = 'rgba(255,255,255,.2)';
+    ctx.font = '14px "Pretendard Variable", sans-serif';
+    ctx.fillText('━━━ 다른 후보 ━━━', SIZE / 2, candidateY);
+
+    const others = lastScanResult.candidates.slice(1, 3);
+    others.forEach((c, i) => {
+      const cy = candidateY + 30 + i * 32;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,.5)';
+      ctx.font = '500 18px "Pretendard Variable", sans-serif';
+      ctx.fillText(`${c.name}  ${c.prob}%`, SIZE / 2, cy);
+    });
+  }
+
+  // ── 하단 워터마크 ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(93,220,106,.3)';
+  ctx.font = '12px "DM Mono", monospace';
+  ctx.fillText('Powered by MyCre · AI Crested Gecko Morph Scanner', SIZE / 2, SIZE - PAD + 5);
+
+  // ── 다운로드 ──
+  try {
+    const link = document.createElement('a');
+    link.download = `mycre_${morphName}_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('✅ 카드가 저장되었어요!');
+  } catch(e) {
+    showToast('저장 실패: ' + e.message);
+  }
+}
+
+// Canvas 라운드렉트 유틸
+function _roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── AI 분석 근거 설명 렌더링 ──
+function _renderAnalysisExplanation(reasons, morphName, prob, fireUp, colorAnalyses) {
+  const container = document.getElementById('res-explanation');
+  if (!container) return;
+
+  // 요약 문장 생성
+  const summary = document.getElementById('explanation-summary');
+  const mData = MORPHS[morphName];
+  let summaryText = `사진을 분석한 결과, "${morphName}"일 확률이 ${prob}%로 가장 높습니다.`;
+  if (mData) {
+    const keyTraits = mData.traits.slice(0, 2).join(', ');
+    summaryText += ` ${morphName}의 핵심 특징인 ${keyTraits}과(와) 유사한 패턴이 감지되었습니다.`;
+  }
+  if (fireUp) summaryText += ' (🔥 파이어업 보정 적용됨)';
+  summary.textContent = summaryText;
+
+  // 개별 근거 리스트 렌더링
+  const details = document.getElementById('explanation-details');
+  if (reasons.length > 0) {
+    // 중복 제거 (여러 사진 분석 시)
+    const uniqueReasons = [];
+    const seen = new Set();
+    reasons.forEach(r => {
+      const key = r.text.substring(0, 30);
+      if (!seen.has(key)) { seen.add(key); uniqueReasons.push(r); }
+    });
+    details.innerHTML = uniqueReasons.map(r =>
+      `<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:13px;flex-shrink:0;width:20px;text-align:center">${r.icon}</span>
+        <span>${r.text}</span>
+      </div>`
+    ).join('');
+  } else {
+    details.innerHTML = '<div style="color:var(--tx3)">분석 데이터가 충분하지 않습니다.</div>';
+  }
+
+  // 수치 지표 카드 (첫 번째 사진 기준)
+  const metrics = document.getElementById('explanation-metrics');
+  if (colorAnalyses && colorAnalyses[0]) {
+    const ca = colorAnalyses[0];
+    const metricItems = [
+      {label:'중앙 대비', value:`${ca.contrast.toFixed(1)}`, max:100, color:'var(--ac)'},
+      {label:'중앙 점밀도', value:`${((ca.centerSpotDensity||0)*100).toFixed(1)}%`, max:100, color:'var(--am)'},
+      {label:'점/바탕 대비', value:`${(ca.spotContrastRatio||0).toFixed(0)}`, max:100, color:'#ef4444'},
+      {label:'횡단 밴드', value:`${(ca.hBandScore*100).toFixed(0)}%`, max:100, color:'var(--blue)'},
+      {label:'색 균일도', value:`${(ca.colorUniformity*100).toFixed(0)}%`, max:100, color:'#a78bfa'},
+      {label:'평균 채도', value:`${(ca.avgSaturation*100).toFixed(0)}%`, max:100, color:'#fb923c'},
+    ];
+    metrics.innerHTML = metricItems.map(m => {
+      const pct = m.label === '대비(Contrast)' ? Math.min(parseFloat(m.value)/100*100, 100) : parseFloat(m.value);
+      return `<div style="background:var(--sf2);border-radius:8px;padding:8px 10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:10px;font-weight:600;color:var(--tx3)">${m.label}</span>
+          <span style="font-size:10px;font-weight:800;color:${m.color};font-family:'DM Mono',monospace">${m.value}</span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+          <div style="width:${Math.min(pct, 100)}%;height:100%;background:${m.color};border-radius:2px;transition:width .6s ease"></div>
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    metrics.innerHTML = '';
+  }
+
+  container.style.display = 'block';
 }
 
 function resetScan() {
@@ -3907,11 +4511,29 @@ async function renderPosts() {
     if (state.commFilter !== 'all') query = query.eq('cat', state.commFilter);
     const { data, error } = await query;
     if (!error && data) {
+      // 게시글 작성자들의 PRO 상태 일괄 확인
+      const userIds = [...new Set(data.map(r => r.user_id).filter(Boolean))];
+      let proUserSet = new Set();
+      if (userIds.length > 0) {
+        try {
+          const { data: profiles } = await _supabase.from('profiles')
+            .select('id,is_pro,pro_until').in('id', userIds);
+          if (profiles) {
+            profiles.forEach(pr => {
+              if (pr.is_pro && (!pr.pro_until || new Date(pr.pro_until) > new Date())) {
+                proUserSet.add(pr.id);
+              }
+            });
+          }
+        } catch(e) {}
+      }
       state.posts = data.map(row => ({
         ...row,
         tags: row.tags || [],
         time: _timeAgo(row.created_at),
         isOwn: _currentUser && row.user_id === _currentUser.id,
+        authorIsPro: proUserSet.has(row.user_id),
+        hasLinkedGecko: !!(row.morph && row.photo && row.cat === 'sale'),
       }));
     }
   } catch(e) {}
@@ -3953,6 +4575,19 @@ function buildPostCard(p, compact) {
   const div = document.createElement('div');
   div.className = 'post-card';
 
+  // PRO 사용자 골드 테두리
+  if (p.authorIsPro && !isNotice) {
+    div.style.border = '1.5px solid transparent';
+    div.style.backgroundClip = 'padding-box';
+    div.style.position = 'relative';
+    div.style.overflow = 'hidden';
+    // 골드 그라데이션 테두리 효과 (::before 대체 — 인라인이므로 box-shadow 사용)
+    div.style.boxShadow = '0 0 0 1.5px rgba(212,175,55,.45), 0 0 12px rgba(212,175,55,.1)';
+  }
+
+  const proBadge = p.authorIsPro ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;margin-left:3px;letter-spacing:.3px">⭐PRO</span>` : '';
+  const certBadge = p.hasLinkedGecko ? `<span style="font-size:9px;font-weight:700;color:var(--ac);background:var(--ac2);border:1px solid rgba(93,220,106,.3);border-radius:6px;padding:1px 5px;letter-spacing:.3px">✅ 인증 개체</span>` : '';
+
   if (isNotice) {
     // 공지사항 카드 (사진 없이 텍스트)
     div.style.cssText = 'display:block;padding:14px 18px;cursor:pointer;border-left:3px solid var(--ac)';
@@ -3965,17 +4600,18 @@ function buildPostCard(p, compact) {
       <div style="font-size:15px;font-weight:800;margin-bottom:4px;color:var(--tx)">${p.title}</div>
       ${preview ? `<div style="font-size:12px;color:var(--tx2);line-height:1.6">${preview}</div>` : ''}`;
   } else {
-    // 일반 게시글 카드 (기존 스타일)
+    // 일반 게시글 카드
     div.onclick = () => openPostDetail(p);
     div.innerHTML = `
       ${!compact ? `<div class="post-card-img">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:14px 0 0 14px">` : (p.emoji || '🦎')}</div>` : ''}
       <div class="post-card-body">
         <div class="post-author-row">
           <div class="post-avatar">${p.avatar}</div>
-          <div class="post-author-name">${p.author}</div>
+          <div class="post-author-name">${p.author}${proBadge}</div>
         </div>
         <div class="post-tags">
           <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
+          ${certBadge}
           ${p.tags ? p.tags.map(t=>`<span class="tag tag-green">${t}</span>`).join('') : ''}
         </div>
         <div class="post-title">${p.title}</div>
@@ -3999,6 +4635,8 @@ async function openPostDetail(p) {
   const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보'};
   const isNotice = p.cat === 'notice';
   const bodyHtml = (p.body || '').replace(/\n/g, '<br>');
+  const proBadge = p.authorIsPro ? `<span style="font-size:10px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:2px 6px;letter-spacing:.3px">⭐ PRO</span>` : '';
+  const certBadge = p.hasLinkedGecko ? `<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(93,220,106,.08);border:1px solid rgba(93,220,106,.25);border-radius:8px;padding:5px 10px;margin-bottom:10px;font-size:11px;font-weight:700;color:var(--ac)">✅ 마이크레 인증 개체</div>` : '';
 
   document.getElementById('post-detail-body').innerHTML = `
     ${isNotice ? '' : `<div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : (p.emoji||'🦎')}</div>`}
@@ -4010,8 +4648,9 @@ async function openPostDetail(p) {
       </div>
       <div style="font-size:19px;font-weight:800;margin-bottom:6px;line-height:1.4">${p.title}</div>
       ${p.price ? `<div style="font-size:20px;font-weight:900;color:var(--am);margin-bottom:10px">${p.price}만원</div>` : ''}
+      ${certBadge}
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:600;color:var(--tx2)">✍️ ${p.author}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--tx2)">✍️ ${p.author} ${proBadge}</div>
       </div>
       <div style="background:var(--sf2);border-radius:12px;padding:14px;font-size:13px;line-height:1.9;color:var(--tx2);margin-bottom:14px;white-space:pre-wrap">${bodyHtml}</div>
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 <span id="comment-count">0</span>개</div>
