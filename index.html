@@ -1022,6 +1022,23 @@ input[type=file]{display:none}
       <button class="btn-outline" onclick="resetScan()" style="flex:1">↩ 다시 판별</button>
       <button class="btn-primary" onclick="saveResultCard()" style="flex:1;border-radius:12px;font-size:13px">📸 결과 카드 저장</button>
     </div>
+    <!-- 공유 링크 복사 -->
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-outline" onclick="copyResultShareLink()" style="flex:1;border-radius:12px;font-size:12px">🔗 공유 링크 복사</button>
+    </div>
+    <!-- 친구 공유 리워드 -->
+    <div id="share-reward-box" style="margin-top:10px;background:linear-gradient(135deg,rgba(245,200,66,.12),rgba(245,200,66,.04));border:1.5px solid rgba(245,200,66,.35);border-radius:14px;padding:12px 13px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px">
+        <div>
+          <div style="font-weight:800;color:var(--am);font-size:13px">🎁 친구에게 공유하고 +1회 받기</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">하루 한 번, 공유 시 오늘의 스캔 1회 추가</div>
+        </div>
+        <div id="share-reward-status" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--am);white-space:nowrap">오늘 미수령</div>
+      </div>
+      <button id="share-reward-btn" onclick="shareForReward()" class="btn-sm" style="width:100%;background:linear-gradient(135deg,var(--am),#f59e0b);color:#0b0f0c;font-weight:800;border:none;padding:10px;border-radius:10px;font-size:12px">
+        📣 친구에게 공유하기
+      </button>
+    </div>
     <div style="text-align:center;margin-top:14px;padding:10px;font-size:11px;color:#e74c3c;line-height:1.5;background:rgba(231,76,60,.06);border-radius:10px">
       ⚠️ AI 판별 결과는 참고용이며, 정확한 모프 감정은 전문가 상담을 권장합니다.
     </div>
@@ -4104,6 +4121,10 @@ function openGeckoDetail(id) {
         ${state.isPro ? `<button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">📱 QR 시트</button>` :
         `<button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">🔒 QR (PRO)</button>`}
       </div>
+      <!-- 공유 링크 복사 (모든 등급) -->
+      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px" onclick="copyGeckoShareLink('${id}')">
+        🔗 공유 링크 복사
+      </button>
     </div>`;
 
   document.getElementById('gecko-detail-body').innerHTML = html;
@@ -4494,6 +4515,8 @@ function showCandidateDetail(index) {
   if (!candidate) return;
   const gInfo = MORPH_GRADES[candidate.data.grade] || MORPH_GRADES['C'];
   renderCandidateDetail(candidate, gInfo, isFireUp);
+  // 공유 리워드 버튼 상태 갱신 (결과 표시 시)
+  try { _updateShareRewardUI(); } catch(e) {}
   // 스크롤 to detail
   document.getElementById('res-top-detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -4765,11 +4788,30 @@ async function saveResultCard() {
     });
   }
 
-  // ── 하단 워터마크 ──
+  // ══════════════════════════════════════
+  // 하단 워터마크 (브랜드 + 주소 — 공유 시 자동 유입)
+  // ══════════════════════════════════════
+  const wmY = SIZE - PAD - 10;
+  // 배경 박스 (살짝 어둡게 깔아서 가독성 확보)
+  const wmBoxW = 640, wmBoxH = 58;
+  const wmBoxX = SIZE / 2 - wmBoxW / 2, wmBoxY = wmY - 42;
+  ctx.fillStyle = 'rgba(93,220,106,.08)';
+  _roundRect(ctx, wmBoxX, wmBoxY, wmBoxW, wmBoxH, 14);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(93,220,106,.25)';
+  ctx.lineWidth = 1.5;
+  _roundRect(ctx, wmBoxX, wmBoxY, wmBoxW, wmBoxH, 14);
+  ctx.stroke();
+
+  // 브랜드 라인
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(93,220,106,.3)';
-  ctx.font = '12px "DM Mono", monospace';
-  ctx.fillText('Powered by MyCre · AI Crested Gecko Morph Scanner', SIZE / 2, SIZE - PAD + 5);
+  ctx.fillStyle = '#5ddc6a';
+  ctx.font = 'bold 18px "Pretendard Variable", sans-serif';
+  ctx.fillText('🦎 마이크레 — AI 모프 분석기', SIZE / 2, wmY - 18);
+  // URL 라인 (유입 유도)
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = '500 14px "DM Mono", monospace';
+  ctx.fillText('mycre-gecko.netlify.app', SIZE / 2, wmY + 2);
 
   // ── 다운로드 ──
   try {
@@ -4780,6 +4822,144 @@ async function saveResultCard() {
     showToast('✅ 카드가 저장되었어요!');
   } catch(e) {
     showToast('저장 실패: ' + e.message);
+  }
+}
+
+// ══════════════════════════════════════
+// 🔗 공유 링크 복사 / 📣 공유 리워드
+// ══════════════════════════════════════
+const APP_URL = 'https://mycre-gecko.netlify.app';
+
+async function _copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch(e) { return false; }
+}
+
+// 판별 결과 공유 링크 복사
+async function copyResultShareLink() {
+  if (!lastScanResult) { showToast('판별 결과가 없습니다'); return; }
+  const morph = lastScanResult.morph || '';
+  const prob  = lastScanResult.candidates?.[0]?.prob || '';
+  const text  = `🦎 마이크레 AI 모프 판별 결과: ${morph}${prob ? ` (${prob}%)` : ''}\n\n지금 내 크레스티드 게코도 판별해보세요 👉 ${APP_URL}`;
+  const ok = await _copyToClipboard(text);
+  showToast(ok ? '✅ 공유 링크가 복사되었어요! 붙여넣어 공유하세요' : '❌ 복사 실패 — 수동으로 복사해주세요');
+}
+
+// 개체 공유 링크 복사
+async function copyGeckoShareLink(geckoId) {
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+  const link = `${APP_URL}/?gecko=${encodeURIComponent(geckoId)}&owner=${encodeURIComponent(_currentUser.id)}`;
+  const text = `🦎 ${g.name}${g.morph ? ` (${g.morph})` : ''} — 마이크레에서 프로필 보기\n${link}`;
+  const ok = await _copyToClipboard(text);
+  showToast(ok ? '✅ 공유 링크가 복사되었어요!' : '❌ 복사 실패 — 수동으로 복사해주세요');
+}
+
+// ── 공유 리워드 (하루 1회 +1 스캔) ──
+function _shareRewardKey() {
+  const today = new Date().toISOString().slice(0, 10);
+  return `mycre_share_reward_${_currentUser?.id || 'anon'}_${today}`;
+}
+function _hasClaimedShareRewardToday() {
+  try { return localStorage.getItem(_shareRewardKey()) === '1'; } catch(e) { return false; }
+}
+function _markShareRewardClaimed() {
+  try { localStorage.setItem(_shareRewardKey(), '1'); } catch(e) {}
+}
+
+async function shareForReward() {
+  if (!_currentUser) { showToast('로그인이 필요해요'); return; }
+
+  // 유료 등급은 스캔 제한이 없어서 리워드 불필요
+  if (isBreeder()) { showToast('🧬 Breeder는 무제한이에요!'); return; }
+
+  // 오늘 이미 받았는지
+  if (_hasClaimedShareRewardToday()) {
+    showToast('🎁 오늘은 이미 리워드를 받았어요. 내일 다시!');
+    return;
+  }
+
+  // 1) 링크 복사 (Web Share API 우선, fallback 복사)
+  const shareText = `🦎 마이크레 — AI 크레스티드 게코 모프 분석기\n무료로 내 도마뱀 모프 확인해보세요!\n${APP_URL}`;
+  let shared = false;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: '마이크레 AI 모프 분석기', text: shareText, url: APP_URL });
+      shared = true;
+    }
+  } catch(e) {
+    // 사용자가 공유 다이얼로그를 닫은 경우 → 취소로 간주
+    if (e && e.name === 'AbortError') { showToast('공유가 취소되었어요'); return; }
+  }
+  if (!shared) {
+    const ok = await _copyToClipboard(shareText);
+    if (!ok) { showToast('❌ 공유 실패 — 다시 시도해주세요'); return; }
+  }
+
+  // 2) 리워드 지급 (+1 scan)
+  if (isLite()) {
+    // Lite: 월 카운터 역산 (used -1 효과)
+    try {
+      const key = `mycre_scans_${_currentUser.id}_${_monthKey()}`;
+      const cur = _getMonthlyScansUsed();
+      localStorage.setItem(key, String(Math.max(0, cur - 1)));
+    } catch(e) {}
+  } else {
+    // Free: 오늘의 스캔 +1
+    state.freeScansLeft = Math.min(99, state.freeScansLeft + 1);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const stored = JSON.parse(localStorage.getItem('_daily_scan_' + _currentUser.id) || '{}');
+      const count = Math.max(0, (stored.date === today ? (stored.count || 0) : 0) - 1);
+      localStorage.setItem('_daily_scan_' + _currentUser.id, JSON.stringify({ date: today, count }));
+    } catch(e) {}
+  }
+  _markShareRewardClaimed();
+  _updateScanBadge();
+  _updateShareRewardUI();
+  showToast('🎁 공유 완료! AI 판별 +1회가 지급되었어요');
+}
+
+// 공유 리워드 버튼 상태 갱신
+function _updateShareRewardUI() {
+  const btn = document.getElementById('share-reward-btn');
+  const status = document.getElementById('share-reward-status');
+  if (!btn || !status) return;
+
+  if (isBreeder()) {
+    // Breeder는 무제한 → 리워드 숨김
+    const box = document.getElementById('share-reward-box');
+    if (box) box.style.display = 'none';
+    return;
+  }
+
+  if (_hasClaimedShareRewardToday()) {
+    btn.disabled = true;
+    btn.style.opacity = '.55';
+    btn.style.cursor = 'not-allowed';
+    btn.innerHTML = '✅ 오늘 수령 완료';
+    status.textContent = '내일 재수령';
+    status.style.color = 'var(--tx3)';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.innerHTML = '📣 친구에게 공유하기';
+    status.textContent = '오늘 미수령';
+    status.style.color = 'var(--am)';
   }
 }
 
