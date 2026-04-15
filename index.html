@@ -557,10 +557,24 @@ input[type=file]{display:none}
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 <!-- QR코드 생성 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<!-- 배경 제거 AI 라이브러리 -->
+<!-- 배경 제거 AI 라이브러리 (ESM 전용, 올바른 엔트리: dist/index.mjs) -->
 <script type="module">
-  import { removeBackground } from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/index.browser.js';
-  window.imglyRemoveBackground = removeBackground;
+  window.imglyLoadStatus = 'loading';
+  console.log('[imgly] 모듈 로드 시작...');
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/index.mjs');
+    if (typeof mod.removeBackground !== 'function') {
+      throw new Error('removeBackground export가 함수가 아님: ' + typeof mod.removeBackground);
+    }
+    window.imglyRemoveBackground = mod.removeBackground;
+    window.imglyLoadStatus = 'ready';
+    console.log('[imgly] ✅ 모듈 로드 성공 — window.imglyRemoveBackground 사용 가능');
+  } catch (err) {
+    window.imglyLoadStatus = 'failed';
+    window.imglyLoadError = err;
+    console.error('[imgly] ❌ 모듈 로드 실패:', err);
+    console.error('[imgly] → 배경 제거 기능이 비활성화됩니다. 원본 사진으로 분석됩니다.');
+  }
 </script>
 </head>
 <body>
@@ -4419,7 +4433,23 @@ async function handleScanPhotos(e) {
   e.target.value = '';
   if (files.length > remaining) showToast(`최대 6장까지 업로드 가능해요 (${remaining}장 추가됨)`);
 
-  const useBgRemove = document.getElementById('bg-remove-toggle')?.checked && window.imglyRemoveBackground;
+  const toggleChecked = document.getElementById('bg-remove-toggle')?.checked;
+  const libReady = typeof window.imglyRemoveBackground === 'function';
+  const useBgRemove = toggleChecked && libReady;
+
+  console.log('[배경제거] 상태 점검:', {
+    toggle: toggleChecked,
+    libReady,
+    loadStatus: window.imglyLoadStatus,
+    loadError: window.imglyLoadError?.message,
+    fileCount: toAdd.length,
+    willUse: useBgRemove
+  });
+
+  if (toggleChecked && !libReady) {
+    console.warn('[배경제거] ⚠️ 토글은 켜져있으나 라이브러리가 준비되지 않음 → 원본 사진으로 진행');
+    showToast('⚠️ 배경 제거 AI 로딩 실패 — 원본 사진으로 분석해요');
+  }
 
   if (useBgRemove) {
     const progressEl = document.getElementById('bg-remove-progress');
@@ -4435,14 +4465,18 @@ async function handleScanPhotos(e) {
     updateProgress();
 
     for (const file of toAdd) {
+      const t0 = performance.now();
+      console.log(`[배경제거] 시작: ${file.name} (${(file.size/1024).toFixed(0)}KB)`);
       try {
         const resultBlob = await window.imglyRemoveBackground(file, {
           output: { format: 'image/png', quality: 0.9 }
         });
         const dataURL = await _blobToDataURL(resultBlob);
         scanPhotos.push({ data: dataURL, name: file.name });
+        const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+        console.log(`[배경제거] ✅ 성공: ${file.name} — ${elapsed}s, 결과 ${(resultBlob.size/1024).toFixed(0)}KB`);
       } catch (err) {
-        console.warn('[배경제거 실패] 원본 사용:', err);
+        console.error(`[배경제거] ❌ 실패: ${file.name}`, err);
         const dataURL = await _fileToDataURL(file);
         scanPhotos.push({ data: dataURL, name: file.name });
         showToast('⚠️ 배경 제거 실패 — 원본 사진으로 분석해요');
@@ -4455,6 +4489,7 @@ async function handleScanPhotos(e) {
     barEl.style.width = '0%';
 
   } else {
+    console.log('[배경제거] 경로: 원본 저장 (토글 off 또는 라이브러리 미준비)');
     await Promise.all(toAdd.map(async file => {
       const dataURL = await _fileToDataURL(file);
       scanPhotos.push({ data: dataURL, name: file.name });
