@@ -768,7 +768,6 @@ input[type=file]{display:none}
       <div><div class="logo-text" style="color:var(--tx)">AI 모프 판별</div><div class="logo-sub">MORPH SCANNER</div></div>
     </div>
     <div class="topbar-right">
-      <div class="tb-btn" id="dev-mode-badge" style="display:none;background:rgba(255,60,60,.15);border-color:#ff4444;color:#ff4444;font-family:'DM Mono',monospace;font-size:10px;width:auto;padding:0 8px;margin-right:6px" title="개발자 모드 — 스캔 제한 우회 중">🛠️ DEV</div>
       <div class="tb-btn" id="scan-free-badge" style="background:var(--ac2);border-color:var(--ac);color:var(--ac);font-family:'DM Mono',monospace;font-size:10px;width:auto;padding:0 10px">잔여 3회</div>
     </div>
   </div>
@@ -1967,29 +1966,6 @@ input[type=file]{display:none}
 </div>
 
 <script>
-// ══════════════════════════════
-// DEV MODE (스캔 제한 우회)
-//   - URL에 ?dev=true → localStorage 저장 + 활성화
-//   - URL에 ?dev=false → 해제
-//   - localStorage 'mycre_dev_mode' === 'true' → 활성화 유지
-// ══════════════════════════════
-(function initDevMode() {
-  try {
-    const params = new URLSearchParams(location.search);
-    const devParam = params.get('dev');
-    if (devParam === 'true')  localStorage.setItem('mycre_dev_mode', 'true');
-    if (devParam === 'false') localStorage.removeItem('mycre_dev_mode');
-    if (localStorage.getItem('mycre_dev_mode') === 'true') {
-      window.__DEV_MODE__ = true;
-      console.log('[DEV MODE] 활성화됨 — 스캔 횟수 제한 우회 중');
-      document.addEventListener('DOMContentLoaded', () => {
-        const badge = document.getElementById('dev-mode-badge');
-        if (badge) badge.style.display = 'inline-flex';
-      });
-    }
-  } catch (e) { /* localStorage 차단 환경 무시 */ }
-})();
-
 // ══════════════════════════════
 // DATA & STATE
 // ══════════════════════════════
@@ -4502,13 +4478,13 @@ function startAnalysis() {
     // Breeder: 무제한
   } else if (isLite()) {
     // Lite: 월 10회
-    if (_getMonthlyScansUsed() >= TIERS.lite.monthlyScans && !window.__DEV_MODE__) {
+    if (_getMonthlyScansUsed() >= TIERS.lite.monthlyScans) {
       _showProUpgradePopup(`Lite 등급 AI 판별 월 ${TIERS.lite.monthlyScans}회를 모두 사용했어요.<br>다음 달 1일에 초기화됩니다.<br><b>🧬 Breeder는 무제한 판별!</b>`);
       return;
     }
   } else {
     // Free: 총 3회 (일일 리셋)
-    if (state.freeScansLeft <= 0 && !window.__DEV_MODE__) {
+    if (state.freeScansLeft <= 0) {
       _showProUpgradePopup('오늘의 무료 판별 횟수를 모두 사용했어요.<br>내일 자정에 초기화됩니다.<br><b>🌱 Lite는 월 10회, 🧬 Breeder는 무제한!</b>');
       return;
     }
