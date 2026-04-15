@@ -2633,19 +2633,45 @@ function calcMultiLayerScores(selections) {
 
   const spotSel = selections.spot || '';
   const hasSpots = spotSel.includes('대량') || spotSel.includes('100개+') || spotSel.includes('중간') || spotSel.includes('소량');
+  const flagsEarly = selections._flags || {};
+  const confirmedDal = !!flagsEarly.confirmedDalmatian;
+  const confirmedSuperDal = !!flagsEarly.confirmedSuperDalmatian;
+  const spotButNotDal = !!flagsEarly.spotButNotDalmatian;
+
   Object.entries(MORPHS).forEach(([name, m]) => {
     const vs = m.visualLayers.spot;
     if (spotSel.includes('대량') || spotSel.includes('100개+')) {
-      if (vs.some(s => s.includes('고밀도') || s.includes('100+'))) scores[name] += 45;
-      else if (vs.some(s => s.includes('잉크점'))) scores[name] += 25;
+      // 🔒 엄격 게이트: confirmedSuperDalmatian 통과했을 때만 풀 점수
+      if (vs.some(s => s.includes('고밀도') || s.includes('100+'))) {
+        scores[name] += confirmedSuperDal ? 45 : 12;  // 미확정이면 1/4 수준만 가산
+      } else if (vs.some(s => s.includes('잉크점'))) {
+        scores[name] += confirmedSuperDal ? 25 : 8;
+      }
     } else if (spotSel.includes('중간')) {
-      if (vs.some(s => s.includes('잉크점') || s.includes('소~중밀도'))) scores[name] += 30;
-      else if (vs.some(s => s.includes('고밀도'))) scores[name] += 15;
+      // 🔒 엄격 게이트: confirmedDalmatian 통과했을 때만 풀 점수
+      if (vs.some(s => s.includes('잉크점') || s.includes('소~중밀도'))) {
+        scores[name] += confirmedDal ? 30 : 10;
+      } else if (vs.some(s => s.includes('고밀도'))) {
+        scores[name] += confirmedDal ? 15 : 5;
+      }
     } else if (spotSel.includes('소량')) {
-      if (vs.some(s => s.includes('잉크점'))) scores[name] += 18;
+      if (vs.some(s => s.includes('잉크점'))) scores[name] += 12; // 기존 18→12
     }
     if (hasSpots && vs.length === 0) scores[name] -= 5;
   });
+
+  // 🚫 점이 있으나 경쟁 패턴이 우세한 경우 — 달마시안 계열 즉시 감점
+  if (spotButNotDal) {
+    ['달마시안','슈퍼달마시안','레드달마','달마할리'].forEach(n => {
+      if (scores[n] !== undefined) scores[n] = Math.max(0, scores[n] - 30);
+    });
+  }
+  // 🚫 확정 실패인데도 '대량 점' 라벨이 붙은 경우 — 슈퍼달마 자동 상승 차단
+  if (!confirmedSuperDal && spotSel.includes('대량')) {
+    ['슈퍼달마시안'].forEach(n => {
+      if (scores[n] !== undefined) scores[n] = Math.max(0, scores[n] - 20);
+    });
+  }
 
   const tailSel = selections.tail || '';
   Object.entries(MORPHS).forEach(([name, m]) => {
@@ -3090,23 +3116,15 @@ function _colorAnalysisToTraits(ca) {
   const reasons = [];
   const flags = {};
 
+  // ── 점 분석 수치 계산 (분류는 패턴 판정 후에 수행) ──
   const cSpot = ca.centerSpotDensity || 0;
   const sContrast = ca.spotContrastRatio || 0;
+  const spotCountRaw = ca.centerSpotCount || 0;          // 실제 독립 반점 개수 (중앙영역)
+  const spotUniformity = ca.spotSpreadUniformity || 0;    // 고른 분포도
   const effectiveSpot = ca.spotDensity * (1 + Math.min(ca.spotIntensity / 80, 1));
   const contrastBoost = sContrast > 40 ? 1.5 : (sContrast > 25 ? 1.2 : 1.0);
   const boostedSpot = effectiveSpot * contrastBoost;
   const hasSignificantSpots = boostedSpot > 0.02 || cSpot > 0.01;
-
-  if (boostedSpot > 0.10 || cSpot > 0.04) {
-    traits.spot = '대량 점(100개+, 슈퍼 달마시안)';
-    reasons.push({icon:'⚫',text:`고밀도 독립 반점 — 중앙밀도 ${(cSpot*100).toFixed(1)}%, 대비 ${sContrast.toFixed(0)}, 균일도 ${(ca.spotSpreadUniformity*100).toFixed(0)}% → 슈퍼 달마시안`});
-  } else if (boostedSpot > 0.04 || cSpot > 0.02) {
-    traits.spot = '중간 점(30~100개)';
-    reasons.push({icon:'⚫',text:`중밀도 반점 — 중앙밀도 ${(cSpot*100).toFixed(1)}%, 대비 ${sContrast.toFixed(0)}`});
-  } else if (boostedSpot > 0.015 || cSpot > 0.008) {
-    traits.spot = '소량 점(~30개)';
-    reasons.push({icon:'·',text:`소량 반점(중앙밀도 ${(cSpot*100).toFixed(1)}%)`});
-  } else { traits.spot = '점 없음'; }
   flags.hasSpots = hasSignificantSpots;
 
   const tailWhite = ca.tail.whiteRatio;
@@ -3222,6 +3240,48 @@ function _colorAnalysisToTraits(ca) {
       reasons.push({icon:'📐',text:`세로 핀 감지(${(ca.vStripeScore*100).toFixed(0)}%)`});
     }
   } else { traits.structure = '없음'; }
+
+  // ══════════════════════════════════════════════════════════════
+  // 달마시안 엄격 판정 — 패턴 판정 완료 후 최종 단계에서 실행
+  // 원칙: "점이 보인다고 무조건 달마시안"은 절대 안 됨
+  //   ① 실제 독립 반점 10개+ (centerSpotCount)
+  //   ② 바탕/점 대비 선명 (spotContrastRatio > 25)
+  //   ③ 분포 균일 (spotSpreadUniformity > 0.3)
+  //   ④ 경쟁 패턴 미감지 (핀스트라이프/할리퀸/타이거/플레임/트리컬러)
+  // ══════════════════════════════════════════════════════════════
+  const competingPattern = /할리퀸|익스트림|타이거|브린들|플레임|3색|트리|핀스트라이프/.test(traits.pattern + ' ' + traits.structure);
+  const strongContrast = sContrast > 25;
+  const uniformSpread  = spotUniformity > 0.3;
+  const manySpots      = spotCountRaw >= 10;
+  const superManySpots = spotCountRaw >= 30;
+
+  const isConfirmedDalmatian = manySpots && strongContrast && uniformSpread && !competingPattern;
+  const isConfirmedSuperDalmatian = superManySpots && strongContrast && uniformSpread && !competingPattern && (cSpot > 0.04 || boostedSpot > 0.10);
+
+  if (isConfirmedSuperDalmatian) {
+    traits.spot = '대량 점(100개+, 슈퍼 달마시안)';
+    flags.confirmedDalmatian = true;
+    flags.confirmedSuperDalmatian = true;
+    reasons.push({icon:'⚫',text:`엄격판정 통과 — 반점 ${spotCountRaw}개, 대비 ${sContrast.toFixed(0)}, 균일도 ${(spotUniformity*100).toFixed(0)}%, 경쟁 패턴 없음 → 슈퍼 달마시안 확정`});
+  } else if (isConfirmedDalmatian && (cSpot > 0.02 || boostedSpot > 0.04)) {
+    traits.spot = '중간 점(30~100개)';
+    flags.confirmedDalmatian = true;
+    reasons.push({icon:'⚫',text:`엄격판정 통과 — 반점 ${spotCountRaw}개, 대비 ${sContrast.toFixed(0)}, 균일도 ${(spotUniformity*100).toFixed(0)}% → 달마시안`});
+  } else if (hasSignificantSpots && competingPattern) {
+    // 점이 보이지만 경쟁 패턴이 더 강함 → 달마시안 아님으로 강제 다운그레이드
+    traits.spot = '소량 점(~30개)';
+    flags.spotButNotDalmatian = true;
+    reasons.push({icon:'·',text:`점 감지되었으나 ${traits.pattern.split('(')[0]}패턴이 우세 → 달마시안 아님(점은 무늬의 일부로 해석)`});
+  } else if (hasSignificantSpots && !manySpots) {
+    // 점은 있으나 개수 부족(10개 미만) → 달마시안 후보에서 제외
+    traits.spot = '소량 점(~30개)';
+    reasons.push({icon:'·',text:`반점 ${spotCountRaw}개(10개 미만) — 달마시안 기준 미달, 소량 점으로만 분류`});
+  } else if (hasSignificantSpots && !strongContrast) {
+    traits.spot = '소량 점(~30개)';
+    reasons.push({icon:'·',text:`반점 ${spotCountRaw}개 있으나 대비 ${sContrast.toFixed(0)} 부족 — 소량 점으로만 분류`});
+  } else {
+    traits.spot = '점 없음';
+  }
 
   traits._reasons = reasons;
   traits._flags = flags;
