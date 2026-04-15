@@ -2553,7 +2553,6 @@ function calcMultiLayerScores(selections) {
   const scores = {};
   Object.keys(MORPHS).forEach(name => { scores[name] = 0; });
 
-  // color 레이어
   const colorSel = selections.color || '';
   Object.entries(MORPHS).forEach(([name, m]) => {
     const vl = m.visualLayers;
@@ -2567,7 +2566,6 @@ function calcMultiLayerScores(selections) {
     if (colorSel.includes('밝은색') && vl.baseColor.some(c => ['밝은색','크림','옐로우'].includes(c))) scores[name] += 8;
   });
 
-  // pattern 레이어
   const patSel = selections.pattern || '';
   Object.entries(MORPHS).forEach(([name, m]) => {
     const sp = m.visualLayers.special;
@@ -2583,7 +2581,6 @@ function calcMultiLayerScores(selections) {
     if (patSel.includes('무늬 없음') || patSel.includes('패턴리스')) { if (m.visualLayers.pattern.some(p => ['노멀','패턴리스','바이컬러'].includes(p))) scores[name] += 12; }
   });
 
-  // structure 레이어
   const strSel = selections.structure || '';
   Object.entries(MORPHS).forEach(([name, m]) => {
     const st = m.visualLayers.structure;
@@ -2594,75 +2591,172 @@ function calcMultiLayerScores(selections) {
     if (strSel.includes('핀스트라이프') && st.includes('핀스트라이프')) scores[name] += 10;
   });
 
-  // spot 레이어 — ⚡ 달마시안 핵심 판별: 가중치 대폭 격상
   const spotSel = selections.spot || '';
   const hasSpots = spotSel.includes('대량') || spotSel.includes('100개+') || spotSel.includes('중간') || spotSel.includes('소량');
   Object.entries(MORPHS).forEach(([name, m]) => {
     const vs = m.visualLayers.spot;
     if (spotSel.includes('대량') || spotSel.includes('100개+')) {
-      if (vs.some(s => s.includes('고밀도') || s.includes('100+'))) scores[name] += 45; // 슈퍼 달마시안 결정적 (기존 25→45)
-      else if (vs.some(s => s.includes('잉크점'))) scores[name] += 25;                  // 일반 달마시안에도 보너스
+      if (vs.some(s => s.includes('고밀도') || s.includes('100+'))) scores[name] += 45;
+      else if (vs.some(s => s.includes('잉크점'))) scores[name] += 25;
     } else if (spotSel.includes('중간')) {
-      if (vs.some(s => s.includes('잉크점') || s.includes('소~중밀도'))) scores[name] += 30; // 달마시안 강화 (기존 15→30)
-      else if (vs.some(s => s.includes('고밀도'))) scores[name] += 15;                    // 슈퍼달마에도 일부 가산
+      if (vs.some(s => s.includes('잉크점') || s.includes('소~중밀도'))) scores[name] += 30;
+      else if (vs.some(s => s.includes('고밀도'))) scores[name] += 15;
     } else if (spotSel.includes('소량')) {
-      if (vs.some(s => s.includes('잉크점'))) scores[name] += 18; // 기존 10→18
+      if (vs.some(s => s.includes('잉크점'))) scores[name] += 18;
     }
-    // 점이 감지되었는데 점 형질이 없는 모프 → 패널티
     if (hasSpots && vs.length === 0) scores[name] -= 5;
   });
 
-  // tail 레이어 — 카푸치노 Y마크/다크테일 가중치 높게
   const tailSel = selections.tail || '';
   Object.entries(MORPHS).forEach(([name, m]) => {
     const vt = m.visualLayers.tail;
     const sp = m.visualLayers.special;
-    if (tailSel.includes('우동') && vt.includes('우동꼬리')) scores[name] += 20;
-    if (tailSel.includes('다크') && (vt.includes('다크테일') || vt.includes('다크테일혼합'))) scores[name] += 20;
-    if (tailSel.includes('Y자') && (vt.includes('Y자마크') || sp.includes('Y자마크'))) scores[name] += 30;
+    if (tailSel.includes('우동') && vt.includes('우동꼬리')) scores[name] += 25;
+    if (tailSel.includes('다크') && (vt.includes('다크테일') || vt.includes('다크테일혼합'))) scores[name] += 25;
+    if (tailSel.includes('Y자') && (vt.includes('Y자마크') || sp.includes('Y자마크'))) scores[name] += 35;
   });
 
-  // pigment 레이어 — 아잔틱 판별 엄격화
   const pigSel = selections.pigment || '';
   Object.entries(MORPHS).forEach(([name, m]) => {
     const sp = m.visualLayers.special;
     if (pigSel.includes('무채색') || pigSel.includes('아잔틱')) {
-      if (sp.includes('무채색톤') || sp.includes('색소결핍')) scores[name] += 25; // 기존 30→25
+      if (sp.includes('무채색톤') || sp.includes('색소결핍')) scores[name] += 25;
     }
     if (pigSel.includes('반투명') || pigSel.includes('하이포')) { if (sp.includes('색소결핍경미') || sp.includes('핑크톤')) scores[name] += 20; }
     if (pigSel.includes('멜라닌') || pigSel.includes('차콜')) { if (sp.includes('하이퍼멜라닌') || sp.includes('칠흑바탕')) scores[name] += 25; }
     if (pigSel.includes('백색') || pigSel.includes('릴리')) { if (sp.includes('백색덮임') || sp.includes('레터럴커버리지')) scores[name] += 20; }
-    if (pigSel.includes('커피') || pigSel.includes('카푸치노')) { if (sp.includes('커피톤') || sp.includes('Y자마크') || sp.includes('다크테일')) scores[name] += 25; }
+    if (pigSel.includes('커피') || pigSel.includes('카푸치노')) { if (sp.includes('커피톤') || sp.includes('Y자마크') || sp.includes('다크테일')) scores[name] += 30; }
   });
 
-  // ── 🆕 교차 검증 페널티: 점이 있으면 아잔틱 점수 대폭 깎기 ──
   if (hasSpots) {
-    // 점이 감지되었으면 아잔틱/릴잔틱 계열 점수 크게 감소
     ['아잔틱','릴잔틱'].forEach(n => { if (scores[n] !== undefined) scores[n] = Math.max(0, scores[n] - 30); });
   }
-  // 반대로: pigment이 아잔틱인데 점이 없으면 아잔틱 보너스
   if ((pigSel.includes('무채색') || pigSel.includes('아잔틱')) && !hasSpots) {
     ['아잔틱','릴잔틱'].forEach(n => { if (scores[n] !== undefined) scores[n] += 10; });
+  }
+
+  const f = selections._flags || {};
+  const bump = (name, n) => { if (scores[name] !== undefined) scores[name] += n; };
+  const cut  = (name, n) => { if (scores[name] !== undefined) scores[name] = Math.max(0, scores[name] - n); };
+
+  if (f.yMark) {
+    ['카푸치노','카푸치노+','프라푸치노','카푸할리','카푸트리'].forEach(n => bump(n, 35));
+    ['사이블','팬텀','노멀','아잔틱','릴잔틱'].forEach(n => cut(n, 20));
+  }
+  if (f.udonTail) {
+    ['릴리화이트','슈퍼릴리','프라푸치노','릴잔틱','릴리트리','크림시클릴리'].forEach(n => bump(n, 35));
+    ['노멀','아잔틱','카푸치노','사이블','팬텀','할리퀸','트리컬러'].forEach(n => cut(n, 12));
+  }
+  if (f.darkTail && !f.yMark && !f.udonTail && !f.cappuccino) {
+    ['사이블','사이블할리','사이블트리'].forEach(n => bump(n, 25));
+    ['노멀','할리퀸'].forEach(n => cut(n, 8));
+  }
+  if (f.charcoal) {
+    ['차콜','블랙나이트','다크나이트'].forEach(n => bump(n, 30));
+    ['아잔틱','릴잔틱','노멀'].forEach(n => cut(n, 20));
+  }
+  if (f.axanthic) {
+    ['아잔틱','릴잔틱'].forEach(n => bump(n, 25));
+    ['차콜','블랙나이트','노멀'].forEach(n => cut(n, 10));
+  }
+  if (f.cappuccino && f.lilly) {
+    bump('프라푸치노', 40);
+  }
+  if (f.phantomLike) {
+    ['팬텀','사이블','노멀팬텀'].forEach(n => bump(n, 15));
   }
 
   return scores;
 }
 
 // 멀티 사진 합산 점수 — 여러 장의 사진 분석 결과를 합산
-function mergeMultiPhotoScores(scoreArrays) {
+function mergeMultiPhotoScores(scoreArrays, views) {
   const merged = {};
   Object.keys(MORPHS).forEach(name => { merged[name] = 0; });
-  scoreArrays.forEach(scores => {
+  const weightByView = { side: 1.0, dorsal: 0.9, tail: 0.85, crown: 0.7, unknown: 0.8 };
+  const weights = (views || []).map(v => weightByView[v] || 0.8);
+  const hasWeights = weights.length === scoreArrays.length && weights.length > 0;
+  const totalW = hasWeights ? weights.reduce((a,b) => a+b, 0) : scoreArrays.length;
+
+  scoreArrays.forEach((scores, idx) => {
+    const w = hasWeights ? weights[idx] : 1;
     Object.entries(scores).forEach(([name, score]) => {
-      merged[name] += score;
+      merged[name] += score * w;
     });
   });
-  // 사진 수로 나누어 평균 + 사진 많을수록 신뢰도 보너스
   const count = scoreArrays.length;
   Object.keys(merged).forEach(name => {
-    merged[name] = Math.round(merged[name] / count * (1 + count * 0.05));
+    merged[name] = Math.round((merged[name] / (totalW || 1)) * (1 + count * 0.05));
   });
   return merged;
+}
+
+function _estimatePhotoView(ca) {
+  if (ca.dorsal.avgBright > ca.avgBright + 20 && Math.abs((ca.regions.left.avgB||0) - (ca.regions.right.avgB||0)) < 15) {
+    return 'dorsal';
+  }
+  if ((ca.tail.whiteRatio > 0.3 || ca.tail.darkRatio > 0.5) && Math.abs(ca.tail.avgBright - ca.avgBright) > 25) {
+    return 'tail';
+  }
+  if (Math.abs((ca.regions.left.avgB||0) - (ca.regions.right.avgB||0)) > 20 || ca.lateral.whiteRatio > 0.1) {
+    return 'side';
+  }
+  if ((ca.regions.top.avgB||0) > ca.avgBright + 25) {
+    return 'crown';
+  }
+  return 'unknown';
+}
+
+function _applyCAHardRules(scores, colorAnalyses) {
+  if (!colorAnalyses || colorAnalyses.length === 0) return scores;
+  const udonCount = colorAnalyses.filter(ca => ca.tail.whiteRatio > 0.28 && ca.tail.avgSat < 0.14).length;
+  const yMarkCount = colorAnalyses.filter(ca => ca.tail.whiteRatio > 0.12 && ca.tail.whiteRatio < 0.35
+                                               && ca.brownRatio > 0.1 && (ca.spotContrastRatio||0) < 30).length;
+  const darkTailCount = colorAnalyses.filter(ca => ca.tail.darkRatio > 0.35 && (ca.avgBright - ca.tail.avgBright) > 18).length;
+  const spotCount = colorAnalyses.filter(ca => (ca.centerSpotDensity||0) > 0.01 || ca.spotDensity > 0.02).length;
+
+  const bump = (name, n) => { if (scores[name] !== undefined) scores[name] += n; };
+  const cut  = (name, n) => { if (scores[name] !== undefined) scores[name] = Math.max(0, scores[name] - n); };
+
+  if (udonCount >= 2) {
+    ['릴리화이트','슈퍼릴리','프라푸치노','릴잔틱'].forEach(n => bump(n, 20));
+  }
+  if (yMarkCount >= 2) {
+    ['카푸치노','카푸치노+','카푸할리','카푸트리'].forEach(n => bump(n, 25));
+    ['사이블','노멀','팬텀'].forEach(n => cut(n, 15));
+  }
+  const allLowSat = colorAnalyses.every(ca => ca.avgSaturation < 0.13 && ca.brownRatio < 0.05);
+  if (allLowSat && spotCount === 0) {
+    ['아잔틱','릴잔틱'].forEach(n => bump(n, 20));
+  }
+  if (darkTailCount >= Math.ceil(colorAnalyses.length / 2) && yMarkCount === 0) {
+    ['사이블','사이블할리','사이블트리'].forEach(n => bump(n, 15));
+  }
+  return scores;
+}
+
+function _evaluateScanConfidence(candidatesWithProb, photoCount) {
+  if (!candidatesWithProb || candidatesWithProb.length === 0) {
+    return { level:'low', label:'판단 불가', msg:'분석 실패', color:'#ff6b6b' };
+  }
+  const top1 = candidatesWithProb[0];
+  const top2 = candidatesWithProb[1];
+  const gap = top2 ? top1.prob - top2.prob : 100;
+  const absScore = top1.score || 0;
+
+  if (absScore < 30 || top1.prob < 35) {
+    return { level:'defer', label:'판단 보류', msg:`증거 부족(점수 ${absScore}, 1위 확률 ${top1.prob}%) — 측면·꼬리·등 사진을 추가해 주세요.`, color:'#ff9c27' };
+  }
+  if (gap < 8 && photoCount < 3) {
+    return { level:'defer', label:'판단 보류', msg:`1·2위 격차 ${gap}%p (거의 동률) — 사진 ${photoCount}장으로는 부족. 꼬리/옆구리 사진 추가 권장.`, color:'#ff9c27' };
+  }
+  if (gap < 15) {
+    return { level:'medium', label:'보통', msg:`1·2위 격차 ${gap}%p — 결과는 참고용, 추가 촬영 권장`, color:'#5ab4e8' };
+  }
+  if (top1.prob > 60 && gap > 25) {
+    return { level:'high', label:'높음', msg:`1위 ${top1.prob}% (2위와 ${gap}%p 차) — 신뢰도 높음`, color:'#5ddc6a' };
+  }
+  return { level:'medium', label:'보통', msg:`1위 ${top1.prob}%, 격차 ${gap}%p`, color:'#5ab4e8' };
 }
 
 // ── 얼굴 감지 (브라우저 FaceDetector API) ──
@@ -2953,131 +3047,145 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
 // 색상 분석 결과 → TRAIT_LAYERS 선택값으로 변환 (v2: 패턴밀도·대비·영역분석 반영)
 function _colorAnalysisToTraits(ca) {
   const traits = {};
-  // 분석 근거 수집 (사용자 설명용)
   const reasons = [];
+  const flags = {};
 
-  // ── color (체색) ──
-  if (ca.darkRatio > 0.4) { traits.color = '칠흑/극다크'; reasons.push({icon:'⬛',text:`어두운 픽셀 비율 ${(ca.darkRatio*100).toFixed(0)}% — 매우 어두운 체색`}); }
-  else if (ca.grayRatio > 0.3 || (ca.avgBright < 90 && ca.darkRatio > 0.2)) { traits.color = '흑색/회색'; reasons.push({icon:'🩶',text:`회색 톤 ${(ca.grayRatio*100).toFixed(0)}%, 평균 밝기 ${ca.avgBright} — 어두운 무채색 체색`}); }
-  else if (ca.redRatio > 0.08 || ca.orangeRatio > 0.08) { traits.color = '레드/오렌지'; reasons.push({icon:'🔴',text:`붉은/주황 색소 ${((ca.redRatio+ca.orangeRatio)*100).toFixed(1)}% 감지`}); }
-  else if (ca.yellowRatio > 0.08 || (ca.avgR > 180 && ca.avgG > 160 && ca.avgB < 130)) { traits.color = '옐로우/크림'; reasons.push({icon:'🟡',text:`노란/크림 색소 감지, 평균 RGB(${ca.avgR},${ca.avgG},${ca.avgB})`}); }
-  else if (ca.pinkRatio > 0.05) { traits.color = '핑크/연분홍'; reasons.push({icon:'🩷',text:`핑크 색소 ${(ca.pinkRatio*100).toFixed(1)}% 감지`}); }
-  else if (ca.whiteRatio > 0.25 || ca.lightRatio > 0.4) { traits.color = '밝은색/화이트'; reasons.push({icon:'⬜',text:`밝은 픽셀 ${(ca.lightRatio*100).toFixed(0)}% — 전체적으로 밝은 체색`}); }
-  else if (ca.brownRatio > 0.15) { traits.color = '커피/밀크초콜릿'; reasons.push({icon:'🟤',text:`갈색(커피톤) 픽셀 ${(ca.brownRatio*100).toFixed(0)}% — 카푸치노 계열 색감`}); }
-  else if (ca.brownRatio > 0.05) { traits.color = '갈색/올리브'; reasons.push({icon:'🫒',text:`갈색/올리브 톤 감지, 평균 밝기 ${ca.avgBright}`}); }
-  else { traits.color = '갈색/올리브'; reasons.push({icon:'🫒',text:`기본 갈색/올리브 체색, 평균 밝기 ${ca.avgBright}`}); }
-
-  // ── spot (점) — 중앙 영역 점 밀도 + 바탕/점 대비 + 분포 균일성 복합 판단 ──
-  const cSpot = ca.centerSpotDensity || 0; // 중앙 영역 순수 점 밀도
-  const sContrast = ca.spotContrastRatio || 0; // 바탕 vs 점 밝기 대비
+  const cSpot = ca.centerSpotDensity || 0;
+  const sContrast = ca.spotContrastRatio || 0;
   const effectiveSpot = ca.spotDensity * (1 + Math.min(ca.spotIntensity / 80, 1));
-  // 바탕/점 대비가 높으면 점 점수 부스트 (배경이 밝고 점이 어두우면 = 달마시안)
   const contrastBoost = sContrast > 40 ? 1.5 : (sContrast > 25 ? 1.2 : 1.0);
   const boostedSpot = effectiveSpot * contrastBoost;
   const hasSignificantSpots = boostedSpot > 0.02 || cSpot > 0.01;
 
   if (boostedSpot > 0.10 || cSpot > 0.04) {
     traits.spot = '대량 점(100개+, 슈퍼 달마시안)';
-    reasons.push({icon:'⚫',text:`고밀도 독립 반점 감지 — 중앙 점밀도 ${(cSpot*100).toFixed(1)}%, 바탕/점 대비 ${sContrast.toFixed(0)}, 분포 균일도 ${(ca.spotSpreadUniformity*100).toFixed(0)}% → 슈퍼 달마시안`});
+    reasons.push({icon:'⚫',text:`고밀도 독립 반점 — 중앙밀도 ${(cSpot*100).toFixed(1)}%, 대비 ${sContrast.toFixed(0)}, 균일도 ${(ca.spotSpreadUniformity*100).toFixed(0)}% → 슈퍼 달마시안`});
   } else if (boostedSpot > 0.04 || cSpot > 0.02) {
     traits.spot = '중간 점(30~100개)';
-    reasons.push({icon:'⚫',text:`중간 밀도 반점 감지 — 중앙 점밀도 ${(cSpot*100).toFixed(1)}%, 대비 ${sContrast.toFixed(0)}`});
+    reasons.push({icon:'⚫',text:`중밀도 반점 — 중앙밀도 ${(cSpot*100).toFixed(1)}%, 대비 ${sContrast.toFixed(0)}`});
   } else if (boostedSpot > 0.015 || cSpot > 0.008) {
     traits.spot = '소량 점(~30개)';
-    reasons.push({icon:'·',text:`소량 반점 감지(중앙 밀도 ${(cSpot*100).toFixed(1)}%)`});
+    reasons.push({icon:'·',text:`소량 반점(중앙밀도 ${(cSpot*100).toFixed(1)}%)`});
   } else { traits.spot = '점 없음'; }
+  flags.hasSpots = hasSignificantSpots;
 
-  // ── pigment (색소 특이사항) — 아잔틱 vs 달마시안 엄격 구분 v3 ──
-  // 아잔틱 핵심: 전체가 균일하게 무채색, 국소적 명암 차이(점) 없음, 유채색 0
+  const tailWhite = ca.tail.whiteRatio;
+  const tailDark = ca.tail.darkRatio;
+  const tailSat = ca.tail.avgSat;
+  const tailBright = ca.tail.avgBright;
+  const bodyBright = ca.avgBright;
+
+  const isUdonTail = tailWhite > 0.28 && tailSat < 0.14 && tailBright > 130;
+  const isDarkTail = tailDark > 0.35 && (bodyBright - tailBright) > 18;
+  const isYMark = tailWhite > 0.12 && tailWhite < 0.35 && ca.brownRatio > 0.1
+                  && tailBright > bodyBright - 10 && sContrast < 30;
+
+  if (isYMark && !isUdonTail) {
+    traits.tail = 'Y자 마크(꼬리 기부 백색 Y)';
+    flags.yMark = true;
+    reasons.push({icon:'🔱',text:`꼬리 기부 부분 백색(${(tailWhite*100).toFixed(0)}%) + 갈색 몸통 → Y자 마크 (카푸치노 결정적)`});
+  } else if (isUdonTail) {
+    traits.tail = '우동 꼬리(하얗고 무늬 없음)';
+    flags.udonTail = true;
+    reasons.push({icon:'🍜',text:`꼬리 백색 ${(tailWhite*100).toFixed(0)}%, 채도 ${(tailSat*100).toFixed(0)}% → 우동꼬리 (릴리화이트 결정적)`});
+  } else if (isDarkTail) {
+    traits.tail = '다크 테일(어두운 꼬리)';
+    flags.darkTail = true;
+    reasons.push({icon:'🌑',text:`꼬리 밝기 ${tailBright.toFixed(0)} vs 몸 ${bodyBright.toFixed(0)}(차이 ${(bodyBright-tailBright).toFixed(0)}) → 다크 테일`});
+  } else {
+    traits.tail = '일반 꼬리';
+  }
+
+  if (ca.darkRatio > 0.4) { traits.color = '칠흑/극다크'; reasons.push({icon:'⬛',text:`어두운 픽셀 ${(ca.darkRatio*100).toFixed(0)}% — 극다크 체색`}); }
+  else if (ca.grayRatio > 0.3 || (ca.avgBright < 90 && ca.darkRatio > 0.2)) { traits.color = '흑색/회색'; reasons.push({icon:'🩶',text:`회색톤 ${(ca.grayRatio*100).toFixed(0)}%, 평균밝기 ${ca.avgBright}`}); }
+  else if (ca.redRatio > 0.08 || ca.orangeRatio > 0.08) { traits.color = '레드/오렌지'; reasons.push({icon:'🔴',text:`붉은/주황 색소 ${((ca.redRatio+ca.orangeRatio)*100).toFixed(1)}%`}); }
+  else if (ca.yellowRatio > 0.08 || (ca.avgR > 180 && ca.avgG > 160 && ca.avgB < 130)) { traits.color = '옐로우/크림'; reasons.push({icon:'🟡',text:`노란/크림 색소 RGB(${ca.avgR},${ca.avgG},${ca.avgB})`}); }
+  else if (ca.pinkRatio > 0.05) { traits.color = '핑크/연분홍'; reasons.push({icon:'🩷',text:`핑크 색소 ${(ca.pinkRatio*100).toFixed(1)}%`}); }
+  else if (ca.whiteRatio > 0.25 || ca.lightRatio > 0.4) { traits.color = '밝은색/화이트'; reasons.push({icon:'⬜',text:`밝은 픽셀 ${(ca.lightRatio*100).toFixed(0)}%`}); }
+  else if (ca.brownRatio > 0.15 || (ca.brownRatio > 0.08 && flags.darkTail)) { traits.color = '커피/밀크초콜릿'; reasons.push({icon:'🟤',text:`갈색(커피톤) ${(ca.brownRatio*100).toFixed(0)}%${flags.darkTail?' + 다크테일':''} — 카푸치노 계열`}); }
+  else if (ca.brownRatio > 0.05) { traits.color = '갈색/올리브'; reasons.push({icon:'🫒',text:`갈색/올리브톤, 밝기 ${ca.avgBright}`}); }
+  else { traits.color = '갈색/올리브'; reasons.push({icon:'🫒',text:`기본 갈색/올리브, 밝기 ${ca.avgBright}`}); }
+
   const isFullyAchromatic = ca.grayRatio > 0.35 && ca.redRatio < 0.01 && ca.orangeRatio < 0.01
     && ca.yellowRatio < 0.01 && ca.brownRatio < 0.03 && ca.avgSaturation < 0.12
     && ca.colorUniformity > 0.5;
-  // 달마시안 핵심: 바탕과 점의 대비가 큼, 점이 독립적으로 분포
-  const spotDisqualifiesAxanthic = hasSignificantSpots || sContrast > 30; // 점이 있거나 바탕/점 대비가 크면 아잔틱 아님
-  const hasAnyChroma = ca.spotChromaRatio > 0.2; // 점 주변에 유채색 20%+ → 아잔틱 아님
+  const spotDisqualifiesAxanthic = hasSignificantSpots || sContrast > 30;
+  const hasAnyChroma = ca.spotChromaRatio > 0.2;
+  const isCharcoal = ca.darkRatio > 0.55 && ca.avgSaturation < 0.14 && ca.avgBright < 80;
+  const isLillyLike = ca.lateral.whiteRatio > 0.25 || ca.whiteRatio > 0.3 || flags.udonTail;
+  const isCappuccinoLike = ca.brownRatio > 0.12 && (flags.yMark || flags.darkTail) && ca.avgR > 100 && ca.avgR < 170;
 
-  if (isFullyAchromatic && !spotDisqualifiesAxanthic && !hasAnyChroma && ca.contrast < 35) {
-    // 대비가 낮고(점 없음) + 전체 무채색일 때만 아잔틱
-    traits.pigment = '황색·적색 결핍(무채색=아잔틱)';
-    reasons.push({icon:'🔬',text:`전체 균일 무채색 — 채도 ${(ca.avgSaturation*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}(낮음), 유채색 없음, 독립 점 미감지 → 아잔틱`});
-  } else if (ca.lateral.whiteRatio > 0.25 || ca.whiteRatio > 0.3) {
+  if (isCappuccinoLike) {
+    traits.pigment = '커피 톤(카푸치노)';
+    flags.cappuccino = true;
+    reasons.push({icon:'☕',text:`갈색 ${(ca.brownRatio*100).toFixed(0)}% + ${flags.yMark?'Y자마크':'다크테일'} → 카푸치노 결정적`});
+  } else if (isLillyLike) {
     traits.pigment = '백색/크림 덮임(릴리화이트)';
-    reasons.push({icon:'🤍',text:`옆구리 백색 비율 ${(ca.lateral.whiteRatio*100).toFixed(0)}% — 릴리화이트 덮임 패턴`});
-  } else if (ca.darkRatio > 0.5) {
+    flags.lilly = true;
+    reasons.push({icon:'🤍',text:`옆구리 백색 ${(ca.lateral.whiteRatio*100).toFixed(0)}%${flags.udonTail?' + 우동꼬리':''} → 릴리화이트`});
+  } else if (isCharcoal) {
     traits.pigment = '멜라닌 과잉(극다크=차콜)';
-    reasons.push({icon:'🖤',text:`극도로 어두운 픽셀 ${(ca.darkRatio*100).toFixed(0)}% — 멜라닌 과잉`});
+    flags.charcoal = true;
+    reasons.push({icon:'🖤',text:`극암흑 ${(ca.darkRatio*100).toFixed(0)}% + 저채도 ${(ca.avgSaturation*100).toFixed(0)}% → 차콜`});
+  } else if (isFullyAchromatic && !spotDisqualifiesAxanthic && !hasAnyChroma && ca.contrast < 35 && !isCharcoal) {
+    traits.pigment = '황색·적색 결핍(무채색=아잔틱)';
+    flags.axanthic = true;
+    reasons.push({icon:'🔬',text:`균일 무채색 — 채도 ${(ca.avgSaturation*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}(낮음), 유채색 없음 → 아잔틱`});
   } else if (ca.pinkRatio > 0.08 && ca.lightRatio > 0.3) {
     traits.pigment = '색소 감소(반투명=하이포)';
-    reasons.push({icon:'🩷',text:`핑크 톤 + 밝은 영역 넓음 → 색소 감소 패턴`});
-  } else if (ca.brownRatio > 0.2 && ca.avgR > 100 && ca.avgR < 160) {
-    traits.pigment = '커피 톤(카푸치노)';
-    reasons.push({icon:'☕',text:`갈색 커피톤 ${(ca.brownRatio*100).toFixed(0)}% — 카푸치노 색소 패턴`});
+    reasons.push({icon:'🩷',text:`핑크톤 + 밝은 영역 → 하이포`});
   } else { traits.pigment = '정상'; }
 
-  // ── pattern (패턴) — 대비·밴드·영역 복합 판단 ──
-  const lateralCoverage = ca.lateral.lightRatio; // 옆구리 밝은 영역 비율
+  const lateralCoverage = ca.lateral.lightRatio;
+  const lateralWhite = ca.lateral.whiteRatio;
   const topBottomDiff = Math.abs((ca.regions.top.avgB || 0) - (ca.regions.bottom.avgB || 0));
-  const leftRightDiff = Math.abs((ca.regions.left.avgB || 0) - (ca.regions.right.avgB || 0));
   const hasHighContrast = ca.contrast > 50;
+  const hasChromaticSpots = ca.orangeRatio > 0.03 || ca.yellowRatio > 0.03 || ca.redRatio > 0.03;
 
-  if (ca.lateral.whiteRatio > 0.2 && ca.contrast > 40 && lateralCoverage > 0.35) {
-    // 3색 분리 체크: 좌우 밝고, 대비 높고, 중앙 어두우면
-    if (ca.regions.center.avgB < ca.regions.left.avgB - 20 && (ca.orangeRatio > 0.03 || ca.yellowRatio > 0.03)) {
-      traits.pattern = '3색 완전 분리(트익할)';
-      reasons.push({icon:'🌈',text:`3색 분리 감지: 옆구리 밝은영역 ${(lateralCoverage*100).toFixed(0)}%, 중앙 대비 ${ca.contrast.toFixed(0)}, 오렌지/옐로 색소 존재`});
-    } else {
-      traits.pattern = '상위 레터럴까지 무늬(익스트림)';
-      reasons.push({icon:'📊',text:`높은 레터럴 커버리지(밝은 영역 ${(lateralCoverage*100).toFixed(0)}%), 대비 ${ca.contrast.toFixed(0)} — 익스트림 할리퀸 패턴`});
-    }
-  } else if (ca.lateral.whiteRatio > 0.1 && ca.darkRatio > 0.15 && hasHighContrast) {
+  if (lateralWhite > 0.18 && ca.contrast > 45 && lateralCoverage > 0.35
+      && ca.regions.center.avgB < ca.regions.left.avgB - 15 && hasChromaticSpots) {
+    traits.pattern = '3색 완전 분리(트익할)';
+    reasons.push({icon:'🌈',text:`3색 분리: 레터럴 ${(lateralWhite*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}, 유채색 잔존 → Tricolor`});
+  } else if (lateralWhite > 0.18 && hasHighContrast && lateralCoverage > 0.30) {
+    traits.pattern = '상위 레터럴까지 무늬(익스트림)';
+    reasons.push({icon:'📊',text:`레터럴 커버리지 ${(lateralCoverage*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)} → Extreme Harlequin`});
+  } else if (lateralWhite > 0.1 && ca.darkRatio > 0.15 && hasHighContrast) {
     traits.pattern = '하위 레터럴 무늬(할리퀸)';
-    reasons.push({icon:'🎭',text:`옆구리에 밝고 어두운 영역 혼재(백색 ${(ca.lateral.whiteRatio*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}) — 할리퀸 패턴`});
+    reasons.push({icon:'🎭',text:`옆구리 혼재(백색 ${(lateralWhite*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}) → Harlequin`});
   } else if (ca.hBandScore > 0.25 && hasHighContrast) {
     traits.pattern = '횡단 줄무늬(타이거/브린들)';
-    reasons.push({icon:'🐯',text:`가로 밴드 전환 밀도 ${(ca.hBandScore*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)} — 타이거/브린들 줄무늬`});
+    reasons.push({icon:'🐯',text:`가로 밴드 밀도 ${(ca.hBandScore*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)} → Tiger/Brindle`});
   } else if (ca.vStripeScore > 0.12 && ca.dorsal.avgBright > ca.avgBright + 15) {
     traits.pattern = '밝은 등 스트라이프(플레임)';
-    reasons.push({icon:'🔥',text:`등(도살) 밝기 ${ca.dorsal.avgBright.toFixed(0)} vs 전체 ${ca.avgBright} — 밝은 등줄 플레임 패턴`});
+    reasons.push({icon:'🔥',text:`등 밝기 ${ca.dorsal.avgBright.toFixed(0)} vs 몸 ${ca.avgBright} → Flame/Dorsal`});
   } else if (topBottomDiff > 25 || (ca.lightRatio > 0.2 && ca.darkRatio > 0.2)) {
     traits.pattern = '상하 투톤(바이컬러)';
-    reasons.push({icon:'◐',text:`상하 밝기 차이 ${topBottomDiff.toFixed(0)}, 밝음/어둠 혼재 — 바이컬러 패턴`});
+    reasons.push({icon:'◐',text:`상하 밝기차 ${topBottomDiff.toFixed(0)} → Bicolor`});
   } else if (ca.colorUniformity > 0.7 && ca.contrast < 30) {
     traits.pattern = '단색/투톤(팬텀)';
-    reasons.push({icon:'🎴',text:`색 균일도 ${(ca.colorUniformity*100).toFixed(0)}%, 낮은 대비 ${ca.contrast.toFixed(0)} — 단색/팬텀 패턴`});
+    flags.phantomLike = true;
+    reasons.push({icon:'🎴',text:`색 균일도 ${(ca.colorUniformity*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}(낮음) → Phantom/Patternless`});
   } else {
     traits.pattern = '무늬 없음(패턴리스)';
     reasons.push({icon:'◻️',text:`뚜렷한 패턴 미감지, 대비 ${ca.contrast.toFixed(0)}`});
   }
 
-  // ── structure (구조) — 레터럴 백색 + 핀라인 분석 ──
   if (ca.lateral.whiteRatio > 0.3 || (ca.whiteRatio > 0.3 && ca.lateral.lightRatio > 0.4)) {
     traits.structure = '릴리화이트 덮임(백색 레터럴)';
-    reasons.push({icon:'🏔️',text:`옆구리 백색 커버리지 높음(${(ca.lateral.whiteRatio*100).toFixed(0)}%) — 릴리화이트 구조`});
+    reasons.push({icon:'🏔️',text:`옆구리 백색 ${(ca.lateral.whiteRatio*100).toFixed(0)}% → 릴리화이트 구조`});
   } else if (ca.vStripeScore > 0.08 && ca.spotDensity < 0.03) {
     if (ca.vStripeScore > 0.2) {
       traits.structure = '풀핀(100% 연결)';
-      reasons.push({icon:'📏',text:`세로 핀 라인 강도 ${(ca.vStripeScore*100).toFixed(0)}% — 풀핀 구조`});
+      reasons.push({icon:'📏',text:`세로 핀 강도 ${(ca.vStripeScore*100).toFixed(0)}% → 풀핀`});
     } else {
       traits.structure = '핀스트라이프(핀 라인)';
-      reasons.push({icon:'📐',text:`세로 핀 라인 감지(강도 ${(ca.vStripeScore*100).toFixed(0)}%)`});
+      reasons.push({icon:'📐',text:`세로 핀 감지(${(ca.vStripeScore*100).toFixed(0)}%)`});
     }
   } else { traits.structure = '없음'; }
 
-  // ── tail (꼬리) — 🆕 하단 영역 분석으로 추정 ──
-  if (ca.tail.whiteRatio > 0.3 && ca.tail.avgSat < 0.12) {
-    traits.tail = '우동 꼬리(하얗고 무늬 없음)';
-    reasons.push({icon:'🍜',text:`하단 영역 백색 ${(ca.tail.whiteRatio*100).toFixed(0)}%, 채도 낮음(${(ca.tail.avgSat*100).toFixed(0)}%) — 우동 꼬리 특징`});
-  } else if (ca.tail.darkRatio > 0.4 && ca.tail.avgBright < 50) {
-    traits.tail = '다크 테일(어두운 꼬리)';
-    reasons.push({icon:'🌑',text:`하단 영역 매우 어두움(밝기 ${ca.tail.avgBright.toFixed(0)}, 어두운 비율 ${(ca.tail.darkRatio*100).toFixed(0)}%) — 다크 테일`});
-  } else if (ca.tail.whiteRatio > 0.15 && ca.tail.avgBright > 150 && ca.brownRatio > 0.1) {
-    traits.tail = 'Y자 마크(꼬리 기부 백색 Y)';
-    reasons.push({icon:'🔱',text:`하단에 부분 백색(${(ca.tail.whiteRatio*100).toFixed(0)}%) + 갈색 배경 — Y자 마크 추정`});
-  } else {
-    traits.tail = '일반 꼬리';
-  }
-
-  traits._reasons = reasons; // 설명 데이터 보존
+  traits._reasons = reasons;
+  traits._flags = flags;
+  traits._rawCA = ca;
   return traits;
 }
 
@@ -4398,7 +4506,9 @@ function showResult(photoCount, fireUp, colorAnalyses) {
     scoreArrays.push(calcMultiLayerScores(selections));
   }
 
-  const mergedScores = photoCount > 1 ? mergeMultiPhotoScores(scoreArrays) : scoreArrays[0];
+  const photoViews = (colorAnalyses || []).map(ca => ca ? _estimatePhotoView(ca) : 'unknown');
+  let mergedScores = photoCount > 1 ? mergeMultiPhotoScores(scoreArrays, photoViews) : scoreArrays[0];
+  mergedScores = _applyCAHardRules(mergedScores, colorAnalyses);
   const topCandidates = getTopCandidates(mergedScores, 3);
 
   // 최소 1개 후보 보장
@@ -4417,7 +4527,10 @@ function showResult(photoCount, fireUp, colorAnalyses) {
   const top = candidatesWithProb[0];
   const pickedMorph = top.name;
   const m = top.data;
-  lastScanResult = { morph: pickedMorph, data: m, candidates: candidatesWithProb, reasons: allReasons };
+  const scanConfidence = _evaluateScanConfidence(candidatesWithProb, photoCount);
+  allReasons.unshift({ icon: scanConfidence.level === 'defer' ? '⚠️' : (scanConfidence.level === 'high' ? '✅' : 'ℹ️'),
+                       text: `신뢰도: ${scanConfidence.label} — ${scanConfidence.msg}` });
+  lastScanResult = { morph: pickedMorph, data: m, candidates: candidatesWithProb, reasons: allReasons, confidence: scanConfidence };
 
   const gInfo = MORPH_GRADES[m.grade] || MORPH_GRADES['C'];
 
