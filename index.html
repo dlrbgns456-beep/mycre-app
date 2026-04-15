@@ -557,6 +557,11 @@ input[type=file]{display:none}
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 <!-- QR코드 생성 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<!-- 배경 제거 AI 라이브러리 -->
+<script type="module">
+  import { removeBackground } from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/index.browser.js';
+  window.imglyRemoveBackground = removeBackground;
+</script>
 </head>
 <body>
 
@@ -803,6 +808,27 @@ input[type=file]{display:none}
       </div>
       <div style="font-size:12px;font-weight:700;color:var(--ac);margin-bottom:4px">게코를 중앙에 맞춰주세요!</div>
       <div style="font-size:10px;color:var(--tx3);line-height:1.5">AI가 사진 <b style="color:var(--ac)">중앙 60% 영역</b>을 집중 분석합니다.<br>배경이 아닌 개체가 중앙에 오도록 촬영하면 정확도가 높아져요.</div>
+    </div>
+
+    <!-- 배경 제거 토글 -->
+    <label id="bg-remove-wrap" style="display:flex;align-items:center;gap:10px;padding:10px 13px;background:rgba(90,180,232,.08);border:1.5px solid rgba(90,180,232,.35);border-radius:12px;margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="bg-remove-toggle" checked style="width:18px;height:18px;accent-color:#5ab4e8;cursor:pointer;flex-shrink:0">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:#5ab4e8">✂️ 배경 자동 제거</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">사진에서 게코만 남기고 배경을 지워요 (처음엔 AI 모델 다운로드로 느릴 수 있어요)</div>
+      </div>
+    </label>
+
+    <!-- 처리 중 프로그레스 바 -->
+    <div id="bg-remove-progress" style="display:none;background:rgba(90,180,232,.08);border:1.5px solid rgba(90,180,232,.35);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-align:center">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px">
+        <div style="width:20px;height:20px;border:2.5px solid rgba(90,180,232,.3);border-top-color:#5ab4e8;border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0"></div>
+        <div style="font-size:13px;font-weight:700;color:#5ab4e8" id="bg-remove-status">배경 제거 중... (0/0)</div>
+      </div>
+      <div style="background:rgba(90,180,232,.15);border-radius:6px;height:6px;overflow:hidden">
+        <div id="bg-remove-bar" style="height:100%;background:#5ab4e8;border-radius:6px;transition:width .3s;width:0%"></div>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:6px">AI가 배경을 분석하고 있어요. 잠시만 기다려 주세요 🦎</div>
     </div>
 
     <!-- 사진 추가 버튼 -->
@@ -4367,27 +4393,76 @@ function renderScanGrid() {
     : `✨ AI 분석 시작 (${cnt}장 — 3장 이상 권장)`;
 }
 
-function handleScanPhotos(e) {
+function _fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function _blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function handleScanPhotos(e) {
   const files = Array.from(e.target.files);
   if (!files.length) return;
   const remaining = 6 - scanPhotos.length;
   const toAdd = files.slice(0, remaining);
-
-  let loaded = 0;
-  toAdd.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      scanPhotos.push({data: ev.target.result, name: file.name});
-      loaded++;
-      if (loaded === toAdd.length) {
-        document.getElementById('scan-tips').style.display = 'none';
-        renderScanGrid();
-      }
-    };
-    reader.readAsDataURL(file);
-  });
   e.target.value = '';
   if (files.length > remaining) showToast(`최대 6장까지 업로드 가능해요 (${remaining}장 추가됨)`);
+
+  const useBgRemove = document.getElementById('bg-remove-toggle')?.checked && window.imglyRemoveBackground;
+
+  if (useBgRemove) {
+    const progressEl = document.getElementById('bg-remove-progress');
+    const statusEl   = document.getElementById('bg-remove-status');
+    const barEl      = document.getElementById('bg-remove-bar');
+    progressEl.style.display = 'block';
+
+    let done = 0;
+    const updateProgress = () => {
+      statusEl.textContent = `배경 제거 중... (${done}/${toAdd.length})`;
+      barEl.style.width = `${Math.round((done / toAdd.length) * 100)}%`;
+    };
+    updateProgress();
+
+    for (const file of toAdd) {
+      try {
+        const resultBlob = await window.imglyRemoveBackground(file, {
+          output: { format: 'image/png', quality: 0.9 }
+        });
+        const dataURL = await _blobToDataURL(resultBlob);
+        scanPhotos.push({ data: dataURL, name: file.name });
+      } catch (err) {
+        console.warn('[배경제거 실패] 원본 사용:', err);
+        const dataURL = await _fileToDataURL(file);
+        scanPhotos.push({ data: dataURL, name: file.name });
+        showToast('⚠️ 배경 제거 실패 — 원본 사진으로 분석해요');
+      }
+      done++;
+      updateProgress();
+    }
+
+    progressEl.style.display = 'none';
+    barEl.style.width = '0%';
+
+  } else {
+    await Promise.all(toAdd.map(async file => {
+      const dataURL = await _fileToDataURL(file);
+      scanPhotos.push({ data: dataURL, name: file.name });
+    }));
+  }
+
+  document.getElementById('scan-tips').style.display = 'none';
+  renderScanGrid();
 }
 
 function removeScanPhoto(idx) {
