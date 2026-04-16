@@ -6069,7 +6069,7 @@ function printQR() {
     </div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script>
   
-<\!-- ══════════════════════════════════════
+<!-- ══════════════════════════════════════
      SHEET: 개체별 기록
 ══════════════════════════════════════ -->
 <div class="sheet-overlay" id="sheet-gecko-records" onclick="closeSheet('sheet-gecko-records',event)">
@@ -7758,7 +7758,7 @@ let _currentRecordType = 'memo';
 
 function openGeckoRecords(geckoId) {
   const g = state.geckos.find(x => String(x.id) === String(geckoId));
-  if (\!g) return;
+  if (!g) return;
   _currentRecordGeckoId = geckoId;
   document.getElementById('record-gecko-name').textContent = g.name;
   document.getElementById('record-gecko-morph').textContent = g.morph || '모프 미판별';
@@ -7783,14 +7783,14 @@ function openAddRecord(type) {
 }
 
 async function saveRecord() {
-  if (\!_currentRecordGeckoId || \!_currentUser) return;
+  if (!_currentRecordGeckoId || !_currentUser) return;
   const date = document.getElementById('record-date').value;
   const note = document.getElementById('record-note').value;
-  if (\!date) { showToast('날짜를 입력해주세요'); return; }
+  if (!date) { showToast('날짜를 입력해주세요'); return; }
   let value = '';
   if (_currentRecordType === 'weight') {
     value = document.getElementById('record-weight-val').value;
-    if (\!value) { showToast('체중을 입력해주세요'); return; }
+    if (!value) { showToast('체중을 입력해주세요'); return; }
     const g = state.geckos.find(x => String(x.id) === String(_currentRecordGeckoId));
     if (g) { g.weight = value; _saveGeckoToDB(g); }
   } else if (_currentRecordType === 'feed') {
@@ -7803,7 +7803,7 @@ async function saveRecord() {
     const { error } = await _supabase.from('gecko_logs').insert(record);
     if (error) { const key='gecko_logs_'+_currentUser.id; const logs=JSON.parse(localStorage.getItem(key)||'[]'); logs.push(record); localStorage.setItem(key,JSON.stringify(logs)); }
   } catch(e) { const key='gecko_logs_'+_currentUser.id; const logs=JSON.parse(localStorage.getItem(key)||'[]'); logs.push(record); localStorage.setItem(key,JSON.stringify(logs)); }
-  showToast('기록이 저장됐어요\!');
+  showToast('기록이 저장됐어요!');
   document.getElementById('record-add-form').style.display = 'none';
   loadRecords(_currentRecordGeckoId);
 }
@@ -7812,23 +7812,23 @@ async function loadRecords(geckoId) {
   let records = [];
   try {
     const { data, error } = await _supabase.from('gecko_logs').select('*').eq('gecko_id', geckoId).eq('user_id', _currentUser.id).order('date', { ascending: false });
-    if (\!error && data) records = data;
+    if (!error && data) records = data;
   } catch(e) {}
   try {
     const key='gecko_logs_'+_currentUser.id; const local=JSON.parse(localStorage.getItem(key)||'[]');
     const localForGecko = local.filter(r => String(r.gecko_id) === String(geckoId));
     const existingDates = new Set(records.map(r => r.created_at));
-    localForGecko.forEach(r => { if (\!existingDates.has(r.created_at)) records.push(r); });
+    localForGecko.forEach(r => { if (!existingDates.has(r.created_at)) records.push(r); });
   } catch(e) {}
   records.sort((a, b) => b.date.localeCompare(a.date));
   renderWeightChart(records.filter(r => r.type === 'weight'));
   const timeline = document.getElementById('record-timeline');
-  if (records.length === 0) { timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요. 위 버튼으로 첫 기록을 추가해보세요\!</div>'; return; }
+  if (records.length === 0) { timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요. 위 버튼으로 첫 기록을 추가해보세요!</div>'; return; }
   const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'} };
   timeline.innerHTML = records.map(r => {
     const c = tc[r.type] || tc.memo;
     let detail = r.type==='weight' ? '<b>'+r.value+'g</b>' : r.type==='feed' ? r.value : r.type==='shed' ? r.value : r.note||'';
-    const noteHtml = (r.note && r.type\!=='health' && r.type\!=='memo') ? '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+r.note+'</div>' : '';
+    const noteHtml = (r.note && r.type!=='health' && r.type!=='memo') ? '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+r.note+'</div>' : '';
     return '<div class="record-item type-'+r.type+'"><div class="record-date">'+r.date+'</div><div class="record-content"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
   }).join('');
 }
