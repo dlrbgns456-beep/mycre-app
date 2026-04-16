@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="마이크레">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0e1a10">
+<meta name="theme-color" content="#FFF9EF">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
 <link rel="icon" type="image/svg+xml" href="/icon-192.svg">
@@ -17,32 +17,32 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* ─── Design Tokens ─── */
+/* ─── Design Tokens (MyCre Brand) ─── */
 :root {
-  --bg:    #0e1a10;
-  --sf:    #162819;
-  --sf2:   #1d3320;
-  --card:  #1a2f1c;
-  --br:    #2a4a2d;
-  --br2:   #1f3d22;
-  --ac:    #5ddc6a;
-  --ac2:   rgba(93,220,106,.13);
-  --ac3:   rgba(93,220,106,.07);
-  --am:    #f5c842;
-  --am2:   rgba(245,200,66,.14);
-  --coral: #ff7b54;
-  --co2:   rgba(255,123,84,.14);
-  --blue:  #5ab4e8;
-  --bl2:   rgba(90,180,232,.13);
-  --pu:    #c07af0;
-  --pu2:   rgba(192,122,240,.13);
-  --tx:    #ddf0de;
-  --tx2:   #7aab7e;
-  --tx3:   #4a7a4e;
+  --bg:    #FFF9EF;
+  --sf:    #F2EDE3;
+  --sf2:   #E8E2D6;
+  --card:  #FFFFFF;
+  --br:    #D4CBB8;
+  --br2:   #E0D8C9;
+  --ac:    #2E7D57;
+  --ac2:   rgba(46,125,87,.10);
+  --ac3:   rgba(46,125,87,.05);
+  --am:    #E09C2A;
+  --am2:   rgba(224,156,42,.12);
+  --coral: #D4663E;
+  --co2:   rgba(212,102,62,.10);
+  --blue:  #3E8CB5;
+  --bl2:   rgba(62,140,181,.10);
+  --pu:    #8B5CB0;
+  --pu2:   rgba(139,92,176,.10);
+  --tx:    #1A2B22;
+  --tx2:   #4A6B52;
+  --tx3:   #8A9E8D;
   --r:     18px;
   --rs:    12px;
   --rx:    24px;
-  --shadow: 0 4px 24px rgba(0,0,0,.5);
+  --shadow: 0 4px 24px rgba(26,43,34,.12);
 }
 
 /* ─── Reset ─── */
@@ -62,7 +62,7 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 /* ─── Top Bar ─── */
 .topbar{
   position:sticky;top:0;z-index:50;
-  background:rgba(14,26,16,.93);
+  background:rgba(255,249,239,.95);
   backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);
   padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
@@ -81,7 +81,7 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 .bnav{
   position:fixed;bottom:0;left:50%;transform:translateX(-50%);
   width:100%;max-width:480px;
-  background:rgba(14,26,16,.97);
+  background:rgba(255,249,239,.97);
   backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);
   border-top:1px solid var(--br2);
@@ -97,11 +97,11 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 .nb-scan{flex:1;padding:6px 0 5px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none}
 .nb-scan-c{
   width:50px;height:50px;
-  background:linear-gradient(135deg,var(--ac),#38c947);
+  background:linear-gradient(135deg,var(--ac),#3A9968);
   border-radius:16px;
   display:flex;align-items:center;justify-content:center;
   font-size:24px;
-  box-shadow:0 4px 20px rgba(93,220,106,.45);
+  box-shadow:0 4px 20px rgba(46,125,87,.45);
   margin-top:-12px;
   transition:all .15s;
 }
@@ -119,11 +119,11 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 
 /* ─── Buttons ─── */
 .btn-primary{
-  background:linear-gradient(135deg,var(--ac),#38c947);
-  color:#071508;font-weight:700;
+  background:linear-gradient(135deg,var(--ac),#3A9968);
+  color:#FFFFFF;font-weight:700;
   border-radius:14px;padding:14px;
   font-size:15px;width:100%;
-  box-shadow:0 4px 18px rgba(93,220,106,.35);
+  box-shadow:0 4px 18px rgba(46,125,87,.35);
   transition:all .15s;
 }
 .btn-primary:active{transform:scale(.97);box-shadow:none}
@@ -231,7 +231,7 @@ input[type=file]{display:none}
 /* ─── HOME PAGE ─── */
 .home-banner{
   margin:14px 18px;
-  background:linear-gradient(135deg,#1a3d1f,#0d2610);
+  background:linear-gradient(135deg,#E8E2D6,#FFF9EF);
   border:1px solid var(--br);border-radius:var(--rx);
   padding:20px;overflow:hidden;position:relative;
 }
@@ -256,12 +256,12 @@ input[type=file]{display:none}
 .quick-icon{font-size:28px;margin-bottom:2px}
 .quick-title{font-size:14px;font-weight:700}
 .quick-sub{font-size:11px;color:var(--tx2);line-height:1.4}
-.quick-card.featured{border-color:rgba(93,220,106,.4);background:linear-gradient(135deg,#1a3320,var(--card))}
+.quick-card.featured{border-color:rgba(46,125,87,.4);background:linear-gradient(135deg,#F0EBE0,var(--card))}
 
 /* AI scan teaser */
 .scan-teaser{
   margin:0 18px 14px;
-  background:linear-gradient(135deg,#1e3823,#162819);
+  background:linear-gradient(135deg,#E8E2D6,#F2EDE3);
   border:1.5px solid var(--ac);border-radius:var(--rx);
   padding:16px 18px;display:flex;align-items:center;gap:14px;
   cursor:pointer;transition:all .15s;
@@ -271,8 +271,8 @@ input[type=file]{display:none}
 .scan-teaser-title{font-size:15px;font-weight:800;margin-bottom:4px}
 .scan-teaser-sub{font-size:12px;color:var(--tx2)}
 .scan-teaser-btn{
-  background:linear-gradient(135deg,var(--ac),#38c947);
-  color:#071508;font-weight:800;font-size:13px;
+  background:linear-gradient(135deg,var(--ac),#3A9968);
+  color:#FFFFFF;font-weight:800;font-size:13px;
   border-radius:12px;padding:10px 16px;
   white-space:nowrap;flex-shrink:0;
 }
@@ -311,7 +311,7 @@ input[type=file]{display:none}
 .step::after{content:"";position:absolute;top:14px;right:-50%;width:100%;height:2px;background:var(--br)}
 .step:last-child::after{display:none}
 .step-circle{width:28px;height:28px;border-radius:50%;background:var(--sf2);border:2px solid var(--br);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:"DM Mono",monospace;color:var(--tx2);position:relative;z-index:1}
-.step.active .step-circle{background:var(--ac);border-color:var(--ac);color:#071508}
+.step.active .step-circle{background:var(--ac);border-color:var(--ac);color:#FFFFFF}
 .step.done .step-circle{background:var(--ac2);border-color:var(--ac);color:var(--ac)}
 .step-label{font-size:9px;color:var(--tx3);font-family:"DM Mono",monospace;text-align:center;letter-spacing:.3px}
 .step.active .step-label{color:var(--ac)}
@@ -368,7 +368,7 @@ input[type=file]{display:none}
 .result-area{display:none;padding:0 18px 20px}
 .result-area.show{display:block}
 .result-morph-card{
-  background:linear-gradient(135deg,#1e3823,#162819);
+  background:linear-gradient(135deg,#E8E2D6,#F2EDE3);
   border:1.5px solid var(--ac);border-radius:20px;
   padding:18px;margin-bottom:12px;
 }
@@ -434,11 +434,11 @@ input[type=file]{display:none}
 .fab{
   position:fixed;bottom:90px;right:18px;
   width:54px;height:54px;
-  background:linear-gradient(135deg,var(--ac),#38c947);
+  background:linear-gradient(135deg,var(--ac),#3A9968);
   border-radius:17px;
   display:flex;align-items:center;justify-content:center;
-  font-size:26px;color:#071508;
-  box-shadow:0 6px 24px rgba(93,220,106,.5);
+  font-size:26px;color:#FFFFFF;
+  box-shadow:0 6px 24px rgba(46,125,87,.5);
   z-index:90;transition:all .15s;
   border:none;cursor:pointer;
 }
@@ -489,11 +489,11 @@ input[type=file]{display:none}
 .auth-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--br);border-radius:var(--rx);padding:22px 20px;display:flex;flex-direction:column;gap:12px}
 .auth-tab-row{display:flex;background:var(--sf2);border-radius:12px;padding:3px;gap:3px;margin-bottom:4px}
 .auth-tab{flex:1;padding:9px 0;border-radius:10px;font-size:13px;font-weight:700;color:var(--tx2);background:none;border:none;cursor:pointer;transition:all .15s}
-.auth-tab.active{background:var(--ac);color:#071508}
+.auth-tab.active{background:var(--ac);color:#FFFFFF}
 .auth-input{width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:"Noto Sans KR",sans-serif;font-size:14px;outline:none;transition:border-color .15s}
 .auth-input:focus{border-color:var(--ac)}
 .auth-input::placeholder{color:var(--tx3)}
-.auth-btn{width:100%;background:linear-gradient(135deg,var(--ac),#38c947);color:#071508;font-weight:800;font-size:15px;border:none;border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 4px 18px rgba(93,220,106,.35);transition:all .15s;font-family:"Noto Sans KR",sans-serif}
+.auth-btn{width:100%;background:linear-gradient(135deg,var(--ac),#3A9968);color:#FFFFFF;font-weight:800;font-size:15px;border:none;border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 4px 18px rgba(46,125,87,.35);transition:all .15s;font-family:"Noto Sans KR",sans-serif}
 .auth-btn:active{transform:scale(.97);box-shadow:none}
 .auth-err{font-size:12px;color:var(--coral);text-align:center;min-height:18px;font-weight:600}
 .social-btn{
@@ -552,6 +552,20 @@ input[type=file]{display:none}
   color:#1a0a00;font-weight:800;font-size:14px;
   border-radius:14px;padding:13px;width:100%;
 }
+
+/* ─── Gecko Record Log ─── */
+.record-timeline{display:flex;flex-direction:column;gap:0;padding-left:16px;border-left:2px solid var(--br);margin-left:8px}
+.record-item{position:relative;padding:10px 0 10px 16px}
+.record-item::before{content:'';position:absolute;left:-9px;top:14px;width:14px;height:14px;border-radius:50%;border:2px solid var(--ac);background:var(--bg)}
+.record-item.type-weight::before{background:var(--ac);border-color:var(--ac)}
+.record-item.type-feed::before{background:var(--am);border-color:var(--am)}
+.record-item.type-shed::before{background:var(--blue);border-color:var(--blue)}
+.record-item.type-health::before{background:var(--coral);border-color:var(--coral)}
+.record-item.type-memo::before{background:var(--pu);border-color:var(--pu)}
+.record-date{font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:3px}
+.record-content{font-size:13px;color:var(--tx);line-height:1.5}
+.record-type-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-right:5px}
+.weight-chart-bar{height:4px;border-radius:2px;background:var(--ac);transition:width .3s}
 </style>
 <!-- 포트원(아임포트) SDK -->
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
@@ -591,7 +605,7 @@ input[type=file]{display:none}
   <div id="shared-gecko-content"></div>
   <div style="text-align:center;margin-top:20px">
     <a href="/" style="display:inline-block;background:var(--ac);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:700">마이크레 앱 시작하기</a>
-    <div style="font-size:10px;color:var(--tx3);margin-top:10px">mycre-gecko.netlify.app</div>
+    <div style="font-size:10px;color:var(--tx3);margin-top:10px">mycre.netlify.app</div>
   </div>
 </div>
 
@@ -617,7 +631,7 @@ input[type=file]{display:none}
       <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:12px">
         카카오톡/인스타 등의 인앱 브라우저에서는<br>Google 로그인이 제한돼요.
       </div>
-      <button onclick="_openInExternalBrowser('https://mycre-gecko.netlify.app')"
+      <button onclick="_openInExternalBrowser('https://mycre.netlify.app')"
         style="width:100%;padding:12px;border-radius:12px;background:var(--am);color:#1a0a00;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;margin-bottom:8px">
         🌐 Safari / Chrome으로 열기
       </button>
@@ -813,12 +827,12 @@ input[type=file]{display:none}
     </div>
 
     <!-- 게코 가이드라인 오버레이 안내 -->
-    <div id="scan-guideline-hint" style="position:relative;background:var(--sf2);border:1.5px dashed rgba(93,220,106,.3);border-radius:16px;padding:18px 14px;margin-bottom:12px;text-align:center;overflow:hidden">
+    <div id="scan-guideline-hint" style="position:relative;background:var(--sf2);border:1.5px dashed rgba(46,125,87,.3);border-radius:16px;padding:18px 14px;margin-bottom:12px;text-align:center;overflow:hidden">
       <!-- 게코 실루엣 (점선 가이드) -->
-      <div style="position:relative;width:120px;height:80px;margin:0 auto 10px;border:2px dashed rgba(93,220,106,.35);border-radius:40% 40% 35% 35%;display:flex;align-items:center;justify-content:center">
+      <div style="position:relative;width:120px;height:80px;margin:0 auto 10px;border:2px dashed rgba(46,125,87,.35);border-radius:40% 40% 35% 35%;display:flex;align-items:center;justify-content:center">
         <span style="font-size:40px;opacity:.4">🦎</span>
         <!-- 중앙 포커스 영역 표시 -->
-        <div style="position:absolute;inset:15%;border:1.5px solid rgba(93,220,106,.5);border-radius:8px"></div>
+        <div style="position:absolute;inset:15%;border:1.5px solid rgba(46,125,87,.5);border-radius:8px"></div>
       </div>
       <div style="font-size:12px;font-weight:700;color:var(--ac);margin-bottom:4px">게코를 중앙에 맞춰주세요!</div>
       <div style="font-size:10px;color:var(--tx3);line-height:1.5">AI가 사진 <b style="color:var(--ac)">중앙 60% 영역</b>을 집중 분석합니다.<br>배경이 아닌 개체가 중앙에 오도록 촬영하면 정확도가 높아져요.</div>
@@ -937,14 +951,14 @@ input[type=file]{display:none}
     </div>
 
     <!-- AI 분석 데이터 섹션 (raw 수치) -->
-    <div id="res-ai-data" class="card card-pad" style="margin-bottom:12px;display:none;border:1px solid rgba(93,220,106,.2)">
+    <div id="res-ai-data" class="card card-pad" style="margin-bottom:12px;display:none;border:1px solid rgba(46,125,87,.2)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <span style="font-size:15px">📊</span>
         <div class="result-section-title" style="margin:0;flex:1">AI 분석 데이터</div>
         <span style="font-size:9px;color:var(--tx3);font-family:'DM Mono',monospace">RAW METRICS</span>
       </div>
       <!-- 핵심 요약 한 줄 -->
-      <div id="ai-data-headline" style="font-size:12px;color:var(--ac);font-weight:700;line-height:1.6;margin-bottom:12px;padding:9px 11px;background:rgba(93,220,106,.08);border-left:3px solid var(--ac);border-radius:6px"></div>
+      <div id="ai-data-headline" style="font-size:12px;color:var(--ac);font-weight:700;line-height:1.6;margin-bottom:12px;padding:9px 11px;background:rgba(46,125,87,.08);border-left:3px solid var(--ac);border-radius:6px"></div>
       <!-- 수치 그리드 -->
       <div id="ai-data-metrics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
       <!-- RGB 채널 -->
@@ -959,7 +973,7 @@ input[type=file]{display:none}
     </div>
 
     <!-- AI 분석 근거 설명 (왜 이 결과가 나왔는지) -->
-    <div id="res-explanation" class="card card-pad" style="margin-bottom:12px;border:1px solid rgba(93,220,106,.15);display:none">
+    <div id="res-explanation" class="card card-pad" style="margin-bottom:12px;border:1px solid rgba(46,125,87,.15);display:none">
       <div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding-bottom:0" onclick="const b=document.getElementById('explanation-body');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.exp-arrow').textContent=b.style.display==='none'?'▶':'▼'">
         <span style="font-size:15px">🧠</span>
         <div class="result-section-title" style="margin:0;flex:1">AI가 이렇게 판단한 이유</div>
@@ -967,7 +981,7 @@ input[type=file]{display:none}
         <span class="exp-arrow" style="font-size:11px;color:var(--tx3)">▶</span>
       </div>
       <div id="explanation-body" style="display:none">
-        <div id="explanation-summary" style="font-size:12px;color:var(--ac);font-weight:700;line-height:1.6;margin-bottom:10px;padding:8px 10px;background:rgba(93,220,106,.06);border-radius:10px"></div>
+        <div id="explanation-summary" style="font-size:12px;color:var(--ac);font-weight:700;line-height:1.6;margin-bottom:10px;padding:8px 10px;background:rgba(46,125,87,.06);border-radius:10px"></div>
         <div id="explanation-details" style="font-size:11px;color:var(--tx2);line-height:1.7"></div>
         <div id="explanation-metrics" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
       </div>
@@ -1027,7 +1041,7 @@ input[type=file]{display:none}
     </div>
 
     <!-- 내 개체로 저장 (이름 + 모프 직접 입력) -->
-    <div id="res-save-section" class="card card-pad" style="margin-bottom:14px;border:1.5px solid rgba(93,220,106,.2)">
+    <div id="res-save-section" class="card card-pad" style="margin-bottom:14px;border:1.5px solid rgba(46,125,87,.2)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <span style="font-size:16px">📝</span>
         <div class="result-section-title" style="margin:0">내 개체로 저장</div>
@@ -1577,7 +1591,7 @@ input[type=file]{display:none}
     <div class="sheet-title">⚡ 고속 등록 모드</div>
     <div class="sheet-body">
       <!-- 안내 -->
-      <div style="background:linear-gradient(135deg,rgba(93,220,106,.1),rgba(93,220,106,.03));border:1.5px solid rgba(93,220,106,.3);border-radius:14px;padding:11px 13px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.65">
+      <div style="background:linear-gradient(135deg,rgba(46,125,87,.1),rgba(46,125,87,.03));border:1.5px solid rgba(46,125,87,.3);border-radius:14px;padding:11px 13px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.65">
         <div style="font-weight:800;color:var(--ac);font-size:12px;margin-bottom:3px">📸 사진과 이름만 입력하면 저장!</div>
         모프·성별·출생일은 나중에 <b style="color:var(--tx)">내 개체 탭</b>에서 한 번에 수정할 수 있어요.
       </div>
@@ -2820,7 +2834,7 @@ function _evaluateScanConfidence(candidatesWithProb, photoCount) {
     return { level:'medium', label:'보통', msg:`1·2위 격차 ${gap}%p — 결과는 참고용, 추가 촬영 권장`, color:'#5ab4e8' };
   }
   if (top1.prob > 60 && gap > 25) {
-    return { level:'high', label:'높음', msg:`1위 ${top1.prob}% (2위와 ${gap}%p 차) — 신뢰도 높음`, color:'#5ddc6a' };
+    return { level:'high', label:'높음', msg:`1위 ${top1.prob}% (2위와 ${gap}%p 차) — 신뢰도 높음`, color:'#2E7D57' };
   }
   return { level:'medium', label:'보통', msg:`1위 ${top1.prob}%, 격차 ${gap}%p`, color:'#5ab4e8' };
 }
@@ -3301,7 +3315,7 @@ function getTopCandidates(scores, n) {
 const MORPH_GRADES = {
   'S': {label:'S급', color:'#f5c842', bg:'rgba(245,200,66,.18)', cssClass:'gS'},
   'A': {label:'A급', color:'#ff9c27', bg:'rgba(255,156,39,.15)', cssClass:'gA'},
-  'B': {label:'B급', color:'#5ddc6a', bg:'rgba(93,220,106,.13)', cssClass:'gB'},
+  'B': {label:'B급', color:'#2E7D57', bg:'rgba(46,125,87,.13)', cssClass:'gB'},
   'C': {label:'C급', color:'#5ab4e8', bg:'rgba(90,180,232,.13)', cssClass:'gC'},
 };
 
@@ -4342,8 +4356,8 @@ function openGeckoDetail(id) {
   if (state.isPro && typeof QRCode !== 'undefined') {
     const qrEl = document.getElementById('detail-qr-' + id);
     if (qrEl) {
-      const qrData = `https://mycre-gecko.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
-      try { new QRCode(qrEl, { text: qrData, width: 140, height: 140, colorDark:'#0e1a10', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
+      const qrData = `https://mycre.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
+      try { new QRCode(qrEl, { text: qrData, width: 140, height: 140, colorDark:'#1A2B22', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
     }
   }
 }
@@ -4777,7 +4791,7 @@ function renderCandidateDetail(candidate, gInfo, fireUp) {
     <div class="genetics-item"><div class="genetics-item-label">대립유전자</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.allele}</div></div>
     <div class="genetics-item"><div class="genetics-item-label">헷 여부</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.het}</div></div>
     <div class="genetics-item"><div class="genetics-item-label">우성 특성</div><div class="genetics-item-value" style="font-size:12px">${m.genetics.dom}</div></div>
-    ${m.origin ? `<div style="grid-column:1/-1;margin-top:6px;padding:10px;background:rgba(93,220,106,.08);border:1px solid rgba(93,220,106,.2);border-radius:10px">
+    ${m.origin ? `<div style="grid-column:1/-1;margin-top:6px;padding:10px;background:rgba(46,125,87,.08);border:1px solid rgba(46,125,87,.2);border-radius:10px">
       <div style="font-size:11px;font-weight:700;color:var(--ac);margin-bottom:4px">📖 유전적 기원</div>
       <div style="font-size:11px;color:var(--tx2);line-height:1.6">${m.origin}</div>
     </div>` : ''}
@@ -4920,12 +4934,12 @@ async function saveResultCard() {
   ctx.strokeRect(bw / 2, bw / 2, SIZE - bw, SIZE - bw);
 
   // 안쪽 얇은 라인
-  ctx.strokeStyle = 'rgba(93,220,106,.15)';
+  ctx.strokeStyle = 'rgba(46,125,87,.15)';
   ctx.lineWidth = 1;
   ctx.strokeRect(bw + 14, bw + 14, SIZE - (bw + 14) * 2, SIZE - (bw + 14) * 2);
 
   // ── 상단: 로고 영역 ──
-  ctx.fillStyle = '#5ddc6a';
+  ctx.fillStyle = '#2E7D57';
   ctx.font = 'bold 28px "Pretendard Variable", sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('🦎 마이크레', PAD + 10, PAD + 36);
@@ -4941,7 +4955,7 @@ async function saveResultCard() {
   ctx.fillText(now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }), SIZE - PAD - 10, PAD + 42);
 
   // ── 구분선 ──
-  ctx.strokeStyle = 'rgba(93,220,106,.2)';
+  ctx.strokeStyle = 'rgba(46,125,87,.2)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(PAD + 10, PAD + 76);
@@ -4956,8 +4970,8 @@ async function saveResultCard() {
 
   // 사진 테두리 글로우
   const glowGrd = ctx.createRadialGradient(photoCX, photoCY, photoR - 10, photoCX, photoCY, photoR + 20);
-  glowGrd.addColorStop(0, 'rgba(93,220,106,.25)');
-  glowGrd.addColorStop(1, 'rgba(93,220,106,0)');
+  glowGrd.addColorStop(0, 'rgba(46,125,87,.25)');
+  glowGrd.addColorStop(1, 'rgba(46,125,87,0)');
   ctx.fillStyle = glowGrd;
   ctx.fillRect(photoCX - photoR - 30, photoCY - photoR - 30, (photoR + 30) * 2, (photoR + 30) * 2);
 
@@ -4978,7 +4992,7 @@ async function saveResultCard() {
       ctx.restore();
     } catch(e) {
       // 사진 로드 실패 시 대체 아이콘
-      ctx.fillStyle = 'rgba(93,220,106,.15)';
+      ctx.fillStyle = 'rgba(46,125,87,.15)';
       ctx.beginPath();
       ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
       ctx.fill();
@@ -4987,7 +5001,7 @@ async function saveResultCard() {
       ctx.fillText('🦎', photoCX, photoCY + 40);
     }
   } else {
-    ctx.fillStyle = 'rgba(93,220,106,.15)';
+    ctx.fillStyle = 'rgba(46,125,87,.15)';
     ctx.beginPath();
     ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
     ctx.fill();
@@ -4999,7 +5013,7 @@ async function saveResultCard() {
   // 원형 테두리
   ctx.beginPath();
   ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(93,220,106,.5)';
+  ctx.strokeStyle = 'rgba(46,125,87,.5)';
   ctx.lineWidth = 3;
   ctx.stroke();
 
@@ -5032,19 +5046,19 @@ async function saveResultCard() {
   // pill 배경
   const pillGrd = ctx.createLinearGradient(pillX, pillY, pillX + pillW, pillY + pillH);
   pillGrd.addColorStop(0, 'rgba(46,204,113,.2)');
-  pillGrd.addColorStop(1, 'rgba(93,220,106,.1)');
+  pillGrd.addColorStop(1, 'rgba(46,125,87,.1)');
   ctx.fillStyle = pillGrd;
   _roundRect(ctx, pillX, pillY, pillW, pillH, 20);
   ctx.fill();
 
   // pill 테두리
-  ctx.strokeStyle = 'rgba(93,220,106,.3)';
+  ctx.strokeStyle = 'rgba(46,125,87,.3)';
   ctx.lineWidth = 1.5;
   _roundRect(ctx, pillX, pillY, pillW, pillH, 20);
   ctx.stroke();
 
   // 확률 숫자
-  ctx.fillStyle = '#5ddc6a';
+  ctx.fillStyle = '#2E7D57';
   ctx.font = 'bold 64px "DM Mono", monospace';
   ctx.textAlign = 'center';
   ctx.fillText(probText, SIZE / 2, probY);
@@ -5078,23 +5092,23 @@ async function saveResultCard() {
   // 배경 박스 (살짝 어둡게 깔아서 가독성 확보)
   const wmBoxW = 640, wmBoxH = 58;
   const wmBoxX = SIZE / 2 - wmBoxW / 2, wmBoxY = wmY - 42;
-  ctx.fillStyle = 'rgba(93,220,106,.08)';
+  ctx.fillStyle = 'rgba(46,125,87,.08)';
   _roundRect(ctx, wmBoxX, wmBoxY, wmBoxW, wmBoxH, 14);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(93,220,106,.25)';
+  ctx.strokeStyle = 'rgba(46,125,87,.25)';
   ctx.lineWidth = 1.5;
   _roundRect(ctx, wmBoxX, wmBoxY, wmBoxW, wmBoxH, 14);
   ctx.stroke();
 
   // 브랜드 라인
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#5ddc6a';
+  ctx.fillStyle = '#2E7D57';
   ctx.font = 'bold 18px "Pretendard Variable", sans-serif';
   ctx.fillText('🦎 마이크레 — AI 모프 분석기', SIZE / 2, wmY - 18);
   // URL 라인 (유입 유도)
   ctx.fillStyle = 'rgba(255,255,255,.55)';
   ctx.font = '500 14px "DM Mono", monospace';
-  ctx.fillText('mycre-gecko.netlify.app', SIZE / 2, wmY + 2);
+  ctx.fillText('mycre.netlify.app', SIZE / 2, wmY + 2);
 
   // ── 다운로드 ──
   try {
@@ -5111,7 +5125,7 @@ async function saveResultCard() {
 // ══════════════════════════════════════
 // 🔗 공유 링크 복사 / 📣 공유 리워드
 // ══════════════════════════════════════
-const APP_URL = 'https://mycre-gecko.netlify.app';
+const APP_URL = 'https://mycre.netlify.app';
 
 async function _copyToClipboard(text) {
   try {
@@ -5977,7 +5991,7 @@ function generateQR() {
   document.getElementById('qr-selected-name').textContent = g.name;
 
   // QR에 담을 URL — 개체 상세 페이지 링크
-  const qrData = `https://mycre-gecko.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
+  const qrData = `https://mycre.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
 
   // qrcode.js로 로컬 QR 생성
   try {
@@ -5985,7 +5999,7 @@ function generateQR() {
       text: qrData,
       width: 180,
       height: 180,
-      colorDark: '#0e1a10',
+      colorDark: '#1A2B22',
       colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.M
     });
@@ -6032,7 +6046,7 @@ function printQR() {
   printWin.document.write(`<!DOCTYPE html><html><head><title>마이크레 QR - ${g?.name||'개체'}</title>
     <style>
       body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}
-      .card{text-align:center;border:2px solid #0e1a10;border-radius:20px;padding:40px 30px;max-width:360px}
+      .card{text-align:center;border:2px solid #2E7D57;border-radius:20px;padding:40px 30px;max-width:360px}
       .title{font-size:24px;font-weight:900;margin-bottom:4px}
       .sub{font-size:14px;color:#666;margin-bottom:20px}
       .qr{margin:20px auto}
@@ -6051,10 +6065,67 @@ function printQR() {
         ${m.price ? `<div>시세: ${m.price}</div>` : ''}
         ${g?.dad||g?.mom ? `<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>` : ''}
       </div>
-      <div class="footer">마이크레 · mycre-gecko.netlify.app</div>
+      <div class="footer">마이크레 · mycre.netlify.app</div>
     </div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script>
-  </body></html>`);
+  
+<\!-- ══════════════════════════════════════
+     SHEET: 개체별 기록
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-gecko-records" onclick="closeSheet('sheet-gecko-records',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📋 개체별 기록</div>
+    <div class="sheet-body">
+      <div id="record-gecko-name" style="font-size:18px;font-weight:800;margin-bottom:4px"></div>
+      <div id="record-gecko-morph" style="font-size:13px;color:var(--tx2);margin-bottom:14px"></div>
+      <div id="record-weight-chart" style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px;display:none">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">⚖️ 체중 변화</div>
+        <div id="weight-chart-bars" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn-sm" style="background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="openAddRecord('weight')">⚖️ 체중</button>
+        <button class="btn-sm" style="background:var(--am2);border-color:var(--am);color:var(--am)" onclick="openAddRecord('feed')">🍽️ 급여</button>
+        <button class="btn-sm" style="background:var(--bl2);border-color:var(--blue);color:var(--blue)" onclick="openAddRecord('shed')">🦎 탈피</button>
+        <button class="btn-sm" style="background:var(--co2);border-color:var(--coral);color:var(--coral)" onclick="openAddRecord('health')">💊 건강</button>
+        <button class="btn-sm" style="background:var(--pu2);border-color:var(--pu);color:var(--pu)" onclick="openAddRecord('memo')">📝 메모</button>
+      </div>
+      <div id="record-add-form" style="display:none;background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div id="record-form-title" style="font-size:14px;font-weight:700"></div>
+          <button style="font-size:18px;color:var(--tx3);background:none;border:none" onclick="document.getElementById('record-add-form').style.display='none'">✕</button>
+        </div>
+        <input class="form-input" id="record-date" type="date" style="margin-bottom:8px">
+        <div id="record-weight-field" style="display:none;margin-bottom:8px">
+          <input class="form-input" id="record-weight-val" type="number" step="0.1" placeholder="체중 (g)">
+        </div>
+        <div id="record-feed-field" style="display:none;margin-bottom:8px">
+          <select class="form-select" id="record-feed-type">
+            <option value="크레스티드 젤리">크레스티드 젤리</option>
+            <option value="귀뚜라미">귀뚜라미</option>
+            <option value="밀웜">밀웜</option>
+            <option value="과일">과일</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div id="record-shed-field" style="display:none;margin-bottom:8px">
+          <select class="form-select" id="record-shed-status">
+            <option value="완전 탈피">완전 탈피</option>
+            <option value="부분 탈피 (잔여물 있음)">부분 탈피 (잔여물 있음)</option>
+            <option value="탈피 시작">탈피 시작</option>
+          </select>
+        </div>
+        <textarea class="form-textarea" id="record-note" placeholder="메모 (선택)" style="height:60px"></textarea>
+        <button class="btn-primary" style="margin-top:8px" onclick="saveRecord()">기록 저장</button>
+      </div>
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">기록 타임라인</div>
+      <div id="record-timeline" class="record-timeline">
+        <div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>`);
   printWin.document.close();
 }
 
@@ -6078,11 +6149,11 @@ function printDetailQR(id) {
   const imgSrc = canvas.toDataURL('image/png');
   const printWin = window.open('', '_blank', 'width=800,height=600');
   printWin.document.write(`<!DOCTYPE html><html><head><title>마이크레 QR - ${g?.name||'개체'}</title>
-    <style>body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}.card{text-align:center;border:2px solid #0e1a10;border-radius:20px;padding:40px 30px;max-width:360px}.title{font-size:24px;font-weight:900;margin-bottom:4px}.sub{font-size:14px;color:#666;margin-bottom:20px}.qr{margin:20px auto}.info{text-align:left;font-size:13px;line-height:2;color:#333;margin-top:16px;border-top:1px solid #ddd;padding-top:12px}.footer{margin-top:16px;font-size:10px;color:#999}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+    <style>body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}.card{text-align:center;border:2px solid #2E7D57;border-radius:20px;padding:40px 30px;max-width:360px}.title{font-size:24px;font-weight:900;margin-bottom:4px}.sub{font-size:14px;color:#666;margin-bottom:20px}.qr{margin:20px auto}.info{text-align:left;font-size:13px;line-height:2;color:#333;margin-top:16px;border-top:1px solid #ddd;padding-top:12px}.footer{margin-top:16px;font-size:10px;color:#999}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
     <div class="card"><div class="title">🦎 ${g?.name||'개체'}</div><div class="sub">${g?.morph||'미판별'}</div>
     <div class="qr"><img src="${imgSrc}" width="200" height="200"></div>
     <div class="info">${g?.sex?`<div>성별: ${g.sex==='암컷'?'♀ 암컷':'♂ 수컷'}</div>`:''} ${g?.dob?`<div>출생: ${g.dob}</div>`:''} ${g?.weight?`<div>몸무게: ${g.weight}g</div>`:''} ${m.price?`<div>시세: ${m.price}</div>`:''} ${g?.dad||g?.mom?`<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>`:''}</div>
-    <div class="footer">마이크레 · mycre-gecko.netlify.app</div></div>
+    <div class="footer">마이크레 · mycre.netlify.app</div></div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script></body></html>`);
   printWin.document.close();
 }
@@ -6205,7 +6276,7 @@ function openMorphGuide() {
         <div style="margin-top:6px;font-size:10px;color:var(--blue);font-weight:600">예: 아잔틱</div>
       </div>
     </div>
-    <div style="background:rgba(93,220,106,.08);border:1px solid rgba(93,220,106,.2);border-radius:10px;padding:9px 11px">
+    <div style="background:rgba(46,125,87,.08);border:1px solid rgba(46,125,87,.2);border-radius:10px;padding:9px 11px">
       <div style="font-size:11px;font-weight:700;color:var(--ac);margin-bottom:3px">헷(Het)이란?</div>
       <div style="font-size:11px;color:var(--tx2);line-height:1.6">겉모습은 평범한 노말처럼 보이지만, 체내에 숨겨진 열성 유전자를 품고 있는 개체. 헷 아잔틱 × 헷 아잔틱 → 25% 아잔틱 / 50% 헷 아잔틱 / 25% 노말</div>
     </div>
@@ -6310,7 +6381,7 @@ function openMorphGuide() {
         ${m.genetics.het !== '해당 없음' ? `<div style="font-size:11px;color:var(--blue);margin-top:3px">헷: ${m.genetics.het}</div>` : ''}
         ${m.genetics.dom && m.genetics.dom !== '해당 없음' ? `<div style="font-size:11px;color:#ff7070;margin-top:3px">⚠️ ${m.genetics.dom}</div>` : ''}
       </div>
-      ${m.origin ? `<div style="background:rgba(93,220,106,.06);border:1px solid rgba(93,220,106,.15);border-radius:10px;padding:9px 11px;margin-bottom:8px">
+      ${m.origin ? `<div style="background:rgba(46,125,87,.06);border:1px solid rgba(46,125,87,.15);border-radius:10px;padding:9px 11px;margin-bottom:8px">
         <div style="font-size:10px;color:var(--ac);font-family:'DM Mono',monospace;margin-bottom:4px">📖 유전적 기원</div>
         <div style="font-size:11px;color:var(--tx2);line-height:1.6">${m.origin}</div>
       </div>` : ''}
@@ -6939,7 +7010,7 @@ if (typeof window.supabase === 'undefined') {
       <div style="font-size:52px;margin-bottom:16px">⚠️</div>
       <div style="font-size:16px;color:var(--coral);font-weight:700;margin-bottom:8px">연결 오류</div>
       <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:20px">서버에 연결할 수 없어요.<br>네트워크를 확인하고 새로고침해 주세요.</div>
-      <button onclick="location.reload()" style="padding:12px 28px;border-radius:12px;background:var(--ac);color:#071508;font-weight:800;border:none;font-size:14px;cursor:pointer;font-family:inherit">새로고침</button>
+      <button onclick="location.reload()" style="padding:12px 28px;border-radius:12px;background:var(--ac);color:#FFFFFF;font-weight:800;border:none;font-size:14px;cursor:pointer;font-family:inherit">새로고침</button>
     `;
   });
   throw new Error('Supabase SDK not loaded');
@@ -7007,7 +7078,7 @@ function _openInExternalBrowser(url) {
 // ── Google 로그인 ──
 async function signInWithGoogle() {
   if (_isWebView()) {
-    const url = window.location.origin || 'https://mycre-gecko.netlify.app';
+    const url = window.location.origin || 'https://mycre.netlify.app';
     showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬/사파리로 이동합니다...');
     setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
@@ -7018,7 +7089,7 @@ async function signInWithGoogle() {
     const { error } = await _supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://mycre-gecko.netlify.app',
+        redirectTo: 'https://mycre.netlify.app',
         skipBrowserRedirect: false, // 항상 redirect 방식
       }
     });
@@ -7036,7 +7107,7 @@ async function signInWithGoogle() {
 async function signInWithKakao() {
   const { error } = await _supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: { redirectTo: 'https://mycre-gecko.netlify.app' }
+    options: { redirectTo: 'https://mycre.netlify.app' }
   });
   if (error) showAuthErr('카카오 로그인 실패: ' + error.message);
 }
@@ -7076,7 +7147,7 @@ async function handleAuthSubmit() {
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '가입 중...'; }
     const { data, error } = await _supabase.auth.signUp({
       email, password: pw,
-      options: { emailRedirectTo: 'https://mycre-gecko.netlify.app' }
+      options: { emailRedirectTo: 'https://mycre.netlify.app' }
     });
     if (error) {
       errEl.textContent = '❌ ' + (error.message || '가입 실패');
@@ -7678,6 +7749,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 3000);
   }
 });
+
+// ══════════════════════════════════════
+// 개체별 기록 (Gecko Record Log)
+// ══════════════════════════════════════
+let _currentRecordGeckoId = null;
+let _currentRecordType = 'memo';
+
+function openGeckoRecords(geckoId) {
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (\!g) return;
+  _currentRecordGeckoId = geckoId;
+  document.getElementById('record-gecko-name').textContent = g.name;
+  document.getElementById('record-gecko-morph').textContent = g.morph || '모프 미판별';
+  document.getElementById('record-add-form').style.display = 'none';
+  loadRecords(geckoId);
+  openSheet('sheet-gecko-records');
+}
+
+function openAddRecord(type) {
+  _currentRecordType = type;
+  const form = document.getElementById('record-add-form');
+  form.style.display = 'block';
+  document.getElementById('record-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('record-note').value = '';
+  document.getElementById('record-weight-val').value = '';
+  const titles = {weight:'⚖️ 체중 기록',feed:'🍽️ 급여 기록',shed:'🦎 탈피 기록',health:'💊 건강 기록',memo:'📝 메모'};
+  document.getElementById('record-form-title').textContent = titles[type] || '기록 추가';
+  document.getElementById('record-weight-field').style.display = type==='weight' ? 'block' : 'none';
+  document.getElementById('record-feed-field').style.display = type==='feed' ? 'block' : 'none';
+  document.getElementById('record-shed-field').style.display = type==='shed' ? 'block' : 'none';
+  form.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+async function saveRecord() {
+  if (\!_currentRecordGeckoId || \!_currentUser) return;
+  const date = document.getElementById('record-date').value;
+  const note = document.getElementById('record-note').value;
+  if (\!date) { showToast('날짜를 입력해주세요'); return; }
+  let value = '';
+  if (_currentRecordType === 'weight') {
+    value = document.getElementById('record-weight-val').value;
+    if (\!value) { showToast('체중을 입력해주세요'); return; }
+    const g = state.geckos.find(x => String(x.id) === String(_currentRecordGeckoId));
+    if (g) { g.weight = value; _saveGeckoToDB(g); }
+  } else if (_currentRecordType === 'feed') {
+    value = document.getElementById('record-feed-type').value;
+  } else if (_currentRecordType === 'shed') {
+    value = document.getElementById('record-shed-status').value;
+  }
+  const record = { gecko_id: _currentRecordGeckoId, user_id: _currentUser.id, type: _currentRecordType, date, value, note, created_at: new Date().toISOString() };
+  try {
+    const { error } = await _supabase.from('gecko_logs').insert(record);
+    if (error) { const key='gecko_logs_'+_currentUser.id; const logs=JSON.parse(localStorage.getItem(key)||'[]'); logs.push(record); localStorage.setItem(key,JSON.stringify(logs)); }
+  } catch(e) { const key='gecko_logs_'+_currentUser.id; const logs=JSON.parse(localStorage.getItem(key)||'[]'); logs.push(record); localStorage.setItem(key,JSON.stringify(logs)); }
+  showToast('기록이 저장됐어요\!');
+  document.getElementById('record-add-form').style.display = 'none';
+  loadRecords(_currentRecordGeckoId);
+}
+
+async function loadRecords(geckoId) {
+  let records = [];
+  try {
+    const { data, error } = await _supabase.from('gecko_logs').select('*').eq('gecko_id', geckoId).eq('user_id', _currentUser.id).order('date', { ascending: false });
+    if (\!error && data) records = data;
+  } catch(e) {}
+  try {
+    const key='gecko_logs_'+_currentUser.id; const local=JSON.parse(localStorage.getItem(key)||'[]');
+    const localForGecko = local.filter(r => String(r.gecko_id) === String(geckoId));
+    const existingDates = new Set(records.map(r => r.created_at));
+    localForGecko.forEach(r => { if (\!existingDates.has(r.created_at)) records.push(r); });
+  } catch(e) {}
+  records.sort((a, b) => b.date.localeCompare(a.date));
+  renderWeightChart(records.filter(r => r.type === 'weight'));
+  const timeline = document.getElementById('record-timeline');
+  if (records.length === 0) { timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요. 위 버튼으로 첫 기록을 추가해보세요\!</div>'; return; }
+  const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'} };
+  timeline.innerHTML = records.map(r => {
+    const c = tc[r.type] || tc.memo;
+    let detail = r.type==='weight' ? '<b>'+r.value+'g</b>' : r.type==='feed' ? r.value : r.type==='shed' ? r.value : r.note||'';
+    const noteHtml = (r.note && r.type\!=='health' && r.type\!=='memo') ? '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+r.note+'</div>' : '';
+    return '<div class="record-item type-'+r.type+'"><div class="record-date">'+r.date+'</div><div class="record-content"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
+  }).join('');
+}
+
+function renderWeightChart(weightRecords) {
+  const container = document.getElementById('record-weight-chart');
+  const barsDiv = document.getElementById('weight-chart-bars');
+  if (weightRecords.length < 1) { container.style.display='none'; return; }
+  container.style.display = 'block';
+  const sorted = [...weightRecords].sort((a,b) => a.date.localeCompare(b.date));
+  const maxW = Math.max(...sorted.map(r => parseFloat(r.value)));
+  barsDiv.innerHTML = sorted.slice(-8).map(r => {
+    const w = parseFloat(r.value), pct = maxW>0?(w/maxW*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px"><div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">'+r.date.slice(5)+'</div><div style="flex:1;background:var(--sf2);border-radius:2px;height:4px"><div class="weight-chart-bar" style="width:'+pct+'%"></div></div><div style="font-size:11px;font-weight:700;color:var(--ac);width:35px;flex-shrink:0">'+w+'g</div></div>';
+  }).join('');
+}
+
 </script>
 </body>
 </html>
