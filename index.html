@@ -596,16 +596,16 @@ input[type=file]{display:none}
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 <!-- QR코드 생성 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<!-- 배경 제거 AI 라이브러리 (ESM 전용, 올바른 엔트리: dist/index.mjs) -->
+<!-- 배경 제거 AI 라이브러리 (esm.sh CDN — lodash 등 Node 의존성 자동 번들링) -->
 <script type="module">
   window.imglyLoadStatus = 'loading';
-  console.log('[imgly] 모듈 로드 시작...');
+  console.log('[imgly] 모듈 로드 시작 (esm.sh CDN)...');
   try {
-    const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/index.mjs');
-    if (typeof mod.removeBackground !== 'function') {
-      throw new Error('removeBackground export가 함수가 아님: ' + typeof mod.removeBackground);
+    const { removeBackground } = await import('https://esm.sh/@imgly/background-removal@1.4.5');
+    if (typeof removeBackground !== 'function') {
+      throw new Error('removeBackground export가 함수가 아님: ' + typeof removeBackground);
     }
-    window.imglyRemoveBackground = mod.removeBackground;
+    window.imglyRemoveBackground = removeBackground;
     window.imglyLoadStatus = 'ready';
     console.log('[imgly] ✅ 모듈 로드 성공 — window.imglyRemoveBackground 사용 가능');
   } catch (err) {
