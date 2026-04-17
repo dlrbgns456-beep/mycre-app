@@ -2977,6 +2977,26 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
           continue;
         }
 
+        // ── 사람 피부색 필터 (손/팔 제외) ──
+        // 피부 vs 게코 구분 핵심: 피부는 R-G 차이가 25~70 (분홍 기미)
+        //   게코 크림/옐로우는 R-G < 25 (노란 기미) → 필터 안 걸림
+        //   게코 주황/레드는 채도 > 55% → 필터 안 걸림
+        {
+          const _sh = _rgbToHsl(r, g, b);
+          const hDeg = _sh.h * 360;
+          const rgGap = r - g; // 피부 핵심: R이 G보다 25~70 높음
+          const isSkinHue = hDeg >= 0 && hDeg <= 40;
+          const isSkinSat = _sh.s >= 0.10 && _sh.s <= 0.55; // 게코 주황(>55%)은 통과
+          const isSkinLig = _sh.l >= 0.35 && _sh.l <= 0.82;
+          const isSkinRGB = r > g && g > b && rgGap >= 25 && rgGap <= 70 && (r - b) > 20 && (r - b) < 110;
+          if (isSkinHue && isSkinSat && isSkinLig && isSkinRGB) {
+            brightArr.push(-1);
+            satArr.push(-1);
+            hueArr.push(-1);
+            continue;
+          }
+        }
+
         opaqueCount++;
         const px = i / 4;
         const x = px % size, y = Math.floor(px / size);
