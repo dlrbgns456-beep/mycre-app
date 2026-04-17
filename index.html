@@ -3028,7 +3028,8 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
         if (r > 80 && r < 160 && g > 50 && g < 130 && b > 30 && b < 100 && Math.abs(r - g) < 60) brownPx += pw;
         if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && bright > 60 && bright < 200) grayPx += pw;
 
-        const isWhitePx = bright > 220 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20;
+        const isWhitePx = (bright > 220 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20)
+          || (bright > 185 && hsl.s < 0.25 && Math.abs(r - g) < 30); // 크림/연노랑도 "밝은색"으로 인정
         if (y < size * 0.3) { regions.top.b += bright; regions.top.n++; if (isWhitePx) regions.top.w++; }
         if (y > size * 0.7) { regions.bottom.b += bright; regions.bottom.n++; if (isWhitePx) regions.bottom.w++; }
         if (x < size * 0.25) { regions.left.b += bright; regions.left.n++; if (isWhitePx) regions.left.w++; }
@@ -3053,20 +3054,26 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
           const idx = y * size + x;
           const cur = brightArr[idx];
           if (cur < 0) continue; // 투명 픽셀 건너뛰기
-          // 5x5 이웃 평균 (자기 제외) — 더 넓은 범위로 '독립된 점' 감지
-          let nSum = 0, nCnt = 0;
+          // 5x5 이웃 평균 + 분산 (자기 제외) — '독립 점' vs '패턴 경계' 구분
+          let nSum = 0, nSqSum = 0, nCnt = 0;
           for (let dy = -2; dy <= 2; dy++) {
             for (let dx = -2; dx <= 2; dx++) {
               if (dx === 0 && dy === 0) continue;
               const ni = (y + dy) * size + (x + dx);
-              if (ni >= 0 && ni < pxCount && brightArr[ni] >= 0) { nSum += brightArr[ni]; nCnt++; }
+              if (ni >= 0 && ni < pxCount && brightArr[ni] >= 0) {
+                nSum += brightArr[ni]; nSqSum += brightArr[ni] ** 2; nCnt++;
+              }
             }
           }
+          if (nCnt < 4) continue; // 주변 불투명 픽셀 부족 → 신뢰 없음
           const avgNeighbor = nSum / nCnt;
+          const nVariance = nSqSum / nCnt - avgNeighbor ** 2; // 주변 밝기 분산
           const diff = Math.abs(cur - avgNeighbor);
 
-          // 점 판정: 주변보다 확연히 다른 독립된 점
-          if (diff > 40) {
+          // 핵심 구분: 주변 분산이 높으면 패턴 경계(할리퀸 크림↔주황 등) → 점 아님
+          //   주변 분산이 낮고 중심만 돌출이면 → 독립된 점 (달마시안)
+          // 분산 임계값 400 = 밝기 표준편차 ~20 → 주변이 상당히 균일해야 점으로 인정
+          if (diff > 40 && nVariance < 400) {
             const isInCenter = x >= cMin && x < cMax && y >= cMin && y < cMax;
             const spotWeight = isInCenter ? 3 : 1; // 중앙의 점에 3배 가중
             spotCount += spotWeight;
@@ -3292,10 +3299,10 @@ function _colorAnalysisToTraits(ca) {
   const lateralCoverage = ca.lateral.lightRatio;
   const lateralWhite = ca.lateral.whiteRatio;
   const topBottomDiff = Math.abs((ca.regions.top.avgB || 0) - (ca.regions.bottom.avgB || 0));
-  const hasHighContrast = ca.contrast > 50;
+  const hasHighContrast = ca.contrast > 38; // 기존 50→38: 크림/주황 할리퀸도 감지
   const hasChromaticSpots = ca.orangeRatio > 0.03 || ca.yellowRatio > 0.03 || ca.redRatio > 0.03;
 
-  if (lateralWhite > 0.18 && ca.contrast > 45 && lateralCoverage > 0.35
+  if (lateralWhite > 0.18 && ca.contrast > 35 && lateralCoverage > 0.35
       && ca.regions.center.avgB < ca.regions.left.avgB - 15 && hasChromaticSpots) {
     traits.pattern = '3색 완전 분리(트익할)';
     reasons.push({icon:'🌈',text:`3색 분리: 레터럴 ${(lateralWhite*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}, 유채색 잔존 → Tricolor`});
