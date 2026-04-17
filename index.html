@@ -553,6 +553,31 @@ input[type=file]{display:none}
   border-radius:14px;padding:13px;width:100%;
 }
 
+/* ─── Lineage Tree ─── */
+.lineage-tree{display:flex;flex-direction:column;align-items:center;gap:0;padding:16px 0}
+.lineage-row{display:flex;gap:12px;justify-content:center;width:100%}
+.lineage-node{background:var(--sf2);border:1.5px solid var(--br);border-radius:14px;padding:12px 14px;min-width:120px;max-width:160px;text-align:center;position:relative}
+.lineage-node.self{border-color:var(--ac);background:var(--ac2);box-shadow:0 0 0 3px var(--ac3)}
+.lineage-node.dad{border-color:var(--blue)}
+.lineage-node.mom{border-color:#ff8fb1}
+.lineage-node-label{font-size:9px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:3px}
+.lineage-node-name{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lineage-node-morph{font-size:11px;color:var(--tx2)}
+.lineage-connector{width:2px;height:20px;background:var(--br);margin:0 auto}
+.lineage-branch{display:flex;align-items:flex-end;justify-content:center;position:relative;height:20px;margin-bottom:0}
+.lineage-branch::before{content:'';position:absolute;top:0;left:25%;right:25%;height:2px;background:var(--br)}
+.lineage-branch::after{content:'';position:absolute;bottom:0;left:50%;width:2px;height:20px;background:var(--br);transform:translateX(-50%)}
+.lineage-warn{background:rgba(255,60,60,.08);border:1.5px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 14px;margin-top:12px;display:flex;align-items:flex-start;gap:8px}
+.lineage-warn-icon{font-size:18px;flex-shrink:0}
+.lineage-warn-text{font-size:12px;color:#d44;line-height:1.5;font-weight:600}
+.lineage-predict{background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:12px 14px;margin-top:12px}
+.lineage-predict-title{font-size:12px;font-weight:800;color:var(--tx);margin-bottom:8px}
+.lineage-predict-item{display:flex;align-items:center;gap:8px;padding:4px 0}
+.lineage-predict-bar{height:6px;border-radius:3px;background:var(--ac);transition:width .4s}
+.lineage-offspring-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.lineage-node.offspring{min-width:80px;max-width:110px;padding:8px 10px;border-color:var(--am);background:var(--am2)}
+.lineage-node.offspring .lineage-node-label{color:var(--am)}
+
 /* ─── Gecko Record Log ─── */
 .record-timeline{display:flex;flex-direction:column;gap:0;padding-left:16px;border-left:2px solid var(--br);margin-left:8px}
 .record-item{position:relative;padding:10px 0 10px 16px}
@@ -1238,6 +1263,15 @@ input[type=file]{display:none}
       <div class="more-item-arrow">›</div>
     </div>
 
+    <div class="more-item" onclick="openLineageTreePicker()">
+      <div class="more-icon" style="background:var(--ac2)">🌳</div>
+      <div class="more-item-info">
+        <div class="more-item-title">혈통 트리</div>
+        <div class="more-item-sub">부모 → 자손 형질 시각화 · 유전자 궁합 예측</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+
     <div class="more-item" onclick="handleGeneticCalc()">
       <div class="more-icon" style="background:var(--pu2)">🧬</div>
       <div class="more-item-info">
@@ -1562,14 +1596,21 @@ input[type=file]{display:none}
         <label class="form-label">🧬 혈통 (선택)</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
-            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx2);margin-bottom:4px">♂ 아버지</div>
-            <input class="form-input" id="gecko-dad" type="text" placeholder="예: 아잔틱 ♂" style="font-size:13px">
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--blue);margin-bottom:4px">♂ 아버지</div>
+            <select class="form-select" id="gecko-dad-select" onchange="onParentSelect('dad')" style="font-size:12px;margin-bottom:4px">
+              <option value="">— 내 개체에서 선택 —</option>
+            </select>
+            <input class="form-input" id="gecko-dad" type="text" placeholder="또는 직접 입력 (모프명)" style="font-size:12px">
           </div>
           <div>
-            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx2);margin-bottom:4px">♀ 어머니</div>
-            <input class="form-input" id="gecko-mom" type="text" placeholder="예: 릴리화이트 ♀" style="font-size:13px">
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:#ff8fb1;margin-bottom:4px">♀ 어머니</div>
+            <select class="form-select" id="gecko-mom-select" onchange="onParentSelect('mom')" style="font-size:12px;margin-bottom:4px">
+              <option value="">— 내 개체에서 선택 —</option>
+            </select>
+            <input class="form-input" id="gecko-mom" type="text" placeholder="또는 직접 입력 (모프명)" style="font-size:12px">
           </div>
         </div>
+        <div id="lineage-breed-warn" style="display:none;margin-top:8px"></div>
       </div>
 
       <div class="form-group">
@@ -3635,6 +3676,7 @@ function openAddGecko() {
   document.getElementById('gecko-cage').value = '소형 (30cm 이하)';
   document.getElementById('gecko-dad').value = '';
   document.getElementById('gecko-mom').value = '';
+  populateParentSelects();
   document.getElementById('gecko-memo').value = '';
   document.getElementById('delete-gecko-btn').style.display = 'none';
   document.getElementById('grade-suggestion').style.display = 'none';
@@ -3918,6 +3960,8 @@ async function saveGecko() {
       cage: document.getElementById('gecko-cage').value,
       dad: document.getElementById('gecko-dad').value,
       mom: document.getElementById('gecko-mom').value,
+      dadId: document.getElementById('gecko-dad-select').value || null,
+      momId: document.getElementById('gecko-mom-select').value || null,
       memo: document.getElementById('gecko-memo').value,
       photo: currentPhotoData || null, // 일단 로컬 미리보기 사용
       egg_infertile: document.getElementById('gecko-egg-infertile').checked,
@@ -4350,6 +4394,10 @@ function openGeckoDetail(id) {
       <button class="btn-primary" style="width:100%;margin-top:8px;font-size:13px;padding:12px" onclick="closeSheetDirect('sheet-gecko-detail');setTimeout(()=>openGeckoRecords('${id}'),250)">
         📋 개체별 기록 보기
       </button>
+      <!-- 혈통 트리 -->
+      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px;border-color:var(--ac);color:var(--ac)" onclick="closeSheetDirect('sheet-gecko-detail');setTimeout(()=>openLineageTree('${id}'),250)">
+        🌳 혈통 트리 보기
+      </button>
       <!-- 공유 링크 복사 (모든 등급) -->
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px" onclick="copyGeckoShareLink('${id}')">
         🔗 공유 링크 복사
@@ -4411,6 +4459,9 @@ function editGecko(id) {
     document.getElementById('gecko-cage').value = g.cage || '소형 (30cm 이하)';
     document.getElementById('gecko-dad').value = g.dad || '';
     document.getElementById('gecko-mom').value = g.mom || '';
+    populateParentSelects(g.id);
+    if (g.dadId) document.getElementById('gecko-dad-select').value = g.dadId;
+    if (g.momId) document.getElementById('gecko-mom-select').value = g.momId;
     document.getElementById('gecko-memo').value = g.memo || '';
     document.getElementById('gecko-egg-infertile').checked = !!g.egg_infertile;
     document.getElementById('gecko-egg-fertile').checked = !!g.egg_fertile;
@@ -6079,6 +6130,17 @@ function printQR() {
 <!-- ══════════════════════════════════════
      SHEET: 개체별 기록
 ══════════════════════════════════════ -->
+<!-- 혈통 트리 시트 -->
+<div class="sheet-overlay" id="sheet-lineage" onclick="closeSheet('sheet-lineage',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🌳 혈통 트리</div>
+    <div class="sheet-body">
+      <div id="lineage-tree-content" style="min-height:200px"></div>
+    </div>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="sheet-gecko-records" onclick="closeSheet('sheet-gecko-records',event)">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -7787,6 +7849,247 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ══════════════════════════════════════
 let _currentRecordGeckoId = null;
 let _currentRecordType = 'memo';
+
+// ══════════════════════════════
+// 혈통 트리
+// ══════════════════════════════
+
+// 치사 조합 룰 테이블
+const LETHAL_COMBOS = [
+  { morphA: '릴리화이트', morphB: '릴리화이트', warn: '⚠️ 슈퍼 릴리(LW/LW) 치사 — 25% 확률로 극도로 허약하거나 사망합니다. 릴리 × 릴리 교배는 절대 금지!' },
+  { morphA: '카푸치노', morphB: '카푸치노', warn: '⚠️ 슈퍼 카푸치노(Cap/Cap) 치사 — 안구 결함, 신경 이상 등 치명적 결함. 카푸치노 × 카푸치노 교배는 절대 금지!' },
+  { morphA: '프라푸치노', morphB: '릴리화이트', warn: '⚠️ 프라푸치노는 릴리 유전자 보유 — 슈퍼 릴리 25% 확률. 한쪽은 비릴리 개체 사용 필요!' },
+  { morphA: '프라푸치노', morphB: '카푸치노', warn: '⚠️ 프라푸치노는 카푸치노 유전자 보유 — 슈퍼 카푸치노 25% 확률. 한쪽은 비카푸치노 개체 사용 필요!' },
+  { morphA: '프라푸치노', morphB: '프라푸치노', warn: '⚠️ 프라푸치노 × 프라푸치노 — 슈퍼 릴리 + 슈퍼 카푸치노 둘 다 위험! 절대 금지!' },
+  { morphA: '릴리트리', morphB: '릴리화이트', warn: '⚠️ 릴리트리는 릴리 유전자 보유 — 슈퍼 릴리 25% 확률!' },
+  { morphA: '슈퍼릴리', morphB: '릴리화이트', warn: '⚠️ 슈퍼릴리는 이미 LW/LW — 극도로 위험한 조합!' },
+];
+
+function _checkLethalCombo(morph1, morph2) {
+  if (!morph1 || !morph2) return null;
+  const m1 = morph1.toLowerCase(), m2 = morph2.toLowerCase();
+  for (const combo of LETHAL_COMBOS) {
+    const a = combo.morphA.toLowerCase(), b = combo.morphB.toLowerCase();
+    if ((m1.includes(a) && m2.includes(b)) || (m1.includes(b) && m2.includes(a))) {
+      return combo.warn;
+    }
+  }
+  return null;
+}
+
+function _predictOffspring(dadMorph, momMorph) {
+  const predictions = [];
+  if (!dadMorph && !momMorph) return predictions;
+  // MORPHS 데이터에서 부모 조합 매칭
+  Object.entries(MORPHS).forEach(([name, m]) => {
+    if (!m.parents) return;
+    const p = m.parents.toLowerCase();
+    const d = (dadMorph || '').toLowerCase();
+    const mo = (momMorph || '').toLowerCase();
+    if ((d && p.includes(d)) || (mo && p.includes(mo))) {
+      // 확률 추출 시도 (예: "25% 아잔틱" 형태)
+      const pctMatch = m.parents.match(/(\d+)%\s*[\w가-힣]+/g);
+      if (pctMatch) {
+        pctMatch.forEach(pm => {
+          const [, pct, morph] = pm.match(/(\d+)%\s*([\w가-힣]+)/) || [];
+          if (pct && morph) predictions.push({ name: morph, prob: parseInt(pct), source: name });
+        });
+      } else {
+        predictions.push({ name, prob: null, source: name });
+      }
+    }
+  });
+  // 중복 제거, 확률 높은 순
+  const unique = {};
+  predictions.forEach(p => {
+    if (!unique[p.name] || (p.prob && (!unique[p.name].prob || p.prob > unique[p.name].prob))) {
+      unique[p.name] = p;
+    }
+  });
+  return Object.values(unique).sort((a, b) => (b.prob || 0) - (a.prob || 0)).slice(0, 6);
+}
+
+function _findChildren(geckoId) {
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g) return [];
+  return state.geckos.filter(child => {
+    if (String(child.id) === String(geckoId)) return false;
+    // 부모 선택(ID)으로 연결된 경우
+    if (child.dadId === geckoId || child.momId === geckoId) return true;
+    // 텍스트 매칭 (이름 또는 모프가 일치)
+    if (g.name && (child.dad === g.name || child.mom === g.name)) return true;
+    return false;
+  });
+}
+
+function openLineageTree(geckoId) {
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+
+  const dadMorph = g.dad || '';
+  const momMorph = g.mom || '';
+  const dadGecko = g.dadId ? state.geckos.find(x => String(x.id) === String(g.dadId)) : null;
+  const momGecko = g.momId ? state.geckos.find(x => String(x.id) === String(g.momId)) : null;
+  const children = _findChildren(geckoId);
+
+  // 치사 경고
+  const lethalWarn = _checkLethalCombo(dadMorph, momMorph);
+
+  // 자녀 모프 예측
+  const predictions = _predictOffspring(dadMorph, momMorph);
+
+  const content = document.getElementById('lineage-tree-content');
+  let html = '<div class="lineage-tree">';
+
+  // ── 부모 행 ──
+  html += '<div class="lineage-row">';
+  // 아버지
+  html += `<div class="lineage-node dad">
+    <div class="lineage-node-label">♂ 아버지</div>
+    <div class="lineage-node-name">${dadGecko ? dadGecko.name : (dadMorph || '미입력')}</div>
+    <div class="lineage-node-morph">${dadGecko ? (dadGecko.morph || '—') : dadMorph}</div>
+  </div>`;
+  // 어머니
+  html += `<div class="lineage-node mom">
+    <div class="lineage-node-label">♀ 어머니</div>
+    <div class="lineage-node-name">${momGecko ? momGecko.name : (momMorph || '미입력')}</div>
+    <div class="lineage-node-morph">${momGecko ? (momGecko.morph || '—') : momMorph}</div>
+  </div>`;
+  html += '</div>';
+
+  // ── 연결선 ──
+  if (dadMorph || momMorph) {
+    html += '<div class="lineage-branch"></div>';
+  } else {
+    html += '<div class="lineage-connector"></div>';
+  }
+
+  // ── 자신 ──
+  const gGrade = MORPH_GRADES[g.grade || (MORPHS[g.morph]?.grade)] || MORPH_GRADES['C'];
+  html += `<div class="lineage-node self" style="margin:0 auto">
+    <div class="lineage-node-label">🦎 이 개체</div>
+    <div class="lineage-node-name">${g.name}</div>
+    <div class="lineage-node-morph">${g.morph || '미판별'} <span class="grade-badge" style="background:${gGrade.bg};color:${gGrade.color};font-size:9px;padding:1px 5px">${gGrade.label}</span></div>
+    ${g.sex ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">${g.sex === '암컷' ? '♀ 암컷' : '♂ 수컷'}${g.dob ? ' · ' + g.dob : ''}</div>` : ''}
+  </div>`;
+
+  // ── 자녀 ──
+  if (children.length > 0) {
+    html += '<div class="lineage-connector"></div>';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--tx2);text-align:center;margin-bottom:4px">🥚 자녀 (${0}마리)</div>'.replace('${0}', children.length);
+    html += '<div class="lineage-offspring-row">';
+    children.forEach(c => {
+      html += `<div class="lineage-node offspring" onclick="closeSheetDirect('sheet-lineage');setTimeout(()=>openLineageTree('${c.id}'),300)">
+        <div class="lineage-node-label">${c.sex === '암컷' ? '♀' : (c.sex === '수컷' ? '♂' : '?')}</div>
+        <div class="lineage-node-name">${c.name}</div>
+        <div class="lineage-node-morph">${c.morph || '—'}</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += '</div>'; // .lineage-tree 닫기
+
+  // ── 치사 경고 ──
+  if (lethalWarn) {
+    html += `<div class="lineage-warn">
+      <div class="lineage-warn-icon">☠️</div>
+      <div class="lineage-warn-text">${lethalWarn}</div>
+    </div>`;
+  }
+
+  // ── 유전 예측 ──
+  if (predictions.length > 0) {
+    html += '<div class="lineage-predict">';
+    html += '<div class="lineage-predict-title">🧬 예상 자녀 모프 (부모 조합 기반)</div>';
+    predictions.forEach(p => {
+      const barW = p.prob ? p.prob : 30;
+      const probText = p.prob ? `${p.prob}%` : '가능';
+      const mg = MORPH_GRADES[(MORPHS[p.name]?.grade)] || MORPH_GRADES['C'];
+      html += `<div class="lineage-predict-item">
+        <span style="font-size:12px;font-weight:700;min-width:80px">${p.name}</span>
+        <div style="flex:1;background:var(--br);border-radius:3px;height:6px;overflow:hidden">
+          <div class="lineage-predict-bar" style="width:${barW}%;background:${mg.color}"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${mg.color};min-width:35px;text-align:right">${probText}</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // 부모 미입력 안내
+  if (!dadMorph && !momMorph) {
+    html += `<div style="text-align:center;padding:16px;color:var(--tx3);font-size:12px;line-height:1.6">
+      부모 정보가 입력되지 않았어요.<br>
+      개체 수정에서 🧬 혈통 항목을 입력하면<br>
+      유전 예측과 치사 경고가 표시됩니다.
+    </div>`;
+  }
+
+  content.innerHTML = html;
+  openSheet('sheet-lineage');
+}
+
+function openLineageTreePicker() {
+  if (state.geckos.length === 0) {
+    showToast('등록된 개체가 없어요. 먼저 개체를 등록해주세요.');
+    return;
+  }
+  if (state.geckos.length === 1) {
+    openLineageTree(state.geckos[0].id);
+    return;
+  }
+  // 개체가 2마리 이상이면 선택 목록 표시
+  const content = document.getElementById('lineage-tree-content');
+  let html = '<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">혈통 트리를 볼 개체를 선택하세요:</div>';
+  state.geckos.forEach(g => {
+    const mg = MORPH_GRADES[(MORPHS[g.morph]?.grade)] || MORPH_GRADES['C'];
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border:1px solid var(--br);border-radius:10px;margin-bottom:6px;cursor:pointer" onclick="openLineageTree('${g.id}')">
+      <span style="font-size:20px">${g.sex === '암컷' ? '♀' : (g.sex === '수컷' ? '♂' : '🦎')}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${g.name}</div>
+        <div style="font-size:11px;color:var(--tx2)">${g.morph || '미판별'}</div>
+      </div>
+      <span class="grade-badge" style="background:${mg.bg};color:${mg.color};font-size:9px;padding:2px 6px">${mg.label}</span>
+    </div>`;
+  });
+  content.innerHTML = html;
+  openSheet('sheet-lineage');
+}
+
+// 부모 선택 드롭다운 채우기 + 선택 시 텍스트 자동 입력
+function populateParentSelects(editingId) {
+  const dadSelect = document.getElementById('gecko-dad-select');
+  const momSelect = document.getElementById('gecko-mom-select');
+  if (!dadSelect || !momSelect) return;
+  const opts = '<option value="">— 내 개체에서 선택 —</option>' +
+    state.geckos.filter(g => String(g.id) !== String(editingId || ''))
+      .map(g => `<option value="${g.id}">${g.sex === '암컷' ? '♀' : '♂'} ${g.name} (${g.morph || '미판별'})</option>`).join('');
+  dadSelect.innerHTML = opts;
+  momSelect.innerHTML = opts;
+}
+
+function onParentSelect(role) {
+  const select = document.getElementById(`gecko-${role}-select`);
+  const input = document.getElementById(`gecko-${role}`);
+  if (!select || !input) return;
+  const gId = select.value;
+  if (gId) {
+    const g = state.geckos.find(x => String(x.id) === String(gId));
+    if (g) input.value = g.morph || g.name;
+  }
+  // 치사 경고 실시간 체크
+  const dadMorph = document.getElementById('gecko-dad').value;
+  const momMorph = document.getElementById('gecko-mom').value;
+  const warn = _checkLethalCombo(dadMorph, momMorph);
+  const warnEl = document.getElementById('lineage-breed-warn');
+  if (warn && warnEl) {
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = `<div class="lineage-warn"><div class="lineage-warn-icon">☠️</div><div class="lineage-warn-text">${warn}</div></div>`;
+  } else if (warnEl) {
+    warnEl.style.display = 'none';
+  }
+}
 
 function openGeckoRecords(geckoId) {
   const g = state.geckos.find(x => String(x.id) === String(geckoId));
