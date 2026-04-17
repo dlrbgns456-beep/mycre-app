@@ -1168,6 +1168,7 @@ input[type=file]{display:none}
     <div class="fp" onclick="setCommFilter('notice')">📢 공지</div>
     <div class="fp" onclick="setCommFilter('sale')">🏷️ 분양</div>
     <div class="fp" onclick="setCommFilter('wanted')">🔍 구합니다</div>
+    <div class="fp" onclick="setCommFilter('qna')">❓ QnA</div>
     <div class="fp" onclick="setCommFilter('info')">📚 정보공유</div>
   </div>
 
@@ -1855,6 +1856,8 @@ input[type=file]{display:none}
         <select class="form-select" id="post-category">
           <option value="sale">🏷️ 분양</option>
           <option value="wanted">🔍 구합니다</option>
+          <option value="qna">❓ QnA</option>
+          <option value="info">📚 정보공유</option>
           <option value="info">📚 정보공유</option>
         </select>
       </div>
@@ -2018,7 +2021,7 @@ let state = {
 const TIERS = {
   free: {
     key: 'free', label: '무료', emoji: '🆓',
-    geckoLimit: 0,        // 개체 등록 불가 (Lite/Breeder 업그레이드 필요)
+    geckoLimit: 5,        // 개체 등록 5마리 (무료 기본 제공)
     monthlyScans: 3,      // AI 판별 일 3회 (매일 자정 자동 충전)
     monthlyScansLabel: '일 3회',
     hasBreederBadge: false,
@@ -3882,7 +3885,7 @@ async function saveGecko() {
     const tLabel = _tier().label;
     const limit = _tier().geckoLimit;
     const msg = limit === 0
-      ? `${tLabel} 등급은 개체 등록이 불가해요.<br>AI 판별은 매일 3회 무료 제공되지만,<br>개체 관리는 유료 등급부터 가능합니다.<br><b>🌱 Lite(월 1,900원) 또는 🧬 Breeder로 업그레이드하세요!</b>`
+      ? `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.<br>더 많은 개체를 관리하려면 업그레이드하세요.<br><b>🌱 Lite 또는 🧬 Breeder로 업그레이드!</b>`
       : `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.<br>더 많은 개체를 등록하고 싶으신가요?<br><b>🧬 Breeder로 업그레이드하세요!</b>`;
     _showProUpgradePopup(msg);
     return;
@@ -4011,7 +4014,7 @@ function openQuickAdd() {
     const tLabel = _tier().label;
     const limit = _tier().geckoLimit;
     const msg = limit === 0
-      ? `${tLabel} 등급은 개체 등록이 불가해요.<br>고속 등록은 브리더 전용 기능입니다.<br><b>🧬 Breeder로 업그레이드하세요!</b>`
+      ? `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.<br>고속 등록은 브리더 전용 기능입니다.<br><b>🧬 Breeder로 업그레이드하세요!</b>`
       : `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.<br>브리더 등급으로 업그레이드하면 무제한 + 고속 등록이 가능해요!`;
     _showProUpgradePopup(msg);
     return;
@@ -4073,7 +4076,7 @@ async function _quickSaveCore() {
     const tLabel = _tier().label;
     const limit = _tier().geckoLimit;
     _showProUpgradePopup(limit === 0
-      ? `${tLabel} 등급은 개체 등록이 불가해요.`
+      ? `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.`
       : `${tLabel} 등급은 최대 ${limit}마리까지 등록할 수 있어요.`);
     return false;
   }
@@ -5479,7 +5482,7 @@ function _isAdmin() {
 function setCommFilter(f) {
   state.commFilter = f;
   document.querySelectorAll('#comm-filter-row .fp').forEach(el => el.classList.remove('active'));
-  const fMap = {all:0,notice:1,sale:2,wanted:3,info:4};
+  const fMap = {all:0,notice:1,sale:2,wanted:3,qna:4,info:5};
   document.querySelectorAll('#comm-filter-row .fp')[fMap[f]]?.classList.add('active');
   renderPosts();
 }
@@ -6764,11 +6767,12 @@ const TERMS_TEXT = {
 
 제2조 (서비스의 내용)
 ① 개체 등록 및 관리 기능 (프로필, 혈통, 사진)
-② 개체별 기록 관리 (체중, 급여, 탈피, 건강, 메모)
+② 개체별 기록 관리 (체중, 급이, 탈피, 건강, 메모)
 ③ AI 기반 모프 판별 기능 (참고용)
-④ 커뮤니티 게시판
-⑤ QR 프로필 카드 생성
-⑥ PRO/Breeder 구독 서비스 (유료)
+④ 혈통 트리 시각화 (부모→자손 형질 계보)
+⑤ 사육자 커뮤니티 게시판 (분양, QnA, 정보공유)
+⑥ QR 프로필 카드 생성
+⑦ 프리미엄 구독 서비스 (유료)
 
 제3조 (이용자의 의무)
 ① 이용자는 타인의 개인정보를 도용하거나 허위 정보를 등록해서는 안 됩니다.
@@ -6779,18 +6783,23 @@ const TERMS_TEXT = {
 제4조 (AI 판별 면책)
 AI 모프 판별 기능은 참고 자료로만 제공되며, 결과의 정확성을 보장하지 않습니다. 판별 결과에 기반한 거래나 의사결정에 대해 서비스는 책임을 지지 않습니다.
 
-제5조 (결제 및 환불)
-① PRO/Breeder 구독은 결제 즉시 활성화됩니다.
+제5조 (무료 이용 및 베타 혜택)
+① 기본 기능은 무료로 제공됩니다 (개체 등록 5마리, AI 모프 판별 일 3회).
+② 공개 베타 기간 중 가입한 이용자(베타 테스터)는 정식 출시 후 프리미엄 기능을 평생 무료로 제공받습니다.
+③ 베타 테스터 자격은 베타 종료 시점 기준 가입 이력이 확인되는 계정에 한합니다.
+
+제6조 (결제 및 환불)
+① 프리미엄 구독은 결제 즉시 활성화됩니다.
 ② 환불은 결제일로부터 7일 이내, 서비스를 이용하지 않은 경우에 한해 가능합니다.
 ③ 환불 요청은 dlrbgns456@gmail.com으로 연락 바랍니다.
 
-제6조 (서비스 변경 및 중단)
+제7조 (서비스 변경 및 중단)
 서비스는 운영상 필요에 따라 사전 공지 후 서비스 내용을 변경하거나 중단할 수 있습니다.
 
-제7조 (면책)
+제8조 (면책)
 서비스는 천재지변, 시스템 장애 등 불가항력으로 인한 서비스 중단에 대해 책임을 지지 않습니다. 이용자가 등록한 개체 정보 및 기록의 정확성에 대한 책임은 이용자 본인에게 있습니다.
 
-제8조 (저작권)
+제9조 (저작권)
 이용자가 서비스에 게시한 콘텐츠(사진, 글 등)의 저작권은 이용자에게 있으며, 서비스는 서비스 운영 목적에 한해 해당 콘텐츠를 사용할 수 있습니다.
 
 부칙: 이 약관은 2026년 4월 30일부터 시행됩니다.`,
@@ -6801,7 +6810,7 @@ AI 모프 판별 기능은 참고 자료로만 제공되며, 결과의 정확성
 1. 수집하는 개인정보
 ① 회원가입 시: 이메일 주소, 닉네임
 ② Google 로그인 시: 이메일 주소, 프로필 이름, 프로필 사진 URL
-③ 서비스 이용 시: 개체 정보(이름, 모프, 사진 등), 개체별 기록(체중, 급여, 탈피, 건강, 메모), 커뮤니티 게시물
+③ 서비스 이용 시: 개체 정보(이름, 모프, 사진 등), 개체별 기록(체중, 급이, 탈피, 건강, 메모), 혈통 계보 정보, 커뮤니티 게시물
 ④ 결제 시: 결제 고유번호(imp_uid) — 카드번호 등 민감 정보는 수집하지 않습니다.
 
 2. 개인정보의 이용 목적
@@ -6904,7 +6913,7 @@ function selectBilling(plan) {
 // 비교 테이블 렌더링
 function _renderCompareTable() {
   const rows = [
-    { label: '개체 등록', free: '—', lite: '5마리', breeder: '무제한' },
+    { label: '개체 등록', free: '5마리', lite: '5마리', breeder: '무제한' },
     { label: 'AI 모프 판별', free: '일 3회', lite: '월 10회', breeder: '무제한' },
     { label: '성장 그래프', free: '—', lite: '기본', breeder: '전체' },
     { label: '분양 게시판 배지', free: '—', lite: '—', breeder: '🧬 인증' },
