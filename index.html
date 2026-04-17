@@ -2963,8 +2963,21 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
       let lateralWhite = 0, lateralLight = 0, lateralPx = 0;
       let dorsalBright = 0, dorsalPx = 0;
 
+      let opaqueCount = 0; // 불투명 픽셀만 카운트 (배경 제거 후 투명 픽셀 제외)
+
       for (let i = 0; i < data.length; i += 4) {
         let r = data[i], g = data[i+1], b = data[i+2];
+        const a = data[i+3]; // 알파 채널
+
+        // ── 투명 픽셀 건너뛰기 (배경 제거된 영역) ──
+        if (a < 30) {
+          brightArr.push(-1); // 인덱스 유지용 마커 (-1 = 투명)
+          satArr.push(-1);
+          hueArr.push(-1);
+          continue;
+        }
+
+        opaqueCount++;
         const px = i / 4;
         const x = px % size, y = Math.floor(px / size);
         const isCenter = x >= cMin && x < cMax && y >= cMin && y < cMax;
@@ -3019,13 +3032,14 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
         for (let x = 2; x < size - 2; x++) {
           const idx = y * size + x;
           const cur = brightArr[idx];
+          if (cur < 0) continue; // 투명 픽셀 건너뛰기
           // 5x5 이웃 평균 (자기 제외) — 더 넓은 범위로 '독립된 점' 감지
           let nSum = 0, nCnt = 0;
           for (let dy = -2; dy <= 2; dy++) {
             for (let dx = -2; dx <= 2; dx++) {
               if (dx === 0 && dy === 0) continue;
               const ni = (y + dy) * size + (x + dx);
-              if (ni >= 0 && ni < pxCount) { nSum += brightArr[ni]; nCnt++; }
+              if (ni >= 0 && ni < pxCount && brightArr[ni] >= 0) { nSum += brightArr[ni]; nCnt++; }
             }
           }
           const avgNeighbor = nSum / nCnt;
@@ -3049,26 +3063,36 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
       const minQ = Math.min(...spotQuadrants);
       const spotSpreadUniformity = spotCount > 10 ? minQ / maxQ : 0;
 
-      // ── 대비 분석: 중앙 영역 기준 ──
+      // ── 대비 분석: 중앙 영역 기준 (투명 픽셀 제외) ──
       let cBrightSum = 0, cBrightSqSum = 0, cCount = 0;
+      let cSatSum = 0, cSatSqSum = 0;
       for (let y = cMin; y < cMax; y++) {
         for (let x = cMin; x < cMax; x++) {
           const b = brightArr[y * size + x];
+          if (b < 0) continue; // 투명 픽셀 제외
           cBrightSum += b; cBrightSqSum += b * b; cCount++;
+          const s = satArr[y * size + x];
+          if (s >= 0) { cSatSum += s; cSatSqSum += s * s; }
         }
       }
+      cCount = cCount || 1;
       const centerAvgBright = cBrightSum / cCount;
       const centerBrightStdDev = Math.sqrt(cBrightSqSum / cCount - centerAvgBright ** 2);
 
-      // 전체 대비도 (하위 호환)
-      const avgBright = brightArr.reduce((a,b) => a+b, 0) / pxCount;
-      const brightStdDev = Math.sqrt(brightArr.reduce((s,b) => s + (b - avgBright) ** 2, 0) / pxCount);
+      // 전체 대비도 (투명 픽셀 제외)
+      const opaqueBrights = brightArr.filter(b => b >= 0);
+      const effectivePxCount = opaqueBrights.length || 1;
+      const avgBright = opaqueBrights.reduce((a,b) => a+b, 0) / effectivePxCount;
+      const brightStdDev = Math.sqrt(opaqueBrights.reduce((s,b) => s + (b - avgBright) ** 2, 0) / effectivePxCount);
 
       // ── 바탕색과 점의 대비 (Spot Contrast Ratio) ──
       // 중앙 영역에서 가장 밝은 25% vs 가장 어두운 25%의 밝기 차이
       const centerBrights = [];
       for (let y = cMin; y < cMax; y++) {
-        for (let x = cMin; x < cMax; x++) centerBrights.push(brightArr[y * size + x]);
+        for (let x = cMin; x < cMax; x++) {
+          const bv = brightArr[y * size + x];
+          if (bv >= 0) centerBrights.push(bv); // 투명 픽셀 제외
+        }
       }
       centerBrights.sort((a,b) => a - b);
       const q1 = centerBrights[Math.floor(centerBrights.length * 0.25)];
@@ -3101,16 +3125,9 @@ function _analyzeImageColors(imgDataUrl, desatRate = 0) {
       const sideAvg = sideCols.reduce((a,b)=>a+b,0) / sideCols.length;
       if (midAvg - sideAvg > 15) vStripeScore = (midAvg - sideAvg) / 100;
 
-      // ── 색 균일성 (중앙 기준) ──
-      let cSatSum = 0, cSatSqSum = 0;
-      for (let y = cMin; y < cMax; y++) {
-        for (let x = cMin; x < cMax; x++) {
-          const s = satArr[y * size + x];
-          cSatSum += s; cSatSqSum += s * s;
-        }
-      }
+      // ── 색 균일성 (중앙 기준, 투명 픽셀 제외 — 위 대비 루프에서 cSatSum/cSatSqSum 이미 계산됨) ──
       const avgSat = cSatSum / cCount;
-      const satStdDev = Math.sqrt(cSatSqSum / cCount - avgSat ** 2);
+      const satStdDev = Math.sqrt(Math.max(0, cSatSqSum / cCount - avgSat ** 2));
 
       Object.keys(regions).forEach(k => {
         const rg = regions[k];
