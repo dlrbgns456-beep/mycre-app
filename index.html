@@ -4800,6 +4800,18 @@ function showResult(photoCount, fireUp, colorAnalyses) {
   // 최소 1개 후보 보장
   if (topCandidates.length === 0) topCandidates.push({ name: '노멀', score: 1, data: MORPHS['노멀'] });
 
+  // 3위에 노멀 폴백: 노멀이 후보에 없으면 3위를 노멀로 교체
+  // → 애매한 판별 시 "사실 노멀일 수도" 선택지를 항상 제공
+  if (MORPHS['노멀'] && !topCandidates.some(c => c.name === '노멀')) {
+    const normalScore = mergedScores['노멀'] || 1;
+    const normalCandidate = { name: '노멀', score: Math.max(normalScore, 1), data: MORPHS['노멀'] };
+    if (topCandidates.length >= 3) {
+      topCandidates[2] = normalCandidate; // 3위를 노멀로 교체
+    } else {
+      topCandidates.push(normalCandidate); // 후보가 2개 이하면 추가
+    }
+  }
+
   // 확률 계산: 상위 후보들의 점수를 합산하여 비율로 변환
   const totalScore = topCandidates.reduce((sum, c) => sum + c.score, 0);
   const candidatesWithProb = topCandidates.map(c => ({
