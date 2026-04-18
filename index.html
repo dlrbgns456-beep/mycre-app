@@ -554,6 +554,21 @@ input[type=file]{display:none}
   border-radius:14px;padding:13px;width:100%;
 }
 
+/* ─── Onboarding ─── */
+#onboarding-screen{position:fixed;inset:0;z-index:400;background:var(--bg);display:none;flex-direction:column;opacity:0;transition:opacity .3s}
+#onboarding-screen.show{display:flex;opacity:1}
+.ob-slide{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center}
+.ob-slide.active{display:flex}
+.ob-illust{font-size:72px;margin-bottom:18px;filter:drop-shadow(0 4px 12px rgba(46,125,87,.2))}
+.ob-headline{font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px;letter-spacing:-.5px}
+.ob-sub{font-size:14px;color:var(--tx2);line-height:1.8;max-width:320px;margin-bottom:32px}
+.ob-dots{display:flex;gap:8px;margin-bottom:24px}
+.ob-dot{width:8px;height:8px;border-radius:4px;background:var(--br);transition:.3s}
+.ob-dot.active{width:28px;background:var(--ac)}
+.ob-btn-next{width:100%;max-width:320px;background:var(--ac);color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:12px}
+.ob-btn-next:active{transform:scale(.98)}
+.ob-skip{background:none;border:none;color:var(--tx3);font-size:12px;font-family:inherit;cursor:pointer;padding:6px}
+
 /* ─── Lineage Tree ─── */
 .lineage-tree{display:flex;flex-direction:column;align-items:center;gap:0;padding:16px 0}
 .lineage-row{display:flex;gap:12px;justify-content:center;width:100%}
@@ -2058,6 +2073,7 @@ input[type=file]{display:none}
       </div>
 
       <!-- 안내 -->
+      <div style="text-align:center;font-size:10px;color:var(--tx3);line-height:1.7;padding:4px 0 4px;background:var(--sf2);border-radius:8px;margin-bottom:6px">구독은 결제일 기준 24시간 전까지 취소하지 않으면 자동 갱신됩니다.<br>갱신은 Apple ID / Google 계정에서 관리하실 수 있어요.<br>구매 즉시 활성화되며 청약철회는 이용약관에 따라 진행됩니다.</div>
       <div style="text-align:center;font-size:11px;color:var(--tx3);line-height:1.6;padding:4px 0 8px">
         카카오페이 · 카드 결제 지원 · 즉시 활성화 · 언제든 해지 가능<br>
         문의: <span style="color:var(--ac);text-decoration:underline;cursor:pointer" onclick="navigator.clipboard.writeText('dlrbgns456@gmail.com').then(()=>showToast('이메일 복사됨'))">dlrbgns456@gmail.com</span>
@@ -4081,7 +4097,7 @@ async function saveGecko() {
     updateCountBadges();
     populateGeckoSelects();
     showPage('myge');
-    showToast(isEdit ? '✅ 개체 정보가 수정되었어요' : '✅ 새 개체가 등록되었어요!');
+    showToast(isEdit ? '✅ 개체 정보가 수정되었어요' : `🦎 "${name}" 등록 완료! AI 모프 판별도 해보세요`);
 
     // ── 서버 저장 (사진 업로드 + DB) ──
     (async () => {
@@ -6215,37 +6231,49 @@ function printQR() {
 <!-- ══════════════════════════════════════
      SHEET: 개체별 기록
 ══════════════════════════════════════ -->
-<!-- 온보딩 오버레이 (첫 로그인 시 1회 표시) -->
-<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;z-index:400;background:var(--bg);flex-direction:column">
-  <div id="onboarding-pages" style="flex:1;overflow:hidden;position:relative">
-    <!-- Page 1 -->
-    <div class="onboarding-page" data-page="1" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center">
-      <div style="font-size:72px;margin-bottom:12px">🦎</div>
-      <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px">안녕하세요, 크레 사육자님</div>
-      <div style="font-size:14px;color:var(--tx2);line-height:1.8;max-width:300px">마이크레는 크레스티드 게코 사육자를 위한 기록 앱이에요.<br>개체 정보·사진·혈통까지 한 곳에서 관리해 보세요.</div>
+<!-- ══════════════════════════════════════
+     온보딩 3단계 (첫 방문 유저용)
+══════════════════════════════════════ -->
+<div id="onboarding-screen">
+  <!-- Slide 1: 환영 -->
+  <div class="ob-slide active" id="ob-slide-1">
+    <div class="ob-illust">🦎</div>
+    <div class="ob-headline">안녕하세요, 크레 사육자님</div>
+    <div class="ob-sub">마이크레는 크레스티드 게코 사육자를 위한 기록 앱이에요.<br>개체 정보·사진·혈통까지 한 곳에서 관리해 보세요.</div>
+    <div class="ob-dots">
+      <div class="ob-dot active"></div>
+      <div class="ob-dot"></div>
+      <div class="ob-dot"></div>
     </div>
-    <!-- Page 2 -->
-    <div class="onboarding-page" data-page="2" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center">
-      <div style="font-size:72px;margin-bottom:12px">📸</div>
-      <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px">사진 한 장이면 됩니다.</div>
-      <div style="font-size:14px;color:var(--tx2);line-height:1.8;max-width:300px">AI가 할리퀸·트리컬러·릴리화이트 같은 주요 형질을 확률 기반으로 분석해 드려요.<br><br>참고 도구로 활용하시고, 최종 판단은 사육자님 몫이에요.</div>
-    </div>
-    <!-- Page 3 -->
-    <div class="onboarding-page" data-page="3" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center">
-      <div style="font-size:72px;margin-bottom:12px">🌳</div>
-      <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px">혼자 쌓는 기록이 아니에요.</div>
-      <div style="font-size:14px;color:var(--tx2);line-height:1.8;max-width:300px">혈통 트리로 번식 계획을 세우고,<br>커뮤니티에서 다른 사육자 분들과 노하우를 나눠 보세요.</div>
-    </div>
+    <button class="ob-btn-next" onclick="showObSlide(2)">다음 →</button>
+    <button class="ob-skip" onclick="finishOnboarding()">건너뛰기</button>
   </div>
-  <!-- Dots + Button -->
-  <div style="padding:20px 32px 32px;display:flex;flex-direction:column;align-items:center;gap:20px">
-    <div id="onboarding-dots" style="display:flex;gap:8px">
-      <span class="ob-dot active" style="width:28px;height:8px;border-radius:4px;background:var(--ac);transition:.3s"></span>
-      <span class="ob-dot" style="width:8px;height:8px;border-radius:4px;background:var(--br);transition:.3s"></span>
-      <span class="ob-dot" style="width:8px;height:8px;border-radius:4px;background:var(--br);transition:.3s"></span>
+
+  <!-- Slide 2: AI 모프 판별 -->
+  <div class="ob-slide" id="ob-slide-2">
+    <div class="ob-illust">📸</div>
+    <div class="ob-headline">사진 한 장이면 됩니다</div>
+    <div class="ob-sub">AI가 할리퀸·트리컬러·릴리화이트 같은 주요 형질을<br>확률 기반으로 분석해 드려요.<br>참고 도구로 활용하시고, 최종 판단은 사육자님 몫이에요.</div>
+    <div class="ob-dots">
+      <div class="ob-dot"></div>
+      <div class="ob-dot active"></div>
+      <div class="ob-dot"></div>
     </div>
-    <button id="onboarding-next" class="btn-primary" style="width:100%;max-width:320px" onclick="nextOnboardingPage()">다음 →</button>
-    <button onclick="finishOnboarding()" style="background:none;border:none;color:var(--tx3);font-size:12px;font-family:inherit;cursor:pointer">건너뛰기</button>
+    <button class="ob-btn-next" onclick="showObSlide(3)">다음 →</button>
+    <button class="ob-skip" onclick="finishOnboarding()">건너뛰기</button>
+  </div>
+
+  <!-- Slide 3: 혈통 & 커뮤니티 -->
+  <div class="ob-slide" id="ob-slide-3">
+    <div class="ob-illust">🧬</div>
+    <div class="ob-headline">혼자 쌓는 기록이 아니에요</div>
+    <div class="ob-sub">혈통 트리로 번식 계획을 세우고,<br>커뮤니티에서 다른 사육자 분들과 노하우를 나눠 보세요.</div>
+    <div class="ob-dots">
+      <div class="ob-dot"></div>
+      <div class="ob-dot"></div>
+      <div class="ob-dot active"></div>
+    </div>
+    <button class="ob-btn-next" onclick="finishOnboarding()" style="background:linear-gradient(135deg,var(--ac),#38c947)">시작하기 🦎</button>
   </div>
 </div>
 
@@ -6809,6 +6837,7 @@ window.addEventListener('unhandledrejection', (e) => {
 // ── 네트워크 에러 감지 ──
 window.addEventListener('offline', () => {
   _debugLog('warn', 'network', '네트워크 연결 끊김');
+  showToast('연결 상태가 좋지 않아요. 와이파이 또는 데이터를 확인해 주세요.');
 });
 window.addEventListener('online', () => {
   _debugLog('info', 'network', '네트워크 재연결');
@@ -7572,37 +7601,26 @@ function shouldShowOnboarding() {
 }
 
 function showOnboarding() {
-  _onboardingPage = 1;
-  _renderOnboardingPage();
-  document.getElementById('onboarding-overlay').style.display = 'flex';
+  const obScreen = document.getElementById('onboarding-screen');
+  if (!obScreen) return;
+  showObSlide(1);
+  obScreen.classList.add('show');
+  obScreen.style.opacity = '1';
 }
 
-function _renderOnboardingPage() {
-  document.querySelectorAll('.onboarding-page').forEach(p => {
-    p.style.display = (parseInt(p.dataset.page) === _onboardingPage) ? 'flex' : 'none';
-  });
-  const dots = document.querySelectorAll('.ob-dot');
-  dots.forEach((d, i) => {
-    const active = (i + 1) === _onboardingPage;
-    d.style.width = active ? '28px' : '8px';
-    d.style.background = active ? 'var(--ac)' : 'var(--br)';
-  });
-  const btn = document.getElementById('onboarding-next');
-  btn.textContent = _onboardingPage === 3 ? '시작하기 🦎' : '다음 →';
-}
-
-function nextOnboardingPage() {
-  if (_onboardingPage < 3) {
-    _onboardingPage++;
-    _renderOnboardingPage();
-  } else {
-    finishOnboarding();
-  }
+function showObSlide(n) {
+  document.querySelectorAll('.ob-slide').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('ob-slide-' + n);
+  if (target) target.classList.add('active');
 }
 
 function finishOnboarding() {
   try { localStorage.setItem('mycre_onboarded_' + (_currentUser?.id || 'anon'), '1'); } catch(e) {}
-  document.getElementById('onboarding-overlay').style.display = 'none';
+  const obScreen = document.getElementById('onboarding-screen');
+  if (obScreen) {
+    obScreen.style.opacity = '0';
+    setTimeout(() => obScreen.classList.remove('show'), 300);
+  }
 }
 
 // ══════════════════════════════
@@ -7718,6 +7736,14 @@ async function _onSignedIn() {
 
   // ── 1) 즉시 화면 전환 (await 없이) ──
   document.getElementById('auth-screen').style.display = 'none';
+
+  // 온보딩: 첫 방문 유저에게만 표시
+  if (shouldShowOnboarding()) {
+    const obScreen = document.getElementById('onboarding-screen');
+    obScreen.classList.add('show');
+    obScreen.style.opacity = '1';
+  }
+
   const homePage = document.getElementById('page-home');
   homePage.style.display = '';
   homePage.classList.add('active');
@@ -7740,10 +7766,8 @@ async function _onSignedIn() {
   renderHome();
   renderGeckoList();
 
-  // ── 온보딩 + 일일 리마인더 체크 (신규 유저만 온보딩 노출) ──
-  if (shouldShowOnboarding()) {
-    setTimeout(() => showOnboarding(), 500);
-  } else {
+  // ── 일일 리마인더 체크 (온보딩은 이미 위에서 처리됨) ──
+  if (!shouldShowOnboarding()) {
     setTimeout(() => _checkDailyReminders(), 2000);
   }
 
