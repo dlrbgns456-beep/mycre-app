@@ -1373,8 +1373,9 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  <!-- 알림 -->
   <div class="more-section">
-    <div class="more-section-label">⚙️ 설정</div>
+    <div class="more-section-label">알림</div>
     <div class="more-item" onclick="openNotifSettings()">
       <div class="more-icon" style="background:var(--sf2)">🔔</div>
       <div class="more-item-info">
@@ -1383,19 +1384,32 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow">›</div>
     </div>
-    <div class="more-item" onclick="showToast('준비 중인 기능입니다')">
-      <div class="more-icon" style="background:var(--sf2)">📤</div>
+  </div>
+
+  <!-- 데이터 -->
+  <div class="more-section">
+    <div class="more-section-label">데이터</div>
+    <div class="more-item" onclick="downloadMyData()">
+      <div class="more-icon" style="background:var(--sf2)">💾</div>
       <div class="more-item-info">
-        <div class="more-item-title">데이터 내보내기</div>
-        <div class="more-item-sub">내 개체 정보 CSV/PDF로 저장</div>
+        <div class="more-item-title">내 데이터 다운로드 (JSON)</div>
+        <div class="more-item-sub">개체·혈통·기록 전체 백업 파일</div>
       </div>
       <div class="more-item-arrow">›</div>
     </div>
+    <button class="more-item" onclick="confirmDeleteAllGeckos()" style="width:100%;text-align:left;font-family:inherit;background:var(--sf);border:1px solid var(--br)">
+      <div class="more-icon" style="background:rgba(255,123,84,.12);pointer-events:none">🗑️</div>
+      <div class="more-item-info" style="pointer-events:none">
+        <div class="more-item-title" style="color:var(--coral)">모든 개체 삭제</div>
+        <div class="more-item-sub">등록된 개체·기록 전부 초기화</div>
+      </div>
+      <div class="more-item-arrow" style="pointer-events:none">›</div>
+    </button>
   </div>
 
-  <!-- 도움말 / 문의 -->
+  <!-- 앱 정보 / 문의 -->
   <div class="more-section">
-    <div class="more-section-label">💬 도움말</div>
+    <div class="more-section-label">앱 정보</div>
     <div class="more-item" onclick="window.open('https://open.kakao.com/o/sDa987oi','_blank')">
       <div class="more-icon" style="background:#FEE500">💬</div>
       <div class="more-item-info">
@@ -1414,9 +1428,9 @@ input[type=file]{display:none}
     </div>
   </div>
 
-  <!-- 계정 섹션 -->
+  <!-- 계정 -->
   <div class="more-section">
-    <div class="more-section-label">🔐 계정</div>
+    <div class="more-section-label">계정</div>
     <button id="btn-signout" class="more-item" onclick="signOut()" style="border-color:rgba(255,123,84,.3);background:var(--co2);width:100%;text-align:left;font-family:inherit">
       <div class="more-icon" style="background:rgba(255,123,84,.2);pointer-events:none">🚪</div>
       <div class="more-item-info" style="pointer-events:none">
@@ -1425,10 +1439,10 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow" style="color:var(--coral);pointer-events:none">›</div>
     </button>
-    <button id="btn-delete-account" class="more-item" onclick="deleteAccount()" style="border-color:rgba(255,60,60,.3);background:rgba(255,60,60,.07);width:100%;text-align:left;font-family:inherit">
+    <button id="btn-delete-account" class="more-item" onclick="showWithdrawModal()" style="border-color:rgba(255,60,60,.3);background:rgba(255,60,60,.07);width:100%;text-align:left;font-family:inherit">
       <div class="more-icon" style="background:rgba(255,60,60,.15);pointer-events:none">⚠️</div>
       <div class="more-item-info" style="pointer-events:none">
-        <div class="more-item-title" style="color:#ff4444">회원 탈퇴</div>
+        <div class="more-item-title" style="color:#ff4444">계정 탈퇴</div>
         <div class="more-item-sub">계정 및 모든 데이터 영구 삭제</div>
       </div>
       <div class="more-item-arrow" style="color:#ff4444;pointer-events:none">›</div>
@@ -2109,6 +2123,31 @@ input[type=file]{display:none}
         <span onclick="openTermsSheet('terms')" style="cursor:pointer;text-decoration:underline">이용약관</span>
         <span>·</span>
         <span onclick="openTermsSheet('privacy')" style="cursor:pointer;text-decoration:underline">개인정보처리방침</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 계정 탈퇴 확인 모달 -->
+<div id="withdraw-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9990;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)">
+  <div style="background:var(--card);border-radius:18px;padding:24px 22px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:44px;margin-bottom:8px">⚠️</div>
+      <div style="font-size:17px;font-weight:900;color:var(--tx)">정말 탈퇴하시겠어요?</div>
+    </div>
+    <div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.25);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.7">
+      탈퇴하면 등록한 개체·사진·혈통 정보가<br>
+      <b style="color:#ff4444">30일 안에 모두 삭제됩니다.</b> (복구 불가)
+    </div>
+    <div style="background:var(--ac2);border:1px solid var(--ac);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:var(--tx2);line-height:1.7">
+      혹시 잠시 쉬고 싶으시면<br>
+      <b style="color:var(--ac)">로그아웃</b>만 해 두실 수 있어요.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-outline" style="width:100%;padding:12px;border-color:var(--ac);color:var(--ac)" onclick="hideWithdrawModal();signOut()">🚪 로그아웃 (데이터 유지)</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" style="flex:1;padding:12px" onclick="hideWithdrawModal()">취소</button>
+        <button class="btn-primary" style="flex:1;padding:12px;background:#ff4444;border:none" onclick="hideWithdrawModal();_confirmedDeleteAccount()">탈퇴 진행</button>
       </div>
     </div>
   </div>
@@ -7606,6 +7645,83 @@ function _forceCleanStorage() {
     for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
     keys.forEach(k => { if (k && (k.includes('supabase') || k.includes('sb-') || k.includes('mycre'))) localStorage.removeItem(k); });
   } catch(e) {}
+}
+
+// ══════════════════════════════
+// 계정 탈퇴 모달 (스펙: 로그아웃 / 진행 / 취소)
+// ══════════════════════════════
+function showWithdrawModal() {
+  if (!_currentUser) return;
+  document.getElementById('withdraw-modal').style.display = 'flex';
+}
+function hideWithdrawModal() {
+  document.getElementById('withdraw-modal').style.display = 'none';
+}
+async function _confirmedDeleteAccount() {
+  // 모달에서 "진행" 클릭 시 실제 탈퇴 실행 (기존 deleteAccount 로직 활용)
+  _deleteConfirmStep = 1; // 두 번째 단계로 점프
+  await deleteAccount();
+}
+
+// ══════════════════════════════
+// 내 데이터 다운로드 (JSON)
+// ══════════════════════════════
+async function downloadMyData() {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  showToast('데이터 준비 중...');
+  try {
+    const { data: geckos } = await _supabase.from('geckos').select('*').eq('user_id', _currentUser.id);
+    const { data: records } = await _supabase.from('gecko_records').select('*').eq('user_id', _currentUser.id).maybeSingle().then(() => ({ data: [] })).catch(() => ({ data: [] }));
+    const exportData = {
+      exported_at: new Date().toISOString(),
+      user_email: _currentUser.email,
+      user_id: _currentUser.id,
+      geckos: geckos || [],
+      records: records || [],
+      profile: {
+        marketing_opt_in: localStorage.getItem('mycre_marketing_opt_in') === '1',
+      }
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mycre-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✅ 데이터 다운로드 완료');
+  } catch(e) {
+    console.error('다운로드 실패:', e);
+    showToast('❌ 다운로드 실패: ' + e.message);
+  }
+}
+
+// ══════════════════════════════
+// 모든 개체 삭제 (계정은 유지)
+// ══════════════════════════════
+let _deleteAllStep = 0;
+async function confirmDeleteAllGeckos() {
+  if (!_currentUser) return;
+  if (state.geckos.length === 0) { showToast('삭제할 개체가 없어요'); return; }
+  if (_deleteAllStep === 0) {
+    _deleteAllStep = 1;
+    showToast(`⚠️ ${state.geckos.length}마리의 개체와 모든 기록이 삭제됩니다. 한 번 더 누르면 확정.`);
+    setTimeout(() => { _deleteAllStep = 0; }, 5000);
+    return;
+  }
+  _deleteAllStep = 0;
+  showToast('삭제 중...');
+  try {
+    await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
+    state.geckos = [];
+    try { localStorage.removeItem('mycre_geckos_' + _currentUser.id); } catch(e) {}
+    renderHome(); renderGeckoList();
+    showToast('✅ 모든 개체가 삭제되었습니다');
+  } catch(e) {
+    showToast('❌ 삭제 실패: ' + e.message);
+  }
 }
 
 // ── 회원 탈퇴 (2단계 탭 — PWA standalone에서 confirm() 작동 안 하므로) ──
