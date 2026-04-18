@@ -7989,22 +7989,69 @@ function sendLocalNotification(title, body, icon = '/icon-192.svg') {
   } catch(e) { return false; }
 }
 
-// 앱 시작 시 리마인더 체크 (일일 1회)
+// 앱 시작 시 리마인더 체크 (종류별 별도 캐시 — 카피 가이드 준수)
 function _checkDailyReminders() {
   if (!_currentUser || Notification?.permission !== 'granted') return;
+  if (state.geckos.length === 0) return;
   const prefs = _loadNotifPrefs();
   const todayKey = new Date().toISOString().slice(0, 10);
-  const lastReminderKey = 'mycre_last_reminder_' + _currentUser.id;
-  let lastReminder = '';
-  try { lastReminder = localStorage.getItem(lastReminderKey) || ''; } catch(e) {}
-  if (lastReminder === todayKey) return; // 오늘 이미 보냄
+  const weekKey = _getISOWeekKey(new Date()); // 예: "2026-W16"
+  const firstGecko = state.geckos[0];
+  const nickname = firstGecko.name || '크레';
+  const lsKey = (suffix) => `mycre_reminder_${suffix}_${_currentUser.id}`;
+  const checkAndSet = (key, value) => {
+    try {
+      if (localStorage.getItem(lsKey(key)) === value) return false;
+      localStorage.setItem(lsKey(key), value);
+      return true;
+    } catch(e) { return false; }
+  };
 
-  // 급이 리마인더
-  if (prefs.feed && state.geckos.length > 0) {
-    const firstGecko = state.geckos[0];
-    sendLocalNotification('🦎 오늘 급이 하셨나요?', `${firstGecko.name} 등 ${state.geckos.length}마리의 급이 시간이에요.`);
-    try { localStorage.setItem(lastReminderKey, todayKey); } catch(e) {}
+  // 1) 급이 리마인더 (매일)
+  if (prefs.feed && checkAndSet('feed', todayKey)) {
+    sendLocalNotification(`🦎 오늘 ${nickname} 급이 하셨나요?`, '오늘의 급이 시간이에요.');
   }
+
+  // 2) 주간 체중 리마인더 (주 1회)
+  if (prefs.weight && checkAndSet('weight', weekKey)) {
+    sendLocalNotification(`📊 ${nickname}, 이번 주 체중 측정할 시간이에요.`, '주간 체중 기록을 남겨 보세요.');
+  }
+
+  // 3) 탈피 예상 — 개체별 shedCycle 있을 때만 (향후 확장)
+  if (prefs.shed && firstGecko.shedCycle) {
+    const cycle = parseInt(firstGecko.shedCycle) || 14;
+    const lastShed = firstGecko.lastShedAt ? new Date(firstGecko.lastShedAt) : null;
+    if (lastShed) {
+      const daysSince = Math.floor((Date.now() - lastShed.getTime()) / 86400000);
+      if (daysSince >= cycle && checkAndSet('shed_' + firstGecko.id, todayKey)) {
+        sendLocalNotification(`✨ ${nickname} 평균 탈피 주기(${cycle}일)가 돌아왔어요.`, '탈피 사진 찍으시면 다음 예측이 더 정확해져요.');
+      }
+    }
+  }
+}
+
+// ISO Week 계산 (예: 2026-W16)
+function _getISOWeekKey(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+// 커뮤니티 댓글 알림 (외부에서 댓글 수신 시 호출)
+function notifyCommunityComment(commenterName) {
+  const prefs = _loadNotifPrefs();
+  if (!prefs.community) return;
+  sendLocalNotification(`💬 ${commenterName}님이 회원님 글에 댓글을 남겼어요.`, '커뮤니티에서 확인해 보세요.');
+}
+
+// 마케팅 알림 (관리자/승인자 호출)
+function notifyMarketing(title, body) {
+  const prefs = _loadNotifPrefs();
+  if (!prefs.marketing) return;
+  sendLocalNotification(title || '🎁 베타 종료 + 정식 출시 D-3', body || '알림 켜 두신 분 한정 특별 쿠폰, 확인해 보세요.');
 }
 
 async function _onSignedIn() {
