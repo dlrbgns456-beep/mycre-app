@@ -3004,7 +3004,7 @@ function _applyCAHardRules(scores, colorAnalyses) {
 
 function _evaluateScanConfidence(candidatesWithProb, photoCount) {
   if (!candidatesWithProb || candidatesWithProb.length === 0) {
-    return { level:'low', label:'판단 불가', msg:'분석 실패', color:'#ff6b6b' };
+    return { level:'low', label:'판단 불가', msg:'이번 사진은 AI가 자신 없어 하네요. 다른 각도·밝기로 한 번 더 찍어 주시겠어요?', color:'#ff6b6b' };
   }
   const top1 = candidatesWithProb[0];
   const top2 = candidatesWithProb[1];
@@ -3012,7 +3012,7 @@ function _evaluateScanConfidence(candidatesWithProb, photoCount) {
   const absScore = top1.score || 0;
 
   if (absScore < 30 || top1.prob < 35) {
-    return { level:'defer', label:'판단 보류', msg:`증거 부족(점수 ${absScore}, 1위 확률 ${top1.prob}%) — 측면·꼬리·등 사진을 추가해 주세요.`, color:'#ff9c27' };
+    return { level:'defer', label:'판단 보류', msg:'이번 사진은 AI가 자신 없어 하네요. 다른 각도·밝기로 한 번 더 찍어 주시겠어요?', color:'#ff9c27' };
   }
   if (gap < 8 && photoCount < 3) {
     return { level:'defer', label:'판단 보류', msg:`1·2위 격차 ${gap}%p (거의 동률) — 사진 ${photoCount}장으로는 부족. 꼬리/옆구리 사진 추가 권장.`, color:'#ff9c27' };
@@ -4776,6 +4776,16 @@ function _blobToDataURL(blob) {
 async function handleScanPhotos(e) {
   const files = Array.from(e.target.files);
   if (!files.length) return;
+
+  // ── 파일 용량 검증 (20MB 이하) ──
+  const MAX_SIZE = 20 * 1024 * 1024;
+  const oversized = files.filter(f => f.size > MAX_SIZE);
+  if (oversized.length > 0) {
+    showToast('사진이 너무 커요. 20MB 이하로 줄여서 다시 올려 주세요.');
+    e.target.value = '';
+    return;
+  }
+
   const remaining = 6 - scanPhotos.length;
   const toAdd = files.slice(0, remaining);
   e.target.value = '';
@@ -7645,6 +7655,27 @@ function _forceCleanStorage() {
     for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
     keys.forEach(k => { if (k && (k.includes('supabase') || k.includes('sb-') || k.includes('mycre'))) localStorage.removeItem(k); });
   } catch(e) {}
+}
+
+// ══════════════════════════════
+// 서버 점검 오버레이 (수동 호출 또는 5xx 에러 감지 시)
+// ══════════════════════════════
+function showMaintenanceOverlay(estimatedTime) {
+  let overlay = document.getElementById('maintenance-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'maintenance-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:99990;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center;flex-direction:column';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `
+    <div style="font-size:64px;margin-bottom:16px">🛠️</div>
+    <div style="font-size:20px;font-weight:900;color:var(--tx);margin-bottom:10px">잠시 점검 중이에요.</div>
+    ${estimatedTime ? `<div style="font-size:13px;color:var(--tx2);margin-bottom:8px">(예상 복구: ${estimatedTime} KST)</div>` : ''}
+    <div style="font-size:13px;color:var(--tx3);line-height:1.7;margin-bottom:24px">불편을 드려 죄송합니다.<br>잠시 후 다시 시도해 주세요.</div>
+    <button onclick="location.reload()" style="background:var(--ac);color:#fff;border:none;border-radius:12px;padding:12px 28px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">새로고침</button>
+  `;
+  overlay.style.display = 'flex';
 }
 
 // ══════════════════════════════
