@@ -7606,6 +7606,11 @@ function showObSlide(n) {
   if (slide) slide.classList.add('active');
 }
 
+function _onboardingKey() {
+  // 유저별 온보딩 플래그 — 계정 탈퇴 후 새 계정 가입 시에도 온보딩 다시 표시
+  return 'mycre_onboarded_' + (_currentUser?.id || 'anon');
+}
+
 function finishOnboarding() {
   const screen = document.getElementById('onboarding-screen');
   screen.style.opacity = '0';
@@ -7614,11 +7619,11 @@ function finishOnboarding() {
     screen.style.display = 'none';
     screen.classList.remove('show');
   }, 300);
-  try { localStorage.setItem('mycre_onboarded', '1'); } catch(e) {}
+  try { localStorage.setItem(_onboardingKey(), '1'); } catch(e) {}
 }
 
 function shouldShowOnboarding() {
-  try { return !localStorage.getItem('mycre_onboarded'); } catch(e) { return false; }
+  try { return !localStorage.getItem(_onboardingKey()); } catch(e) { return false; }
 }
 
 function showOnboarding() {
