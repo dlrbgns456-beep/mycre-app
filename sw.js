@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mycre-v9';
+const CACHE_NAME = 'mycre-v10';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.svg',
@@ -26,12 +26,18 @@ self.addEventListener('activate', (e) => {
 
 // 요청 가로채기
 self.addEventListener('fetch', (e) => {
-  // Supabase API, Google Fonts, auth callback → 네트워크 직접 (가로채지 않음)
-  if (e.request.url.includes('supabase.co') || e.request.url.includes('googleapis.com')) return;
-  if (e.request.url.includes('code=') || e.request.url.includes('access_token=') || e.request.url.includes('_logout=') || e.request.url.includes('_deleted=')) return;
+  // ── 가로채지 않는 요청 ──
+  // 1) GET이 아닌 요청 (POST/PUT/DELETE 등) — Cache API는 GET만 저장 가능
+  if (e.request.method !== 'GET') return;
+  // 2) http/https가 아닌 스킴 (chrome-extension://, data:, blob: 등)
+  const url = e.request.url;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return;
+  // 3) Supabase API, Google Fonts, auth callback → 네트워크 직접
+  if (url.includes('supabase.co') || url.includes('googleapis.com')) return;
+  if (url.includes('code=') || url.includes('access_token=') || url.includes('_logout=') || url.includes('_deleted=')) return;
 
   // HTML 요청 → 항상 네트워크 (최신 코드 보장)
-  if (e.request.mode === 'navigate' || e.request.url.endsWith('.html')) {
+  if (e.request.mode === 'navigate' || url.endsWith('.html')) {
     e.respondWith(
       fetch(e.request).catch(() => caches.match('/index.html'))
     );
@@ -42,9 +48,12 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
       .then(response => {
-        if (response.ok) {
+        // 캐시 가능 조건: 응답 OK + basic/cors 타입 (opaque 등은 put 시 이슈 가능)
+        if (response.ok && (response.type === 'basic' || response.type === 'cors')) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+          caches.open(CACHE_NAME)
+            .then(cache => cache.put(e.request, clone))
+            .catch(() => {}); // 캐시 실패는 무시 (쿼터 초과 등)
         }
         return response;
       })
