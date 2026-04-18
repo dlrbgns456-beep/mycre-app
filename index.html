@@ -555,19 +555,29 @@ input[type=file]{display:none}
 }
 
 /* ─── Onboarding ─── */
-#onboarding-screen{position:fixed;inset:0;z-index:400;background:var(--bg);display:none;flex-direction:column;opacity:0;transition:opacity .3s}
-#onboarding-screen.show{display:flex;opacity:1}
-.ob-slide{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center}
-.ob-slide.active{display:flex}
-.ob-illust{font-size:72px;margin-bottom:18px;filter:drop-shadow(0 4px 12px rgba(46,125,87,.2))}
-.ob-headline{font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px;letter-spacing:-.5px}
-.ob-sub{font-size:14px;color:var(--tx2);line-height:1.8;max-width:320px;margin-bottom:32px}
-.ob-dots{display:flex;gap:8px;margin-bottom:24px}
-.ob-dot{width:8px;height:8px;border-radius:4px;background:var(--br);transition:.3s}
-.ob-dot.active{width:28px;background:var(--ac)}
-.ob-btn-next{width:100%;max-width:320px;background:var(--ac);color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:12px}
-.ob-btn-next:active{transform:scale(.98)}
-.ob-skip{background:none;border:none;color:var(--tx3);font-size:12px;font-family:inherit;cursor:pointer;padding:6px}
+#onboarding-screen {
+  position:fixed;inset:0;background:var(--bg);z-index:10000;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 28px;
+}
+#onboarding-screen.show { display:flex; }
+.ob-slide { display:none;flex-direction:column;align-items:center;text-align:center;gap:12px;animation:pageFadeIn .3s ease; }
+.ob-slide.active { display:flex; }
+.ob-illust { font-size:72px;margin-bottom:8px; }
+.ob-headline { font-size:22px;font-weight:900;line-height:1.3; }
+.ob-sub { font-size:14px;color:var(--tx2);line-height:1.7;max-width:320px; }
+.ob-dots { display:flex;gap:8px;margin-top:20px; }
+.ob-dot { width:8px;height:8px;border-radius:50%;background:var(--br); }
+.ob-dot.active { background:var(--ac);width:20px;border-radius:4px; }
+.ob-btn-next {
+  margin-top:24px;background:linear-gradient(135deg,var(--ac),#38c947);
+  color:#071508;font-weight:800;font-size:15px;
+  border:none;border-radius:14px;padding:14px 48px;
+  cursor:pointer;box-shadow:0 4px 18px rgba(93,220,106,.35);
+  font-family:'Noto Sans KR',sans-serif;transition:all .15s;
+}
+.ob-btn-next:active { transform:scale(.97);box-shadow:none; }
+.ob-skip { margin-top:12px;font-size:12px;color:var(--tx3);cursor:pointer;background:none;border:none;font-family:inherit; }
 
 /* ─── Lineage Tree ─── */
 .lineage-tree{display:flex;flex-direction:column;align-items:center;gap:0;padding:16px 0}
@@ -7588,39 +7598,36 @@ async function deleteAccount() {
 
 // ── 로그인 성공 후 처리 ──
 // ══════════════════════════════
-// 온보딩 3페이지 (첫 로그인 시 1회)
+// 온보딩 (첫 방문 유저 가이드)
 // ══════════════════════════════
-let _onboardingPage = 1;
+function showObSlide(n) {
+  document.querySelectorAll('.ob-slide').forEach(s => s.classList.remove('active'));
+  const slide = document.getElementById('ob-slide-' + n);
+  if (slide) slide.classList.add('active');
+}
+
+function finishOnboarding() {
+  const screen = document.getElementById('onboarding-screen');
+  screen.style.opacity = '0';
+  screen.style.transition = 'opacity .3s ease';
+  setTimeout(() => {
+    screen.style.display = 'none';
+    screen.classList.remove('show');
+  }, 300);
+  try { localStorage.setItem('mycre_onboarded', '1'); } catch(e) {}
+}
 
 function shouldShowOnboarding() {
-  try {
-    // ?onboarding=1 URL 파라미터로 강제 노출 (테스트/재확인용)
-    if (new URLSearchParams(location.search).get('onboarding') === '1') return true;
-    return !localStorage.getItem('mycre_onboarded_' + (_currentUser?.id || 'anon'));
-  } catch(e) { return false; }
+  try { return !localStorage.getItem('mycre_onboarded'); } catch(e) { return false; }
 }
 
 function showOnboarding() {
   const obScreen = document.getElementById('onboarding-screen');
   if (!obScreen) return;
   showObSlide(1);
+  obScreen.style.opacity = '';
+  obScreen.style.display = '';
   obScreen.classList.add('show');
-  obScreen.style.opacity = '1';
-}
-
-function showObSlide(n) {
-  document.querySelectorAll('.ob-slide').forEach(s => s.classList.remove('active'));
-  const target = document.getElementById('ob-slide-' + n);
-  if (target) target.classList.add('active');
-}
-
-function finishOnboarding() {
-  try { localStorage.setItem('mycre_onboarded_' + (_currentUser?.id || 'anon'), '1'); } catch(e) {}
-  const obScreen = document.getElementById('onboarding-screen');
-  if (obScreen) {
-    obScreen.style.opacity = '0';
-    setTimeout(() => obScreen.classList.remove('show'), 300);
-  }
 }
 
 // ══════════════════════════════
