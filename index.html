@@ -642,15 +642,15 @@ input[type=file]{display:none}
   <!-- 로딩 상태 (기본) -->
   <div id="auth-loading">
     <div style="font-size:52px;margin-bottom:16px">🦎</div>
-    <div style="font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;color:var(--ac);margin-bottom:8px">마이크레</div>
-    <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">내 크레의 모든 것, 마이크레.</div>
+    <div style="font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;color:var(--ac);margin-bottom:6px">마이크레</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">내 크레의 모든 것, 마이크레.</div>
     <div style="width:36px;height:36px;border:3px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
   </div>
   <!-- 로그인 폼 (세션 없을 때만 표시) -->
   <div id="auth-form" style="display:none;flex-direction:column;align-items:center;width:100%;gap:0">
     <div class="auth-logo">🦎</div>
     <div class="auth-title">마이크레 시작하기</div>
-    <div class="auth-sub">내 크레의 모든 것, 마이크레.<br>개체 · 혈통 · 기록을 한 곳에서.</div>
+    <div class="auth-sub">크레스티드 게코 사육자를 위한 기록 앱.<br>개체 정보·사진·혈통까지 한 곳에서 관리하세요.</div>
 
     <!-- WebView 감지 배너 -->
     <div id="webview-banner" style="display:none;width:100%;max-width:360px;background:linear-gradient(135deg,#2a1500,#1a0e00);border:1.5px solid var(--am);border-radius:16px;padding:16px 18px;margin-bottom:16px;text-align:center">
@@ -673,7 +673,7 @@ input[type=file]{display:none}
       </div>
       <div id="email-login-area" style="display:flex;flex-direction:column;gap:10px">
         <input class="auth-input" id="auth-email" type="email" placeholder="이메일 주소" autocomplete="email">
-        <input class="auth-input" id="auth-pw" type="password" placeholder="비밀번호 (영문·숫자 포함 8자 이상)" autocomplete="current-password">
+        <input class="auth-input" id="auth-pw" type="password" placeholder="영문·숫자 포함 8자 이상" autocomplete="current-password">
         <input class="auth-input" id="auth-pw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" style="display:none">
 
         <!-- 약관 동의 (회원가입 시만 표시) -->
@@ -760,8 +760,8 @@ input[type=file]{display:none}
   <!-- Banner -->
   <div class="home-banner">
     <div class="banner-eyebrow">MYCRE · AI GECKO PLATFORM</div>
-    <div class="banner-title">사진 한 장으로<br><span>모프 판별</span> 완료</div>
-    <div class="banner-desc">크레스티드 게코 <b style="color:var(--ac)">브리더</b>로 가기 위한<br>AI 올인원 관리 플랫폼</div>
+    <div class="banner-title">사진 한 장이면<br><span>모프 판별</span> 끝</div>
+    <div class="banner-desc">AI가 할리퀸·트리컬러·릴리화이트 같은 주요 형질을<br>확률 기반으로 분석해 드려요.</div>
     <button class="btn-primary" style="max-width:180px" onclick="showPage('scan')">📷 지금 판별하기</button>
   </div>
 
@@ -973,8 +973,8 @@ input[type=file]{display:none}
   <!-- Loading -->
   <div class="ai-loading" id="ai-loading">
     <div class="ai-spinner"></div>
-    <div class="ai-loading-title">AI가 크레를 자세히 보고 있어요 🧬</div>
-    <div class="ai-loading-sub">약 3~5초 걸려요...</div>
+    <div class="ai-loading-title">AI가 크레를 자세히 보고 있어요... 🧬</div>
+    <div class="ai-loading-sub">약 3~5초 소요됩니다</div>
     <div class="ai-loading-steps" id="ai-loading-steps">
       <div class="ai-step-item" id="ls1">색상 패턴 인식 중...</div>
       <div class="ai-step-item" id="ls2">모프 데이터베이스 대조 중...</div>
