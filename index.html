@@ -561,8 +561,8 @@ input[type=file]{display:none}
   padding:40px 28px;
 }
 #onboarding-screen.show { display:flex; }
-.ob-slide { display:none;flex-direction:column;align-items:center;text-align:center;gap:12px;animation:pageFadeIn .3s ease; }
-.ob-slide.active { display:flex; }
+.ob-slide { display:none;flex-direction:column;align-items:center;text-align:center;gap:12px; }
+.ob-slide.active { display:flex;animation:pageFadeIn .3s ease forwards;opacity:1 }
 .ob-illust { font-size:72px;margin-bottom:8px; }
 .ob-headline { font-size:22px;font-weight:900;line-height:1.3; }
 .ob-sub { font-size:14px;color:var(--tx2);line-height:1.7;max-width:320px; }
@@ -7744,11 +7744,9 @@ async function _onSignedIn() {
   // ── 1) 즉시 화면 전환 (await 없이) ──
   document.getElementById('auth-screen').style.display = 'none';
 
-  // 온보딩: 첫 방문 유저에게만 표시
+  // 온보딩: 첫 방문 유저에게만 표시 (showOnboarding 함수 사용해서 slide 1 명시적 활성화)
   if (shouldShowOnboarding()) {
-    const obScreen = document.getElementById('onboarding-screen');
-    obScreen.classList.add('show');
-    obScreen.style.opacity = '1';
+    showOnboarding();
   }
 
   const homePage = document.getElementById('page-home');
