@@ -2024,8 +2024,9 @@ input[type=file]{display:none}
       <!-- 헤더 -->
       <div style="text-align:center;padding:20px 0 14px">
         <div style="font-size:40px;margin-bottom:8px">⭐</div>
-        <div style="font-size:22px;font-weight:900;color:var(--am)">마이크레 멤버십</div>
+        <div style="font-size:22px;font-weight:900;color:var(--am)">마이크레 프리미엄</div>
         <div style="font-size:13px;color:#c9a850;margin-top:4px">나에게 맞는 등급을 선택하세요</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:6px">연간 구독은 2개월 무료 혜택</div>
       </div>
 
       <!-- 월간/연간 토글 -->
@@ -2103,6 +2104,39 @@ input[type=file]{display:none}
         카카오페이 · 카드 결제 지원 · 즉시 활성화 · 언제든 해지 가능<br>
         문의: <span style="color:var(--ac);text-decoration:underline;cursor:pointer" onclick="navigator.clipboard.writeText('dlrbgns456@gmail.com').then(()=>showToast('이메일 복사됨'))">dlrbgns456@gmail.com</span>
       </div>
+      <!-- 법적 링크 -->
+      <div style="display:flex;justify-content:center;gap:14px;padding:4px 0 12px;font-size:11px;color:var(--tx3)">
+        <span onclick="openTermsSheet('terms')" style="cursor:pointer;text-decoration:underline">이용약관</span>
+        <span>·</span>
+        <span onclick="openTermsSheet('privacy')" style="cursor:pointer;text-decoration:underline">개인정보처리방침</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 베타 테스터 전용 화면 (프리미엄 평생 무료) -->
+<div class="sheet-overlay" id="sheet-beta-tester" onclick="closeSheet('sheet-beta-tester',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body" style="padding:24px 20px 32px;text-align:center">
+      <div style="font-size:56px;margin-bottom:12px">💚</div>
+      <div style="font-size:22px;font-weight:900;color:var(--ac);margin-bottom:14px">베타 테스터 혜택</div>
+      <div style="font-size:14px;color:var(--tx);line-height:1.8;margin-bottom:20px">
+        프리미엄이 <b style="color:var(--ac)">평생 무료</b>로 제공됩니다.<br>
+        결제 없이 모든 기능 이용하실 수 있어요.
+      </div>
+      <div style="background:var(--ac2);border:1px solid var(--ac);border-radius:14px;padding:16px;margin-bottom:20px;text-align:left">
+        <div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:8px">✨ 포함 기능</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.9">
+          ✅ 무제한 개체 등록<br>
+          ✅ 무제한 AI 모프 판별<br>
+          ✅ 혈통 트리 고급 기능<br>
+          ✅ 우선 고객 지원<br>
+          ✅ 광고 없음
+        </div>
+      </div>
+      <div style="font-size:14px;color:var(--tx);font-weight:700">감사합니다. 🦎</div>
+      <button class="btn-primary" style="width:100%;margin-top:20px;padding:13px" onclick="closeSheet('sheet-beta-tester',event)">확인</button>
     </div>
   </div>
 </div>
@@ -7165,7 +7199,17 @@ function handlePDFExport() {
   // 실제 PDF 생성은 추후 구현
 }
 
-function openProSheet() {
+async function openProSheet() {
+  // 베타 테스터면 전용 화면 표시
+  if (_currentUser?.id) {
+    try {
+      const { data } = await _supabase.from('profiles').select('is_beta_tester').eq('id', _currentUser.id).maybeSingle();
+      if (data?.is_beta_tester) {
+        openSheet('sheet-beta-tester');
+        return;
+      }
+    } catch(e) { console.warn('베타 테스터 체크 실패:', e); }
+  }
   selectBilling('yearly');
   _renderCompareTable();
   openSheet('sheet-pro');
