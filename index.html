@@ -642,14 +642,15 @@ input[type=file]{display:none}
   <!-- 로딩 상태 (기본) -->
   <div id="auth-loading">
     <div style="font-size:52px;margin-bottom:16px">🦎</div>
-    <div style="font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;color:var(--ac);margin-bottom:16px">마이크레</div>
+    <div style="font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;color:var(--ac);margin-bottom:8px">마이크레</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">내 크레의 모든 것, 마이크레.</div>
     <div style="width:36px;height:36px;border:3px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
   </div>
   <!-- 로그인 폼 (세션 없을 때만 표시) -->
   <div id="auth-form" style="display:none;flex-direction:column;align-items:center;width:100%;gap:0">
     <div class="auth-logo">🦎</div>
-    <div class="auth-title">마이크레</div>
-    <div class="auth-sub">내 크레스티드 게코 올인원 관리<br>계정으로 어디서든 내 개체 조회</div>
+    <div class="auth-title">마이크레 시작하기</div>
+    <div class="auth-sub">내 크레의 모든 것, 마이크레.<br>개체 · 혈통 · 기록을 한 곳에서.</div>
 
     <!-- WebView 감지 배너 -->
     <div id="webview-banner" style="display:none;width:100%;max-width:360px;background:linear-gradient(135deg,#2a1500,#1a0e00);border:1.5px solid var(--am);border-radius:16px;padding:16px 18px;margin-bottom:16px;text-align:center">
@@ -682,11 +683,11 @@ input[type=file]{display:none}
 
       <button class="social-btn google-btn" id="google-login-btn" onclick="signInWithGoogle()">
         <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Google로 로그인
+        Google로 계속하기
       </button>
       <button class="social-btn kakao-btn" onclick="signInWithKakao()">
         <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0"><path fill="#3C1E1E" d="M12 3C6.477 3 2 6.477 2 10.5c0 2.544 1.394 4.788 3.5 6.186L4.5 20.5l4.229-2.797C9.584 17.9 10.775 18 12 18c5.523 0 10-3.477 10-7.5S17.523 3 12 3z"/></svg>
-        카카오 로그인
+        카카오로 계속하기
       </button>
     </div>
   </div>
@@ -945,8 +946,8 @@ input[type=file]{display:none}
   <!-- Loading -->
   <div class="ai-loading" id="ai-loading">
     <div class="ai-spinner"></div>
-    <div class="ai-loading-title">AI가 분석 중이에요 🧬</div>
-    <div class="ai-loading-sub">잠시만 기다려 주세요...</div>
+    <div class="ai-loading-title">AI가 크레를 자세히 보고 있어요 🧬</div>
+    <div class="ai-loading-sub">약 3~5초 걸려요...</div>
     <div class="ai-loading-steps" id="ai-loading-steps">
       <div class="ai-step-item" id="ls1">색상 패턴 인식 중...</div>
       <div class="ai-step-item" id="ls2">모프 데이터베이스 대조 중...</div>
@@ -1015,7 +1016,8 @@ input[type=file]{display:none}
 
     <!-- 후보 리스트 (확률 순위) -->
     <div class="card card-pad" style="margin-bottom:12px">
-      <div class="result-section-title" style="margin-bottom:10px">📊 모프 후보 (확률 순위)</div>
+      <div class="result-section-title" style="margin-bottom:6px">📊 모프 후보 (확률 순위)</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;line-height:1.5">상위 형질 3개를 확률 순으로 보여 드려요.<br>참고용 결과이며, 최종 판단은 사육자님이 해 주세요.</div>
       <div id="res-candidate-list"></div>
     </div>
 
@@ -1088,9 +1090,9 @@ input[type=file]{display:none}
     <div id="res-feedback" class="card card-pad" style="margin-bottom:14px;border:1px solid var(--br)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span style="font-size:16px">🔄</span>
-        <div class="result-section-title" style="margin:0">AI 판별이 틀렸나요?</div>
+        <div class="result-section-title" style="margin:0">결과가 안 맞는 것 같으세요?</div>
       </div>
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;line-height:1.5">정확한 모프를 알고 계시면 제보해주세요. AI 정확도 개선에 사용됩니다.</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;line-height:1.5">제보해 주시면 모델이 더 똑똑해져요.</div>
       <div id="feedback-form" style="display:flex;gap:8px;align-items:center">
         <input type="text" id="feedback-morph" class="form-input" placeholder="정답 모프 입력 (예: 릴리화이트)" style="flex:1;font-size:12px;padding:10px">
         <button class="btn-outline" style="width:auto;padding:10px 16px;border-radius:12px;font-size:12px;flex-shrink:0" onclick="submitMorphFeedback()">제보</button>
@@ -1425,7 +1427,7 @@ input[type=file]{display:none}
 <div class="sheet-overlay" id="sheet-add-gecko" onclick="closeSheet('sheet-add-gecko',event)">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="add-gecko-title">새 개체 등록</div>
+    <div class="sheet-title" id="add-gecko-title">새 크레 등록</div>
     <div class="sheet-body">
       <!-- Photo -->
       <div class="form-group">
@@ -3707,7 +3709,7 @@ let currentPhotoData = null;
 function openAddGecko() {
   state.editingGeckoId = null;
   currentPhotoData = null;
-  document.getElementById('add-gecko-title').textContent = '새 개체 등록';
+  document.getElementById('add-gecko-title').textContent = '새 크레 등록';
   document.getElementById('gecko-name').value = '';
   document.getElementById('gecko-sex').value = '미판별';
   document.getElementById('gecko-morph').value = '';
@@ -4321,8 +4323,8 @@ function renderGeckoList() {
   if (geckos.length === 0) {
     list.innerHTML = `<div class="empty-state">
       <div class="empty-icon">${state.geckos.length === 0 ? '🦎' : '🔍'}</div>
-      <div class="empty-title">${state.geckos.length === 0 ? '아직 등록된 개체가 없어요' : '검색 결과가 없어요'}</div>
-      <div class="empty-sub">${state.geckos.length === 0 ? '아래 + 버튼을 눌러\n첫 번째 개체를 등록해보세요!' : '다른 검색어를 사용해보세요'}</div>
+      <div class="empty-title">${state.geckos.length === 0 ? '아직 등록된 크레가 없어요' : '검색 결과가 없어요'}</div>
+      <div class="empty-sub">${state.geckos.length === 0 ? '오늘 가장 자주 보는 친구부터\n기록해 볼까요?' : '다른 검색어를 사용해보세요'}</div>
     </div>`;
     return;
   }
@@ -7160,7 +7162,7 @@ if (typeof window.supabase === 'undefined') {
     if (el) el.innerHTML = `
       <div style="font-size:52px;margin-bottom:16px">⚠️</div>
       <div style="font-size:16px;color:var(--coral);font-weight:700;margin-bottom:8px">연결 오류</div>
-      <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:20px">서버에 연결할 수 없어요.<br>네트워크를 확인하고 새로고침해 주세요.</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:20px">연결 상태가 좋지 않아요.<br>와이파이 또는 데이터 연결을 확인해 주세요.</div>
       <button onclick="location.reload()" style="padding:12px 28px;border-radius:12px;background:var(--ac);color:#FFFFFF;font-weight:800;border:none;font-size:14px;cursor:pointer;font-family:inherit">새로고침</button>
     `;
   });
@@ -8058,7 +8060,7 @@ function openLineageTree(geckoId) {
   // ── 유전 예측 ──
   if (predictions.length > 0) {
     html += '<div class="lineage-predict">';
-    html += '<div class="lineage-predict-title">🧬 예상 자녀 모프 (부모 조합 기반)</div>';
+    html += '<div class="lineage-predict-title">🧬 이 조합에서 나올 수 있는 자손 형질 (추정)</div>';
     predictions.forEach(p => {
       const barW = p.prob ? p.prob : 30;
       const probText = p.prob ? `${p.prob}%` : '가능';
@@ -8071,15 +8073,15 @@ function openLineageTree(geckoId) {
         <span style="font-size:11px;font-weight:700;color:${mg.color};min-width:35px;text-align:right">${probText}</span>
       </div>`;
     });
+    html += '<div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center;line-height:1.5">※ 확률은 참고용 추정이며, 실제 결과는 다를 수 있어요.</div>';
     html += '</div>';
   }
 
   // 부모 미입력 안내
   if (!dadMorph && !momMorph) {
     html += `<div style="text-align:center;padding:16px;color:var(--tx3);font-size:12px;line-height:1.6">
-      부모 정보가 입력되지 않았어요.<br>
-      개체 수정에서 🧬 혈통 항목을 입력하면<br>
-      유전 예측과 치사 경고가 표시됩니다.
+      혈통을 기록하면 교배 계획·자손 예측까지 한 번에.<br>
+      개체 수정에서 🧬 혈통 항목을 입력해 보세요.
     </div>`;
   }
 
