@@ -7565,8 +7565,11 @@ async function deleteAccount() {
 let _onboardingPage = 1;
 
 function shouldShowOnboarding() {
-  try { return !localStorage.getItem('mycre_onboarded_' + (_currentUser?.id || 'anon')); }
-  catch(e) { return false; }
+  try {
+    // ?onboarding=1 URL 파라미터로 강제 노출 (테스트/재확인용)
+    if (new URLSearchParams(location.search).get('onboarding') === '1') return true;
+    return !localStorage.getItem('mycre_onboarded_' + (_currentUser?.id || 'anon'));
+  } catch(e) { return false; }
 }
 
 function showOnboarding() {
@@ -8024,6 +8027,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (_urlParams.has('gecko') && _urlParams.has('owner')) {
     _showSharedGeckoPage(_urlParams.get('gecko'), _urlParams.get('owner'));
     return; // 공유 페이지만 표시, 나머지 앱 로직 실행 안 함
+  }
+
+  // ── ?onboarding=1 파라미터로 언제든 온보딩 강제 노출 (로그인 여부 무관) ──
+  if (_urlParams.get('onboarding') === '1') {
+    setTimeout(() => showOnboarding(), 800);
   }
 
   // ── 안전장치: 6초 안에 아무것도 안 되면 강제로 로그인 화면 표시
