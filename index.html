@@ -673,8 +673,35 @@ input[type=file]{display:none}
       </div>
       <div id="email-login-area" style="display:flex;flex-direction:column;gap:10px">
         <input class="auth-input" id="auth-email" type="email" placeholder="이메일 주소" autocomplete="email">
-        <input class="auth-input" id="auth-pw" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="current-password">
+        <input class="auth-input" id="auth-pw" type="password" placeholder="비밀번호 (영문·숫자 포함 8자 이상)" autocomplete="current-password">
         <input class="auth-input" id="auth-pw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" style="display:none">
+
+        <!-- 약관 동의 (회원가입 시만 표시) -->
+        <div id="signup-agreements" style="display:none;background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:10px 12px;font-size:12px">
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-weight:700;color:var(--tx);border-bottom:1px solid var(--br);margin-bottom:4px">
+            <input type="checkbox" id="agree-all" onchange="toggleAllAgreements()" style="width:16px;height:16px;accent-color:var(--ac)">
+            <span>모두 동의합니다</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
+            <input type="checkbox" id="agree-age" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
+            <span style="color:var(--tx2)"><b style="color:var(--coral)">[필수]</b> 만 14세 이상이에요</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
+            <input type="checkbox" id="agree-tos" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
+            <span style="color:var(--tx2);flex:1"><b style="color:var(--coral)">[필수]</b> 이용약관에 동의합니다</span>
+            <span onclick="event.preventDefault();event.stopPropagation();openTermsSheet('terms')" style="color:var(--ac);font-size:11px;text-decoration:underline">보기</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
+            <input type="checkbox" id="agree-privacy" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
+            <span style="color:var(--tx2);flex:1"><b style="color:var(--coral)">[필수]</b> 개인정보처리방침에 동의합니다</span>
+            <span onclick="event.preventDefault();event.stopPropagation();openTermsSheet('privacy')" style="color:var(--ac);font-size:11px;text-decoration:underline">보기</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
+            <input type="checkbox" id="agree-marketing" class="agreement-item" style="width:16px;height:16px;accent-color:var(--ac)">
+            <span style="color:var(--tx2)"><b style="color:var(--tx3)">[선택]</b> 신규 기능·이벤트 소식을 이메일로 받을게요</span>
+          </label>
+        </div>
+
         <div class="auth-err" id="auth-err"></div>
         <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">로그인</button>
       </div>
@@ -1309,11 +1336,11 @@ input[type=file]{display:none}
 
   <div class="more-section">
     <div class="more-section-label">⚙️ 설정</div>
-    <div class="more-item" onclick="showToast('준비 중인 기능입니다')">
+    <div class="more-item" onclick="openNotifSettings()">
       <div class="more-icon" style="background:var(--sf2)">🔔</div>
       <div class="more-item-info">
         <div class="more-item-title">알림 설정</div>
-        <div class="more-item-sub">관심 모프 분양 알림, 팔로우 알림</div>
+        <div class="more-item-sub">급이·체중·탈피 리마인더, 커뮤니티 알림</div>
       </div>
       <div class="more-item-arrow">›</div>
     </div>
@@ -6189,6 +6216,54 @@ function printQR() {
 <!-- ══════════════════════════════════════
      SHEET: 개체별 기록
 ══════════════════════════════════════ -->
+<!-- 온보딩 오버레이 (첫 로그인 시 1회 표시) -->
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;z-index:400;background:var(--bg);flex-direction:column">
+  <div id="onboarding-pages" style="flex:1;overflow:hidden;position:relative">
+    <!-- Page 1 -->
+    <div class="onboarding-page" data-page="1" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center">
+      <div style="font-size:72px;margin-bottom:12px">🦎</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px">안녕하세요, 크레 사육자님</div>
+      <div style="font-size:14px;color:var(--tx2);line-height:1.8;max-width:300px">마이크레는 크레스티드 게코 사육자를 위한 기록 앱이에요.<br>개체 정보·사진·혈통까지 한 곳에서 관리해 보세요.</div>
+    </div>
+    <!-- Page 2 -->
+    <div class="onboarding-page" data-page="2" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center">
+      <div style="font-size:72px;margin-bottom:12px">📸</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px">사진 한 장이면 됩니다.</div>
+      <div style="font-size:14px;color:var(--tx2);line-height:1.8;max-width:300px">AI가 할리퀸·트리컬러·릴리화이트 같은 주요 형질을 확률 기반으로 분석해 드려요.<br><br>참고 도구로 활용하시고, 최종 판단은 사육자님 몫이에요.</div>
+    </div>
+    <!-- Page 3 -->
+    <div class="onboarding-page" data-page="3" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center">
+      <div style="font-size:72px;margin-bottom:12px">🌳</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:14px">혼자 쌓는 기록이 아니에요.</div>
+      <div style="font-size:14px;color:var(--tx2);line-height:1.8;max-width:300px">혈통 트리로 번식 계획을 세우고,<br>커뮤니티에서 다른 사육자 분들과 노하우를 나눠 보세요.</div>
+    </div>
+  </div>
+  <!-- Dots + Button -->
+  <div style="padding:20px 32px 32px;display:flex;flex-direction:column;align-items:center;gap:20px">
+    <div id="onboarding-dots" style="display:flex;gap:8px">
+      <span class="ob-dot active" style="width:28px;height:8px;border-radius:4px;background:var(--ac);transition:.3s"></span>
+      <span class="ob-dot" style="width:8px;height:8px;border-radius:4px;background:var(--br);transition:.3s"></span>
+      <span class="ob-dot" style="width:8px;height:8px;border-radius:4px;background:var(--br);transition:.3s"></span>
+    </div>
+    <button id="onboarding-next" class="btn-primary" style="width:100%;max-width:320px" onclick="nextOnboardingPage()">다음 →</button>
+    <button onclick="finishOnboarding()" style="background:none;border:none;color:var(--tx3);font-size:12px;font-family:inherit;cursor:pointer">건너뛰기</button>
+  </div>
+</div>
+
+<!-- 알림 설정 시트 -->
+<div class="sheet-overlay" id="sheet-notif-settings" onclick="closeSheet('sheet-notif-settings',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🔔 알림 설정</div>
+    <div class="sheet-body">
+      <div id="notif-settings-content"></div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--sf2);border-radius:10px;font-size:11px;color:var(--tx3);line-height:1.6">
+        📌 브라우저 알림은 앱이 열려 있을 때 표시돼요.<br>홈 화면에 추가(PWA)하면 백그라운드에서도 받을 수 있어요.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 혈통 트리 시트 -->
 <div class="sheet-overlay" id="sheet-lineage" onclick="closeSheet('sheet-lineage',event)">
   <div class="sheet">
@@ -7279,8 +7354,15 @@ function switchAuthTab(mode) {
   document.getElementById('tab-signup').classList.toggle('active', isSignup);
   document.getElementById('auth-pw2').style.display = isSignup ? 'block' : 'none';
   document.getElementById('auth-submit-btn').textContent = isSignup ? '회원가입' : '로그인';
-  document.getElementById('auth-pw').placeholder = isSignup ? '비밀번호 설정 (8자 이상)' : '비밀번호 (8자 이상)';
+  document.getElementById('auth-pw').placeholder = isSignup ? '영문·숫자 포함 8자 이상으로 만들어 주세요' : '비밀번호 (8자 이상)';
   document.getElementById('auth-err').textContent = '';
+  const ag = document.getElementById('signup-agreements');
+  if (ag) ag.style.display = isSignup ? 'block' : 'none';
+}
+
+function toggleAllAgreements() {
+  const all = document.getElementById('agree-all').checked;
+  document.querySelectorAll('.agreement-item').forEach(c => { c.checked = all; });
 }
 
 // ── 로그인 / 회원가입 버튼 클릭 ──
@@ -7296,6 +7378,16 @@ async function handleAuthSubmit() {
 
   if (_authMode === 'signup') {
     if (pw !== pw2) { errEl.textContent = '⚠️ 비밀번호가 일치하지 않아요'; return; }
+    // 약관 동의 검증 (필수 3개)
+    const agAge = document.getElementById('agree-age')?.checked;
+    const agTos = document.getElementById('agree-tos')?.checked;
+    const agPrv = document.getElementById('agree-privacy')?.checked;
+    if (!agAge || !agTos || !agPrv) {
+      errEl.textContent = '⚠️ 필수 약관에 모두 동의해 주세요';
+      return;
+    }
+    // 마케팅 동의는 프로필 저장 시 활용
+    try { localStorage.setItem('mycre_marketing_opt_in', document.getElementById('agree-marketing')?.checked ? '1' : '0'); } catch(e) {}
     const submitBtn = document.getElementById('auth-submit-btn');
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '가입 중...'; }
     const { data, error } = await _supabase.auth.signUp({
@@ -7386,9 +7478,9 @@ async function deleteAccount() {
 
   if (_deleteConfirmStep === 0) {
     _deleteConfirmStep = 1;
-    showToast('⚠️ 등록된 모든 데이터가 영구 삭제됩니다. 한 번 더 클릭 시 확정.');
+    showToast('⚠️ 탈퇴하면 개체·사진·혈통 정보가 30일 안에 모두 삭제됩니다. 한 번 더 누르면 확정.');
     if (titleEl) titleEl.textContent = '⚠️ 한번 더 누르면 확정';
-    setTimeout(() => { _deleteConfirmStep = 0; if (titleEl) titleEl.textContent = '회원 탈퇴'; }, 4000);
+    setTimeout(() => { _deleteConfirmStep = 0; if (titleEl) titleEl.textContent = '회원 탈퇴'; }, 5000);
     return;
   }
   _deleteConfirmStep = 0;
@@ -7467,6 +7559,158 @@ async function deleteAccount() {
 }
 
 // ── 로그인 성공 후 처리 ──
+// ══════════════════════════════
+// 온보딩 3페이지 (첫 로그인 시 1회)
+// ══════════════════════════════
+let _onboardingPage = 1;
+
+function shouldShowOnboarding() {
+  try { return !localStorage.getItem('mycre_onboarded_' + (_currentUser?.id || 'anon')); }
+  catch(e) { return false; }
+}
+
+function showOnboarding() {
+  _onboardingPage = 1;
+  _renderOnboardingPage();
+  document.getElementById('onboarding-overlay').style.display = 'flex';
+}
+
+function _renderOnboardingPage() {
+  document.querySelectorAll('.onboarding-page').forEach(p => {
+    p.style.display = (parseInt(p.dataset.page) === _onboardingPage) ? 'flex' : 'none';
+  });
+  const dots = document.querySelectorAll('.ob-dot');
+  dots.forEach((d, i) => {
+    const active = (i + 1) === _onboardingPage;
+    d.style.width = active ? '28px' : '8px';
+    d.style.background = active ? 'var(--ac)' : 'var(--br)';
+  });
+  const btn = document.getElementById('onboarding-next');
+  btn.textContent = _onboardingPage === 3 ? '시작하기 🦎' : '다음 →';
+}
+
+function nextOnboardingPage() {
+  if (_onboardingPage < 3) {
+    _onboardingPage++;
+    _renderOnboardingPage();
+  } else {
+    finishOnboarding();
+  }
+}
+
+function finishOnboarding() {
+  try { localStorage.setItem('mycre_onboarded_' + (_currentUser?.id || 'anon'), '1'); } catch(e) {}
+  document.getElementById('onboarding-overlay').style.display = 'none';
+}
+
+// ══════════════════════════════
+// 알림 설정 & 푸시 알림 (Web Notification API 기반 로컬 리마인더)
+// ══════════════════════════════
+const DEFAULT_NOTIF_PREFS = {
+  feed: true,        // 급이 리마인더
+  weight: true,      // 주간 체중
+  shed: true,        // 탈피 주기
+  community: true,   // 커뮤니티 댓글·좋아요
+  marketing: false,  // 마케팅
+};
+
+function _loadNotifPrefs() {
+  try {
+    const raw = localStorage.getItem('mycre_notif_prefs_' + (_currentUser?.id || 'anon'));
+    return raw ? { ...DEFAULT_NOTIF_PREFS, ...JSON.parse(raw) } : { ...DEFAULT_NOTIF_PREFS };
+  } catch(e) { return { ...DEFAULT_NOTIF_PREFS }; }
+}
+
+function _saveNotifPrefs(prefs) {
+  try { localStorage.setItem('mycre_notif_prefs_' + (_currentUser?.id || 'anon'), JSON.stringify(prefs)); } catch(e) {}
+}
+
+async function openNotifSettings() {
+  // 브라우저 권한 상태 확인
+  const permission = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
+  const prefs = _loadNotifPrefs();
+
+  const content = document.getElementById('notif-settings-content');
+  if (!content) return;
+  let permBanner = '';
+  if (permission === 'unsupported') {
+    permBanner = `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">이 브라우저는 알림을 지원하지 않아요.</div>`;
+  } else if (permission === 'denied') {
+    permBanner = `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">알림이 차단되어 있어요. 브라우저 설정에서 허용으로 변경해 주세요.</div>`;
+  } else if (permission === 'default') {
+    permBanner = `<div style="background:var(--ac2);border:1px solid var(--ac);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--ac);text-align:center;cursor:pointer" onclick="requestNotifPermission()">🔔 알림을 받으려면 여기를 눌러 허용해 주세요</div>`;
+  } else {
+    permBanner = `<div style="background:var(--ac2);border:1px solid var(--ac);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--ac)">✅ 알림이 활성화되어 있어요</div>`;
+  }
+
+  const item = (key, label, sub) => `<label style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--br);cursor:pointer">
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700">${label}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:2px">${sub}</div>
+    </div>
+    <input type="checkbox" ${prefs[key] ? 'checked' : ''} onchange="updateNotifPref('${key}', this.checked)" style="width:40px;height:22px;accent-color:var(--ac)">
+  </label>`;
+
+  content.innerHTML = permBanner
+    + item('feed', '🦴 급이 리마인더', '오늘 급이 여부 체크')
+    + item('weight', '📊 주간 체중 측정', '주 1회, 개체별 체중 기록 권장')
+    + item('shed', '✨ 탈피 주기 알림', '평균 탈피 주기 기반 예측 알림')
+    + item('community', '💬 커뮤니티 알림', '내 글에 댓글·좋아요가 달릴 때')
+    + item('marketing', '🎁 마케팅 · 이벤트 소식', '신규 기능·쿠폰 등 (선택)');
+
+  openSheet('sheet-notif-settings');
+}
+
+function updateNotifPref(key, value) {
+  const prefs = _loadNotifPrefs();
+  prefs[key] = value;
+  _saveNotifPrefs(prefs);
+  showToast(value ? '알림 켜짐' : '알림 꺼짐');
+}
+
+async function requestNotifPermission() {
+  if (typeof Notification === 'undefined') { showToast('이 브라우저는 알림을 지원하지 않아요'); return; }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') {
+    showToast('🔔 알림이 허용되었어요');
+    try {
+      new Notification('마이크레 🦎', {
+        body: '알림이 활성화되었어요. 급이·체중·탈피 리마인더를 받아보세요.',
+        icon: '/icon-192.svg',
+      });
+    } catch(e) {}
+    openNotifSettings(); // UI 새로고침
+  } else {
+    showToast('알림이 차단되었어요');
+  }
+}
+
+function sendLocalNotification(title, body, icon = '/icon-192.svg') {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
+  try {
+    new Notification(title, { body, icon });
+    return true;
+  } catch(e) { return false; }
+}
+
+// 앱 시작 시 리마인더 체크 (일일 1회)
+function _checkDailyReminders() {
+  if (!_currentUser || Notification?.permission !== 'granted') return;
+  const prefs = _loadNotifPrefs();
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const lastReminderKey = 'mycre_last_reminder_' + _currentUser.id;
+  let lastReminder = '';
+  try { lastReminder = localStorage.getItem(lastReminderKey) || ''; } catch(e) {}
+  if (lastReminder === todayKey) return; // 오늘 이미 보냄
+
+  // 급이 리마인더
+  if (prefs.feed && state.geckos.length > 0) {
+    const firstGecko = state.geckos[0];
+    sendLocalNotification('🦎 오늘 급이 하셨나요?', `${firstGecko.name} 등 ${state.geckos.length}마리의 급이 시간이에요.`);
+    try { localStorage.setItem(lastReminderKey, todayKey); } catch(e) {}
+  }
+}
+
 async function _onSignedIn() {
   console.log('[Auth] _onSignedIn 시작', _currentUser?.email);
 
@@ -7493,6 +7737,13 @@ async function _onSignedIn() {
   } catch(e) {}
   renderHome();
   renderGeckoList();
+
+  // ── 온보딩 + 일일 리마인더 체크 (신규 유저만 온보딩 노출) ──
+  if (shouldShowOnboarding()) {
+    setTimeout(() => showOnboarding(), 500);
+  } else {
+    setTimeout(() => _checkDailyReminders(), 2000);
+  }
 
   // ── 2) 백그라운드: DB 동기화 (화면은 이미 떠 있음) ──
   (async () => {
