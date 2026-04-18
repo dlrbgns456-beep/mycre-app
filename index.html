@@ -7335,7 +7335,7 @@ async function signInWithGoogle() {
 async function signInWithKakao() {
   const { error } = await _supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: { redirectTo: 'https://mycre-gecko.netlify.app' }
+    options: { redirectTo: 'https://mycre.netlify.app' }
   });
   if (error) showAuthErr('카카오 로그인 실패: ' + error.message);
 }
