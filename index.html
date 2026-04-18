@@ -1517,7 +1517,7 @@ input[type=file]{display:none}
     <div class="sheet-body">
       <!-- Photo -->
       <div class="form-group">
-        <label class="form-label">📸 사진 (선택)</label>
+        <label class="form-label">📸 사진 <span style="color:var(--tx3);font-size:10px;font-weight:400">최대 5장, AI 판별용</span></label>
         <div style="background:var(--sf2);border:1px solid var(--br);border-radius:10px;padding:8px 11px;margin-bottom:8px;font-size:11px;color:var(--tx3);line-height:1.6">
           🦎 <b style="color:var(--tx2)">개체 사진만</b> 올려주세요. 인물/부적절한 사진은 관리자에 의해 삭제될 수 있습니다.
         </div>
@@ -1549,13 +1549,13 @@ input[type=file]{display:none}
       <!-- Basic info -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">이름 / ID</label>
+          <label class="form-label">별명 <span style="color:var(--coral);font-weight:700">*</span></label>
           <input class="form-input" id="gecko-name" type="text" placeholder="예: 몽뜨">
         </div>
         <div class="form-group">
           <label class="form-label">성별</label>
           <select class="form-select" id="gecko-sex" onchange="updateCageAndBreeding()">
-            <option value="미판별">미판별</option>
+            <option value="미상">미상</option>
             <option value="암컷">♀ 암컷</option>
             <option value="수컷">♂ 수컷</option>
           </select>
@@ -1577,7 +1577,7 @@ input[type=file]{display:none}
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">생년월일</label>
+          <label class="form-label">부화일 or 입수일</label>
           <input class="form-input" id="gecko-dob" type="text" placeholder="예: 20240315 (숫자만)" inputmode="numeric" maxlength="10" oninput="formatDobInput(this)" onchange="updateCageAndBreeding()" onfocus="this.placeholder='YYYYMMDD (숫자만)'" onblur="this.placeholder='예: 20240315 (숫자만)'">
         </div>
         <div class="form-group">
@@ -1617,7 +1617,7 @@ input[type=file]{display:none}
       <!-- Weight -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">현재 몸무게 (g)</label>
+          <label class="form-label">무게 (g) <span style="color:var(--tx3);font-size:10px;font-weight:400">최초 측정값</span></label>
           <input class="form-input" id="gecko-weight" type="number" step="0.1" placeholder="예: 25.5" oninput="updateCageAndBreeding()">
         </div>
         <div class="form-group">
@@ -1682,7 +1682,7 @@ input[type=file]{display:none}
 
       <!-- Lineage -->
       <div class="form-group">
-        <label class="form-label">🧬 혈통 (선택)</label>
+        <label class="form-label">🧬 라인/혈통 (선택)</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
             <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--blue);margin-bottom:4px">♂ 아버지</div>
@@ -1703,7 +1703,7 @@ input[type=file]{display:none}
       </div>
 
       <div class="form-group">
-        <label class="form-label">메모</label>
+        <label class="form-label">모프 메모 (선택)</label>
         <textarea class="form-textarea" id="gecko-memo" placeholder="특징, 먹이 반응, 건강 상태 등 자유롭게..."></textarea>
       </div>
 
@@ -3792,7 +3792,7 @@ function renderHome() {
       <div class="gecko-row-thumb">${g.photo ? `<img src="${g.photo}">` : '🦎'}</div>
       <div class="gecko-row-info">
         <div class="gecko-row-name">${g.name}</div>
-        <div class="gecko-row-morph">${g.morph || '미판별'}</div>
+        <div class="gecko-row-morph">${g.morph || '미상'}</div>
       </div>`;
     row.appendChild(el);
   });
@@ -3819,7 +3819,7 @@ function openAddGecko() {
   currentPhotoData = null;
   document.getElementById('add-gecko-title').textContent = '새 크레 등록';
   document.getElementById('gecko-name').value = '';
-  document.getElementById('gecko-sex').value = '미판별';
+  document.getElementById('gecko-sex').value = '미상';
   document.getElementById('gecko-morph').value = '';
   document.getElementById('morph-inline-input').value = '';
   document.getElementById('morph-inline-input').style.borderColor = '';
@@ -4035,7 +4035,7 @@ function updateCageAndBreeding() {
 
   // ── 번식 가능 판정 ──
   const breedBox = document.getElementById('breeding-ready-box');
-  if (!dob || sex === '미판별') { breedBox.style.display = 'none'; return; }
+  if (!dob || sex === '미상') { breedBox.style.display = 'none'; return; }
 
   const days = Math.floor((Date.now() - new Date(dob).getTime()) / 86400000);
   const w = parseFloat(weightRaw);
@@ -4163,7 +4163,13 @@ async function saveGecko() {
     updateCountBadges();
     populateGeckoSelects();
     showPage('myge');
-    showToast(isEdit ? '✅ 개체 정보가 수정되었어요' : `🦎 "${name}" 등록 완료! AI 모프 판별도 해보세요`);
+    if (isEdit) {
+      showToast('✅ 개체 정보가 수정되었어요');
+    } else {
+      // 신규 등록 → AI 판별 유도 다이얼로그 (모프 미지정 시만)
+      if (!morph) _showRegisterSuccessDialog(name);
+      else showToast(`🦎 "${name}" 등록 완료!`);
+    }
 
     // ── 서버 저장 (사진 업로드 + DB) ──
     (async () => {
@@ -4288,7 +4294,7 @@ async function _quickSaveCore() {
   const gecko = {
     id: geckoId,
     name,
-    sex: '미판별',
+    sex: '미상',
     morph: '',
     grade: '',
     dob: '',
@@ -4452,7 +4458,7 @@ function renderGeckoList() {
                      g.status === '격리중' ? `<span class="tag tag-amber">격리 중</span>` : '';
     const cageTag = g.cage ? `<span class="tag tag-blue">케이지 ${g.cage.split(' ')[0]}</span>` : '';
     // 모프 또는 성별이 비어있으면 "정보 미완성" 태그 표시 (고속 등록 모드 후 수정 유도)
-    const incomplete = !g.morph || g.sex === '미판별';
+    const incomplete = !g.morph || g.sex === '미상';
     const incompleteTag = incomplete ? `<span class="tag tag-amber" style="font-weight:800">⚠️ 정보 미완성</span>` : '';
 
     const card = document.createElement('div');
@@ -4499,7 +4505,7 @@ function openGeckoDetail(id) {
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-        ${detailItem('성별', g.sex === '암컷' ? '♀ 암컷' : g.sex === '수컷' ? '♂ 수컷' : '미판별')}
+        ${detailItem('성별', g.sex === '암컷' ? '♀ 암컷' : g.sex === '수컷' ? '♂ 수컷' : '미상')}
         ${detailItem('나이', age)}
         ${detailItem('상태', g.status || '—')}
         ${detailItem('케이지', g.cage ? g.cage.split(' ')[0] : '—')}
@@ -4602,7 +4608,7 @@ function editGecko(id) {
   setTimeout(() => {
     document.getElementById('add-gecko-title').textContent = '개체 정보 수정';
     document.getElementById('gecko-name').value = g.name;
-    document.getElementById('gecko-sex').value = g.sex;
+    document.getElementById('gecko-sex').value = (g.sex === '미판별') ? '미상' : (g.sex || '미상'); // 기존 데이터 호환
     document.getElementById('gecko-morph').value = g.morph || '';
     document.getElementById('morph-inline-input').value = g.morph || '';
     document.getElementById('morph-inline-input').style.borderColor = g.morph ? 'var(--ac)' : '';
@@ -6237,7 +6243,7 @@ function generateQR() {
   const m = MORPHS[g.morph] || {};
   document.getElementById('qr-profile-content').innerHTML = `
     <div>🦎 <b>${g.name}</b></div>
-    <div>🧬 모프: ${g.morph||'미판별'}</div>
+    <div>🧬 모프: ${g.morph||'미상'}</div>
     <div>${g.sex === '암컷' ? '♀' : '♂'} 성별: ${g.sex}</div>
     ${g.dob ? `<div>📅 출생: ${g.dob}</div>` : ''}
     ${g.weight ? `<div>⚖️ 몸무게: ${g.weight}g</div>` : ''}
@@ -6345,6 +6351,17 @@ function printQR() {
   </div>
 </div>
 
+<!-- 등록 완료 다이얼로그 -->
+<div id="register-success-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9990;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)">
+  <div style="background:var(--card);border-radius:18px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+    <div style="font-size:48px;margin-bottom:12px">🦎</div>
+    <div id="register-success-title" style="font-size:17px;font-weight:900;color:var(--tx);margin-bottom:6px">"몽뜨" 등록 완료!</div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:20px">지금 바로 AI 모프 판별을<br>해 볼까요?</div>
+    <button class="btn-primary" style="width:100%;margin-bottom:8px;padding:13px" onclick="_gotoScanFromRegister()">🔍 AI 판별 시작</button>
+    <button class="btn-outline" style="width:100%;padding:12px" onclick="document.getElementById('register-success-dialog').style.display='none'">나중에 하기</button>
+  </div>
+</div>
+
 <!-- 알림 설정 시트 -->
 <div class="sheet-overlay" id="sheet-notif-settings" onclick="closeSheet('sheet-notif-settings',event)">
   <div class="sheet">
@@ -6448,7 +6465,7 @@ function printDetailQR(id) {
   const printWin = window.open('', '_blank', 'width=800,height=600');
   printWin.document.write(`<!DOCTYPE html><html><head><title>마이크레 QR - ${g?.name||'개체'}</title>
     <style>body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}.card{text-align:center;border:2px solid #2E7D57;border-radius:20px;padding:40px 30px;max-width:360px}.title{font-size:24px;font-weight:900;margin-bottom:4px}.sub{font-size:14px;color:#666;margin-bottom:20px}.qr{margin:20px auto}.info{text-align:left;font-size:13px;line-height:2;color:#333;margin-top:16px;border-top:1px solid #ddd;padding-top:12px}.footer{margin-top:16px;font-size:10px;color:#999}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
-    <div class="card"><div class="title">🦎 ${g?.name||'개체'}</div><div class="sub">${g?.morph||'미판별'}</div>
+    <div class="card"><div class="title">🦎 ${g?.name||'개체'}</div><div class="sub">${g?.morph||'미상'}</div>
     <div class="qr"><img src="${imgSrc}" width="200" height="200"></div>
     <div class="info">${g?.sex?`<div>성별: ${g.sex==='암컷'?'♀ 암컷':'♂ 수컷'}</div>`:''} ${g?.dob?`<div>출생: ${g.dob}</div>`:''} ${g?.weight?`<div>몸무게: ${g.weight}g</div>`:''} ${m.price?`<div>시세: ${m.price}</div>`:''} ${g?.dad||g?.mom?`<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>`:''}</div>
     <div class="footer">마이크레 · mycre.netlify.app</div></div>
@@ -6465,7 +6482,7 @@ function populateGeckoSelects() {
     sel.innerHTML = '';
     sel.appendChild(firstOpt || new Option('— 개체 선택 —', ''));
     state.geckos.forEach(g => {
-      let label = `${g.name} (${g.morph||'미판별'})`;
+      let label = `${g.name} (${g.morph||'미상'})`;
       // 글쓰기용 select에는 AI 판별 이력 노출 (도용 아님 증명)
       if (selId === 'post-gecko-link' && g.ai_morph) {
         const probTxt = g.ai_prob ? ` ${g.ai_prob}%` : '';
@@ -6492,7 +6509,7 @@ function openReportSheet() {
         <span style="font-size:18px">🦎</span>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700">${g.name}</div>
-          <div style="font-size:11px;color:var(--tx2)">${g.morph||'미판별'} · ${g.sex}</div>
+          <div style="font-size:11px;color:var(--tx2)">${g.morph||'미상'} · ${g.sex}</div>
         </div>
         <span class="tag tag-green">포함</span>
       </div>`).join('');
@@ -6502,7 +6519,7 @@ function openReportSheet() {
       <div><b>보유 종:</b> 볏도마뱀붙이 (Correlophus ciliatus)</div>
       <div><b>총 보유 수:</b> ${state.geckos.length}마리</div>
       <div><b>보유 내역:</b></div>
-      ${state.geckos.map((g,i) => `<div style="margin-left:12px">${i+1}. ${g.name} / ${g.sex} / ${g.morph||'미판별'}</div>`).join('')}`;
+      ${state.geckos.map((g,i) => `<div style="margin-left:12px">${i+1}. ${g.name} / ${g.sex} / ${g.morph||'미상'}</div>`).join('')}`;
   }
   openSheet('sheet-report');
 }
@@ -7012,7 +7029,7 @@ async function _showSharedGeckoPage(geckoId, ownerId) {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div style="background:var(--sf2);border-radius:10px;padding:10px 12px">
               <div style="font-size:10px;color:var(--tx3);margin-bottom:2px">성별</div>
-              <div style="font-size:14px;font-weight:700">${g.sex === '암컷' ? '♀ 암컷' : g.sex === '수컷' ? '♂ 수컷' : '미판별'}</div>
+              <div style="font-size:14px;font-weight:700">${g.sex === '암컷' ? '♀ 암컷' : g.sex === '수컷' ? '♂ 수컷' : '미상'}</div>
             </div>
             ${age ? `<div style="background:var(--sf2);border-radius:10px;padding:10px 12px">
               <div style="font-size:10px;color:var(--tx3);margin-bottom:2px">나이</div>
@@ -7657,6 +7674,22 @@ async function deleteAccount() {
 }
 
 // ── 로그인 성공 후 처리 ──
+// ══════════════════════════════
+// 개체 등록 완료 다이얼로그
+// ══════════════════════════════
+function _showRegisterSuccessDialog(name) {
+  const dialog = document.getElementById('register-success-dialog');
+  const title = document.getElementById('register-success-title');
+  if (!dialog || !title) return;
+  title.textContent = `"${name}" 등록 완료!`;
+  dialog.style.display = 'flex';
+}
+
+function _gotoScanFromRegister() {
+  document.getElementById('register-success-dialog').style.display = 'none';
+  showPage('scan');
+}
+
 // ══════════════════════════════
 // 온보딩 (첫 방문 유저 가이드)
 // ══════════════════════════════
@@ -8380,7 +8413,7 @@ function openLineageTree(geckoId) {
   html += `<div class="lineage-node self" style="margin:0 auto">
     <div class="lineage-node-label">🦎 이 개체</div>
     <div class="lineage-node-name">${g.name}</div>
-    <div class="lineage-node-morph">${g.morph || '미판별'} <span class="grade-badge" style="background:${gGrade.bg};color:${gGrade.color};font-size:9px;padding:1px 5px">${gGrade.label}</span></div>
+    <div class="lineage-node-morph">${g.morph || '미상'} <span class="grade-badge" style="background:${gGrade.bg};color:${gGrade.color};font-size:9px;padding:1px 5px">${gGrade.label}</span></div>
     ${g.sex ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">${g.sex === '암컷' ? '♀ 암컷' : '♂ 수컷'}${g.dob ? ' · ' + g.dob : ''}</div>` : ''}
   </div>`;
 
@@ -8459,7 +8492,7 @@ function openLineageTreePicker() {
       <span style="font-size:20px">${g.sex === '암컷' ? '♀' : (g.sex === '수컷' ? '♂' : '🦎')}</span>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:700">${g.name}</div>
-        <div style="font-size:11px;color:var(--tx2)">${g.morph || '미판별'}</div>
+        <div style="font-size:11px;color:var(--tx2)">${g.morph || '미상'}</div>
       </div>
       <span class="grade-badge" style="background:${mg.bg};color:${mg.color};font-size:9px;padding:2px 6px">${mg.label}</span>
     </div>`;
@@ -8475,7 +8508,7 @@ function populateParentSelects(editingId) {
   if (!dadSelect || !momSelect) return;
   const opts = '<option value="">— 내 개체에서 선택 —</option>' +
     state.geckos.filter(g => String(g.id) !== String(editingId || ''))
-      .map(g => `<option value="${g.id}">${g.sex === '암컷' ? '♀' : '♂'} ${g.name} (${g.morph || '미판별'})</option>`).join('');
+      .map(g => `<option value="${g.id}">${g.sex === '암컷' ? '♀' : '♂'} ${g.name} (${g.morph || '미상'})</option>`).join('');
   dadSelect.innerHTML = opts;
   momSelect.innerHTML = opts;
 }
