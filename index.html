@@ -795,10 +795,10 @@ input[type=file]{display:none}
 
   <!-- Banner -->
   <div class="home-banner">
-    <div class="banner-eyebrow">MYCRE · AI GECKO PLATFORM</div>
-    <div class="banner-title">사진 한 장이면<br><span>모프 판별</span> 끝</div>
-    <div class="banner-desc">AI가 할리퀸·트리컬러·릴리화이트 같은 주요 형질을<br>확률 기반으로 분석해 드려요.</div>
-    <button class="btn-primary" style="max-width:180px" onclick="showPage('scan')">📷 지금 판별하기</button>
+    <div class="banner-eyebrow">MYCRE · 크레스티드 게코 전용</div>
+    <div class="banner-title">크레 키우는 사람을 위한<br><span>유일한 전용 앱</span></div>
+    <div class="banner-desc">개체 기록·혈통 관리·모프 판별·분양까지<br>크레 사육에 필요한 모든 걸 한 곳에서.</div>
+    <button class="btn-primary" style="max-width:200px" onclick="showPage('myge')">🦎 내 크레 등록하기</button>
   </div>
 
   <!-- 일일 한도 안내 (무료 유저) -->
@@ -833,29 +833,29 @@ input[type=file]{display:none}
       <div class="stat-sub">마리</div>
     </div>
     <div class="stat-chip">
-      <div class="stat-label">판별 횟수</div>
-      <div class="stat-value" id="stat-scans">3</div>
-      <div class="stat-sub">/ 5 무료</div>
+      <div class="stat-label">사육 기록</div>
+      <div class="stat-value" id="stat-records">0</div>
+      <div class="stat-sub">건</div>
     </div>
     <div class="stat-chip">
-      <div class="stat-label">자산 추정</div>
-      <div class="stat-value" id="stat-value" style="font-size:16px;color:var(--am)">—</div>
-      <div class="stat-sub">만원~</div>
+      <div class="stat-label">AI 판별</div>
+      <div class="stat-value" id="stat-scans">3</div>
+      <div class="stat-sub">회 남음</div>
     </div>
   </div>
 
   <!-- Quick Grid -->
   <div class="sec-head"><span class="sec-title">빠른 기능</span></div>
   <div class="quick-grid">
-    <div class="quick-card featured" onclick="showPage('scan')">
-      <div class="quick-icon">🔍</div>
-      <div class="quick-title">AI 모프 판별</div>
-      <div class="quick-sub">사진 → 모프·유전자·시세 자동 분석</div>
-    </div>
-    <div class="quick-card" onclick="showPage('myge')">
+    <div class="quick-card featured" onclick="showPage('myge')">
       <div class="quick-icon">🦎</div>
       <div class="quick-title">내 개체 관리</div>
       <div class="quick-sub">등록·혈통·사육 기록 한 곳에</div>
+    </div>
+    <div class="quick-card" onclick="showPage('scan')">
+      <div class="quick-icon">📸</div>
+      <div class="quick-title">AI 모프 판별</div>
+      <div class="quick-sub">사진 → 모프·유전자 확률 분석</div>
     </div>
     <div class="quick-card" onclick="showPage('comm')">
       <div class="quick-icon">🏘️</div>
@@ -889,14 +889,32 @@ input[type=file]{display:none}
   </div>
   <div id="home-posts-preview"></div>
 
-  <!-- 배너 광고 슬롯 -->
-  <div id="ad-banner" style="margin:16px 0 8px;background:linear-gradient(135deg,var(--sf2),var(--card));border:1px solid var(--br);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="location.href='mailto:dlrbgns456@gmail.com?subject=마이크레 광고 문의'">
-    <div style="font-size:28px;flex-shrink:0">📢</div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:800;color:var(--tx);margin-bottom:2px">이 자리에 광고를 게재하세요!</div>
-      <div style="font-size:10px;color:var(--tx3)">크레스티드 게코 브리더 맞춤 광고 · dlrbgns456@gmail.com</div>
+  <!-- 왜 마이크레? -->
+  <div style="margin:16px 18px 8px;padding:18px 16px;background:var(--card);border:1px solid var(--br);border-radius:14px">
+    <div style="font-size:13px;font-weight:900;color:var(--tx);margin-bottom:12px">🦎 왜 마이크레인가요?</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:18px;flex-shrink:0">🎯</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:2px">크레스티드 게코 전용</div>
+          <div style="font-size:11px;color:var(--tx2);line-height:1.5">할리퀸·트리컬러·릴리화이트 등 크레 형질에 특화된 유일한 앱</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:18px;flex-shrink:0">📋</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:2px">사육 기록을 체계적으로</div>
+          <div style="font-size:11px;color:var(--tx2);line-height:1.5">급이·탈피·체중·사진을 기록하고 성장 추이를 한눈에</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:18px;flex-shrink:0">🧬</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:2px">혈통 관리 + AI 보조</div>
+          <div style="font-size:11px;color:var(--tx2);line-height:1.5">혈통 트리로 계획 번식, AI가 모프 판별 도와드려요</div>
+        </div>
+      </div>
     </div>
-    <div style="font-size:10px;color:var(--tx3);flex-shrink:0;background:var(--sf2);padding:3px 8px;border-radius:8px;border:1px solid var(--br)">AD</div>
   </div>
 </div>
 
@@ -6386,11 +6404,11 @@ function printQR() {
     <button class="ob-skip" onclick="finishOnboarding()">건너뛰기</button>
   </div>
 
-  <!-- Slide 2: AI 모프 판별 -->
+  <!-- Slide 2: 크레 전용 기록 -->
   <div class="ob-slide" id="ob-slide-2">
-    <div class="ob-illust">📸</div>
-    <div class="ob-headline">사진 한 장이면 됩니다.</div>
-    <div class="ob-sub">AI가 할리퀸·트리컬러·릴리화이트 같은 주요 형질을<br>확률 기반으로 분석해 드려요.<br>참고 도구로 활용하시고, 최종 판단은 사육자님 몫이에요.</div>
+    <div class="ob-illust">📋</div>
+    <div class="ob-headline">크레에 딱 맞춘 사육 기록</div>
+    <div class="ob-sub">급이·탈피·체중·사진을 기록하고<br>크레 형질에 특화된 AI 모프 판별까지.<br>사육의 모든 순간을 한 곳에서 관리하세요.</div>
     <div class="ob-dots">
       <div class="ob-dot"></div>
       <div class="ob-dot active"></div>
@@ -6419,8 +6437,8 @@ function printQR() {
   <div style="background:var(--card);border-radius:18px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
     <div style="font-size:48px;margin-bottom:12px">🦎</div>
     <div id="register-success-title" style="font-size:17px;font-weight:900;color:var(--tx);margin-bottom:6px">"몽뜨" 등록 완료!</div>
-    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:20px">지금 바로 AI 모프 판별을<br>해 볼까요?</div>
-    <button class="btn-primary" style="width:100%;margin-bottom:8px;padding:13px" onclick="_gotoScanFromRegister()">🔍 AI 판별 시작</button>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:20px">사육 기록을 시작해 볼까요?<br>급이·탈피·체중을 기록할 수 있어요.</div>
+    <button class="btn-primary" style="width:100%;margin-bottom:8px;padding:13px" onclick="document.getElementById('register-success-dialog').style.display='none'">📋 사육 기록 시작</button>
     <button class="btn-outline" style="width:100%;padding:12px" onclick="document.getElementById('register-success-dialog').style.display='none'">나중에 하기</button>
   </div>
 </div>
