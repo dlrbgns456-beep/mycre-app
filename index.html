@@ -70,7 +70,8 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
   display:flex;align-items:center;justify-content:space-between;
 }
 .logo{display:flex;align-items:center;gap:8px}
-.logo-icon{width:34px;height:34px;background:var(--ac);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-icon{width:34px;height:34px;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-icon img{width:100%;height:100%;object-fit:cover;border-radius:10px}
 .logo-text{font-family:"Nunito",sans-serif;font-size:22px;font-weight:900;color:var(--ac);letter-spacing:-.5px;line-height:1}
 .logo-sub{font-size:10px;color:var(--tx3);font-family:"DM Mono",monospace;letter-spacing:.5px;margin-top:1px}
 .topbar-right{display:flex;align-items:center;gap:8px}
@@ -649,7 +650,7 @@ input[type=file]{display:none}
 ══════════════════════════════════════ -->
 <div id="shared-gecko-page" style="display:none;min-height:100vh;padding:20px;padding-bottom:80px">
   <div style="text-align:center;margin-bottom:20px">
-    <div style="font-size:36px;margin-bottom:6px">🦎</div>
+    <img src="/icon-192.svg" alt="MyCre" style="width:56px;height:56px;border-radius:14px;margin-bottom:6px">
     <div style="font-family:'Nunito',sans-serif;font-size:20px;font-weight:900;color:var(--ac)">마이크레</div>
     <div style="font-size:11px;color:var(--tx3)">개체 프로필 카드</div>
   </div>
@@ -666,14 +667,14 @@ input[type=file]{display:none}
 <div id="auth-screen">
   <!-- 로딩 상태 (기본) -->
   <div id="auth-loading">
-    <div style="font-size:52px;margin-bottom:8px">🦎</div>
+    <img src="/icon-192.svg" alt="MyCre" style="width:72px;height:72px;border-radius:18px;margin-bottom:10px">
     <div style="font-family:'Nunito',sans-serif;font-size:32px;font-weight:900;color:var(--ac);margin-bottom:6px;letter-spacing:-.5px">MyCre</div>
     <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">내 크레의 모든 것, 마이크레.</div>
     <div style="width:36px;height:36px;border:3px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
   </div>
   <!-- 로그인 폼 (세션 없을 때만 표시) -->
   <div id="auth-form" style="display:none;flex-direction:column;align-items:center;width:100%;gap:0">
-    <div class="auth-logo">🦎</div>
+    <div class="auth-logo"><img src="/icon-192.svg" alt="MyCre" style="width:52px;height:52px;border-radius:14px"></div>
     <div class="auth-title">마이크레 시작하기</div>
     <div class="auth-sub">크레스티드 게코 사육자를 위한 기록 앱.<br>개체 정보·사진·혈통까지 한 곳에서 관리하세요.</div>
 
@@ -784,8 +785,8 @@ input[type=file]{display:none}
 <div class="page" id="page-home" style="display:none">
   <div class="topbar">
     <div class="logo">
-      <div class="logo-icon">🦎</div>
-      <div><div class="logo-text">마이크레</div><div class="logo-sub">MY CRESTIE</div></div>
+      <div class="logo-icon"><img src="/icon-192.svg" alt="MyCre"></div>
+      <div><div class="logo-text">MYCRE</div><div class="logo-sub">CRESTIE KEEPER</div></div>
     </div>
     <div class="topbar-right">
       <div class="tb-btn" onclick="showToast('알림이 없습니다')">🔔</div>
