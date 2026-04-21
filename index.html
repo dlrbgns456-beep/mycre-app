@@ -4,20 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="마이크레">
+<meta name="apple-mobile-web-app-title" content="볏마루도감">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#FFF9EF">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icon-192.svg">
-<link rel="icon" type="image/svg+xml" href="/icon-192.svg">
-<title>마이크레 — 크레스티드 게코 올인원</title>
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<title>볏마루도감 — 크레스티드 게코 올인원</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=DM+Mono:wght@400&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* ─── Design Tokens (MyCre Brand) ─── */
+/* ─── Design Tokens (ByetMaru Brand) ─── */
 :root {
   --bg:    #FFF9EF;
   --sf:    #F2EDE3;
@@ -650,14 +650,14 @@ input[type=file]{display:none}
 ══════════════════════════════════════ -->
 <div id="shared-gecko-page" style="display:none;min-height:100vh;padding:20px;padding-bottom:80px">
   <div style="text-align:center;margin-bottom:20px">
-    <img src="/icon-192.svg" alt="MyCre" style="width:56px;height:56px;border-radius:14px;margin-bottom:6px">
-    <div style="font-family:'Nunito',sans-serif;font-size:20px;font-weight:900;color:var(--ac)">마이크레</div>
+    <img src="/icon-192.png" alt="ByetMaru" style="width:56px;height:56px;border-radius:14px;margin-bottom:6px">
+    <div style="font-family:'Nunito',sans-serif;font-size:20px;font-weight:900;color:var(--ac)">볏마루도감</div>
     <div style="font-size:11px;color:var(--tx3)">개체 프로필 카드</div>
   </div>
   <div id="shared-gecko-content"></div>
   <div style="text-align:center;margin-top:20px">
-    <a href="/" style="display:inline-block;background:var(--ac);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:700">마이크레 앱 시작하기</a>
-    <div style="font-size:10px;color:var(--tx3);margin-top:10px">mycre.netlify.app</div>
+    <a href="/" style="display:inline-block;background:var(--ac);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:700">볏마루도감 앱 시작하기</a>
+    <div style="font-size:10px;color:var(--tx3);margin-top:10px">byetmaru.netlify.app</div>
   </div>
 </div>
 
@@ -667,15 +667,15 @@ input[type=file]{display:none}
 <div id="auth-screen">
   <!-- 로딩 상태 (기본) -->
   <div id="auth-loading">
-    <img src="/icon-192.svg" alt="MyCre" style="width:72px;height:72px;border-radius:18px;margin-bottom:10px">
-    <div style="font-family:'Nunito',sans-serif;font-size:32px;font-weight:900;color:var(--ac);margin-bottom:6px;letter-spacing:-.5px">MyCre</div>
-    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">내 크레의 모든 것, 마이크레.</div>
+    <img src="/icon-192.png" alt="ByetMaru" style="width:72px;height:72px;border-radius:18px;margin-bottom:10px">
+    <div style="font-family:'Nunito',sans-serif;font-size:32px;font-weight:900;color:var(--ac);margin-bottom:6px;letter-spacing:-.5px">ByetMaru</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">내 크레의 모든 것, 볏마루도감.</div>
     <div style="width:36px;height:36px;border:3px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto"></div>
   </div>
   <!-- 로그인 폼 (세션 없을 때만 표시) -->
   <div id="auth-form" style="display:none;flex-direction:column;align-items:center;width:100%;gap:0">
-    <div class="auth-logo"><img src="/icon-192.svg" alt="MyCre" style="width:52px;height:52px;border-radius:14px"></div>
-    <div class="auth-title">마이크레 시작하기</div>
+    <div class="auth-logo"><img src="/icon-192.png" alt="ByetMaru" style="width:52px;height:52px;border-radius:14px"></div>
+    <div class="auth-title">볏마루도감 시작하기</div>
     <div class="auth-sub">크레스티드 게코 사육자를 위한 기록 앱.<br>개체 정보·사진·혈통까지 한 곳에서 관리하세요.</div>
 
     <!-- WebView 감지 배너 -->
@@ -684,7 +684,7 @@ input[type=file]{display:none}
       <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:12px">
         카카오톡/인스타 등의 인앱 브라우저에서는<br>Google 로그인이 제한돼요.
       </div>
-      <button onclick="_openInExternalBrowser('https://mycre.netlify.app')"
+      <button onclick="_openInExternalBrowser('https://byetmaru.netlify.app')"
         style="width:100%;padding:12px;border-radius:12px;background:var(--am);color:#1a0a00;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;margin-bottom:8px">
         🌐 Safari / Chrome으로 열기
       </button>
@@ -781,8 +781,8 @@ input[type=file]{display:none}
 <div class="page" id="page-home" style="display:none">
   <div class="topbar">
     <div class="logo">
-      <div class="logo-icon"><img src="/icon-192.svg" alt="MyCre"></div>
-      <div><div class="logo-text">MYCRE</div><div class="logo-sub">CRESTIE KEEPER</div></div>
+      <div class="logo-icon"><img src="/icon-192.png" alt="ByetMaru"></div>
+      <div><div class="logo-text">BYETMARU</div><div class="logo-sub">CRESTIE KEEPER</div></div>
     </div>
     <div class="topbar-right">
       <div class="tb-btn" onclick="showToast('알림이 없습니다')">🔔</div>
@@ -792,7 +792,7 @@ input[type=file]{display:none}
 
   <!-- Banner -->
   <div class="home-banner">
-    <div class="banner-eyebrow">MYCRE · 크레스티드 게코 전용</div>
+    <div class="banner-eyebrow">BYETMARU · 크레스티드 게코 전용</div>
     <div class="banner-title">크레 키우는 사람을 위한<br><span>유일한 전용 앱</span></div>
     <div class="banner-desc">개체 기록·혈통 관리·모프 판별·분양까지<br>크레 사육에 필요한 모든 걸 한 곳에서.</div>
     <button class="btn-primary" style="max-width:200px" onclick="showPage('myge')">🦎 내 크레 등록하기</button>
@@ -886,9 +886,9 @@ input[type=file]{display:none}
   </div>
   <div id="home-posts-preview"></div>
 
-  <!-- 왜 마이크레? -->
+  <!-- 왜 볏마루도감? -->
   <div style="margin:16px 18px 8px;padding:18px 16px;background:var(--card);border:1px solid var(--br);border-radius:14px">
-    <div style="font-size:13px;font-weight:900;color:var(--tx);margin-bottom:12px">🦎 왜 마이크레인가요?</div>
+    <div style="font-size:13px;font-weight:900;color:var(--tx);margin-bottom:12px">🦎 왜 볏마루도감인가요?</div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <span style="font-size:18px;flex-shrink:0">🎯</span>
@@ -1441,7 +1441,7 @@ input[type=file]{display:none}
 
   <!-- Premium -->
   <div class="premium-card" style="margin-top:14px">
-    <div class="premium-title">⭐ 마이크레 PRO</div>
+    <div class="premium-title">⭐ 볏마루도감 PRO</div>
     <div class="premium-desc">무제한 AI 판별, QR 개체 프로필,<br>환경부 신고서 자동생성까지 모두 이용하세요.</div>
     <div class="premium-features">
       <div class="premium-feat">AI 모프 판별 무제한</div>
@@ -1560,7 +1560,7 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow">›</div>
     </div>
-    <div class="more-item" onclick="location.href='mailto:egh0208@naver.com?subject=[마이크레] 문의'">
+    <div class="more-item" onclick="location.href='mailto:egh0208@naver.com?subject=[볏마루도감] 문의'">
       <div class="more-icon" style="background:var(--ac2)">📧</div>
       <div class="more-item-info">
         <div class="more-item-title">이메일 문의</div>
@@ -1597,7 +1597,7 @@ input[type=file]{display:none}
     <span style="font-size:11px;color:var(--br)">|</span>
     <span onclick="openTermsSheet('privacy')" style="font-size:11px;color:var(--tx3);text-decoration:underline;cursor:pointer">개인정보 처리방침</span>
   </div>
-  <div style="text-align:center;font-size:10px;color:var(--tx3);padding-bottom:12px">© 2026 마이크레. All rights reserved.</div>
+  <div style="text-align:center;font-size:10px;color:var(--tx3);padding-bottom:12px">© 2026 볏마루도감. All rights reserved.</div>
 
   <div style="height:20px"></div>
 </div>
@@ -1993,7 +1993,7 @@ input[type=file]{display:none}
     <div class="sheet-body">
       <div style="background:var(--bl2);border:1px solid var(--blue);border-radius:12px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:12px;color:var(--blue);font-weight:700;margin-bottom:4px">📋 신고 안내</div>
-        <div style="font-size:12px;color:var(--tx2);line-height:1.7">크레스티드 게코(볏도마뱀붙이)는 현재 <b style="color:var(--tx)">권고사항</b>으로 환경부에 보유 현황 신고를 권장합니다. 마이크레에서 등록한 개체 정보를 바탕으로 신고서를 자동 생성해드려요.</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.7">크레스티드 게코(볏도마뱀붙이)는 현재 <b style="color:var(--tx)">권고사항</b>으로 환경부에 보유 현황 신고를 권장합니다. 볏마루도감에서 등록한 개체 정보를 바탕으로 신고서를 자동 생성해드려요.</div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px" id="report-gecko-list">
@@ -2194,7 +2194,7 @@ input[type=file]{display:none}
       <!-- 헤더 -->
       <div style="text-align:center;padding:20px 0 14px">
         <div style="font-size:40px;margin-bottom:8px">⭐</div>
-        <div style="font-size:22px;font-weight:900;color:var(--am)">마이크레 프리미엄</div>
+        <div style="font-size:22px;font-weight:900;color:var(--am)">볏마루도감 프리미엄</div>
         <div style="font-size:13px;color:#c9a850;margin-top:4px">나에게 맞는 등급을 선택하세요</div>
         <div style="font-size:11px;color:var(--tx3);margin-top:6px">연간 구독은 2개월 무료 혜택</div>
       </div>
@@ -2408,13 +2408,13 @@ function _monthKey() {
 }
 function _getMonthlyScansUsed() {
   try {
-    const key = `mycre_scans_${_currentUser?.id || 'anon'}_${_monthKey()}`;
+    const key = `byetmaru_scans_${_currentUser?.id || 'anon'}_${_monthKey()}`;
     return parseInt(localStorage.getItem(key) || '0', 10);
   } catch(e) { return 0; }
 }
 function _incrementMonthlyScans() {
   try {
-    const key = `mycre_scans_${_currentUser?.id || 'anon'}_${_monthKey()}`;
+    const key = `byetmaru_scans_${_currentUser?.id || 'anon'}_${_monthKey()}`;
     const cur = _getMonthlyScansUsed();
     localStorage.setItem(key, String(cur + 1));
   } catch(e) {}
@@ -3846,7 +3846,7 @@ let _profile = { name: '', bio: '', avatar: '' };
 function _loadProfile() {
   if (!_currentUser) return;
   try {
-    const saved = localStorage.getItem('mycre_profile_' + _currentUser.id);
+    const saved = localStorage.getItem('byetmaru_profile_' + _currentUser.id);
     if (saved) {
       const p = JSON.parse(saved);
       _profile.name = p.name || '';
@@ -3882,7 +3882,7 @@ function _updateProfileUI() {
 
 function _saveProfileLocal() {
   if (!_currentUser) return;
-  try { localStorage.setItem('mycre_profile_' + _currentUser.id, JSON.stringify(_profile)); } catch(e) {}
+  try { localStorage.setItem('byetmaru_profile_' + _currentUser.id, JSON.stringify(_profile)); } catch(e) {}
 }
 
 function openProfileEdit() {
@@ -4363,7 +4363,7 @@ async function saveGecko() {
         ...g,
         photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null
       }));
-      localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(localSafe));
+      localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(localSafe));
     } catch(e) {}
 
     // ── 즉시 시트 닫고 화면 전환 (사용자 대기 없음) ──
@@ -4395,7 +4395,7 @@ async function saveGecko() {
           // 로컬도 사진 URL 업데이트
           try {
             const ls = state.geckos.map(g => ({...g, photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null }));
-            localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(ls));
+            localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(ls));
           } catch(e2) {}
         }
         await _saveGeckoToDB(gecko);
@@ -4526,7 +4526,7 @@ async function _quickSaveCore() {
       ...g,
       photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null
     }));
-    localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(localSafe));
+    localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(localSafe));
   } catch(e) {}
 
   renderGeckoList();
@@ -4545,7 +4545,7 @@ async function _quickSaveCore() {
         if (idx !== -1) state.geckos[idx].photo = photoUrl;
         try {
           const ls = state.geckos.map(g => ({...g, photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null}));
-          localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(ls));
+          localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(ls));
         } catch(e2) {}
       }
       await _saveGeckoToDB(gecko);
@@ -4784,7 +4784,7 @@ function openGeckoDetail(id) {
   if (state.isPro && typeof QRCode !== 'undefined') {
     const qrEl = document.getElementById('detail-qr-' + id);
     if (qrEl) {
-      const qrData = `https://mycre.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
+      const qrData = `https://byetmaru.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
       try { new QRCode(qrEl, { text: qrData, width: 140, height: 140, colorDark:'#1A2B22', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
     }
   }
@@ -5411,10 +5411,10 @@ async function saveResultCard() {
   ctx.fillStyle = '#2E7D57';
   ctx.font = 'bold 28px "Pretendard Variable", sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('🦎 마이크레', PAD + 10, PAD + 36);
+  ctx.fillText('🦎 볏마루도감', PAD + 10, PAD + 36);
   ctx.fillStyle = 'rgba(255,255,255,.35)';
   ctx.font = '500 14px "DM Mono", monospace';
-  ctx.fillText('MyCre AI Morph Scan', PAD + 10, PAD + 58);
+  ctx.fillText('ByetMaru AI Morph Scan', PAD + 10, PAD + 58);
 
   // 우측 날짜
   const now = new Date();
@@ -5573,16 +5573,16 @@ async function saveResultCard() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#2E7D57';
   ctx.font = 'bold 18px "Pretendard Variable", sans-serif';
-  ctx.fillText('🦎 마이크레 — AI 모프 분석기', SIZE / 2, wmY - 18);
+  ctx.fillText('🦎 볏마루도감 — AI 모프 분석기', SIZE / 2, wmY - 18);
   // URL 라인 (유입 유도)
   ctx.fillStyle = 'rgba(255,255,255,.55)';
   ctx.font = '500 14px "DM Mono", monospace';
-  ctx.fillText('mycre.netlify.app', SIZE / 2, wmY + 2);
+  ctx.fillText('byetmaru.netlify.app', SIZE / 2, wmY + 2);
 
   // ── 다운로드 ──
   try {
     const link = document.createElement('a');
-    link.download = `mycre_${morphName}_${Date.now()}.png`;
+    link.download = `byetmaru_${morphName}_${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
     showToast('✅ 카드가 저장되었어요!');
@@ -5594,7 +5594,7 @@ async function saveResultCard() {
 // ══════════════════════════════════════
 // 🔗 공유 링크 복사 / 📣 공유 리워드
 // ══════════════════════════════════════
-const APP_URL = 'https://mycre.netlify.app';
+const APP_URL = 'https://byetmaru.netlify.app';
 
 async function _copyToClipboard(text) {
   try {
@@ -5619,7 +5619,7 @@ async function copyResultShareLink() {
   if (!lastScanResult) { showToast('판별 결과가 없습니다'); return; }
   const morph = lastScanResult.morph || '';
   const prob  = lastScanResult.candidates?.[0]?.prob || '';
-  const text  = `🦎 마이크레 AI 모프 판별 결과: ${morph}${prob ? ` (${prob}%)` : ''}\n\n지금 내 크레스티드 게코도 판별해보세요 👉 ${APP_URL}`;
+  const text  = `🦎 볏마루도감 AI 모프 판별 결과: ${morph}${prob ? ` (${prob}%)` : ''}\n\n지금 내 크레스티드 게코도 판별해보세요 👉 ${APP_URL}`;
   const ok = await _copyToClipboard(text);
   showToast(ok ? '✅ 공유 링크가 복사되었어요! 붙여넣어 공유하세요' : '❌ 복사 실패 — 수동으로 복사해주세요');
 }
@@ -5629,7 +5629,7 @@ async function copyGeckoShareLink(geckoId) {
   const g = state.geckos.find(x => String(x.id) === String(geckoId));
   if (!g) { showToast('개체를 찾을 수 없어요'); return; }
   const link = `${APP_URL}/?gecko=${encodeURIComponent(geckoId)}&owner=${encodeURIComponent(_currentUser.id)}`;
-  const text = `🦎 ${g.name}${g.morph ? ` (${g.morph})` : ''} — 마이크레에서 프로필 보기\n${link}`;
+  const text = `🦎 ${g.name}${g.morph ? ` (${g.morph})` : ''} — 볏마루도감에서 프로필 보기\n${link}`;
   const ok = await _copyToClipboard(text);
   showToast(ok ? '✅ 공유 링크가 복사되었어요!' : '❌ 복사 실패 — 수동으로 복사해주세요');
 }
@@ -5637,7 +5637,7 @@ async function copyGeckoShareLink(geckoId) {
 // ── 공유 리워드 (하루 1회 +1 스캔) ──
 function _shareRewardKey() {
   const today = new Date().toISOString().slice(0, 10);
-  return `mycre_share_reward_${_currentUser?.id || 'anon'}_${today}`;
+  return `byetmaru_share_reward_${_currentUser?.id || 'anon'}_${today}`;
 }
 function _hasClaimedShareRewardToday() {
   try { return localStorage.getItem(_shareRewardKey()) === '1'; } catch(e) { return false; }
@@ -5659,11 +5659,11 @@ async function shareForReward() {
   }
 
   // 1) 링크 복사 (Web Share API 우선, fallback 복사)
-  const shareText = `🦎 마이크레 — AI 크레스티드 게코 모프 분석기\n무료로 내 도마뱀 모프 확인해보세요!\n${APP_URL}`;
+  const shareText = `🦎 볏마루도감 — AI 크레스티드 게코 모프 분석기\n무료로 내 도마뱀 모프 확인해보세요!\n${APP_URL}`;
   let shared = false;
   try {
     if (navigator.share) {
-      await navigator.share({ title: '마이크레 AI 모프 분석기', text: shareText, url: APP_URL });
+      await navigator.share({ title: '볏마루도감 AI 모프 분석기', text: shareText, url: APP_URL });
       shared = true;
     }
   } catch(e) {
@@ -5679,7 +5679,7 @@ async function shareForReward() {
   if (isLite()) {
     // Lite: 월 카운터 역산 (used -1 효과)
     try {
-      const key = `mycre_scans_${_currentUser.id}_${_monthKey()}`;
+      const key = `byetmaru_scans_${_currentUser.id}_${_monthKey()}`;
       const cur = _getMonthlyScansUsed();
       localStorage.setItem(key, String(Math.max(0, cur - 1)));
     } catch(e) {}
@@ -6045,8 +6045,8 @@ function buildPostCard(p, compact) {
   }
 
   const proBadge = p.authorIsBreeder ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;margin-left:3px;letter-spacing:.3px">🧬 브리더</span>` : '';
-  // ✅ 마이크레 인증 배지 — 닉네임 바로 옆 (더 눈에 띄게)
-  const verifiedBadge = p.is_verified ? `<span title="마이크레에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:1px 6px;margin-left:3px;letter-spacing:.2px;box-shadow:0 0 6px rgba(74,222,128,.15)">✅ 마이크레 인증</span>` : '';
+  // ✅ 볏마루도감 인증 배지 — 닉네임 바로 옆 (더 눈에 띄게)
+  const verifiedBadge = p.is_verified ? `<span title="볏마루도감에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:1px 6px;margin-left:3px;letter-spacing:.2px;box-shadow:0 0 6px rgba(74,222,128,.15)">✅ 볏마루도감 인증</span>` : '';
   const certBadge = ''; // 배지가 닉네임 옆으로 이동했으므로 태그 라인에서는 비움
 
   if (isNotice) {
@@ -6097,12 +6097,12 @@ async function openPostDetail(p) {
   const isNotice = p.cat === 'notice';
   const bodyHtml = (p.body || '').replace(/\n/g, '<br>');
   const proBadge = p.authorIsBreeder ? `<span style="font-size:10px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:2px 6px;letter-spacing:.3px">🧬 브리더 인증</span>` : '';
-  const verifiedInlineBadge = p.is_verified ? `<span title="마이크레에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:2px 7px;letter-spacing:.2px;box-shadow:0 0 8px rgba(74,222,128,.18)">✅ 마이크레 인증</span>` : '';
+  const verifiedInlineBadge = p.is_verified ? `<span title="볏마루도감에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:2px 7px;letter-spacing:.2px;box-shadow:0 0 8px rgba(74,222,128,.18)">✅ 볏마루도감 인증</span>` : '';
   const certBadge = p.is_verified ? `<div style="display:flex;align-items:flex-start;gap:8px;background:linear-gradient(135deg,rgba(74,222,128,.08),rgba(34,197,94,.04));border:1.5px solid rgba(74,222,128,.35);border-radius:12px;padding:10px 12px;margin-bottom:12px">
     <span style="font-size:16px;flex-shrink:0">🛡️</span>
     <div style="flex:1">
-      <div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px">마이크레 인증 개체</div>
-      <div style="font-size:10.5px;color:var(--tx2);line-height:1.55">이 게시글은 작성자가 마이크레에 등록한 실제 개체와 연결되어 있어요. 도용된 사진이 아닙니다.</div>
+      <div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px">볏마루도감 인증 개체</div>
+      <div style="font-size:10.5px;color:var(--tx2);line-height:1.55">이 게시글은 작성자가 볏마루도감에 등록한 실제 개체와 연결되어 있어요. 도용된 사진이 아닙니다.</div>
     </div>
   </div>` : '';
 
@@ -6355,7 +6355,7 @@ async function submitPost() {
       user_id: _currentUser.id,
       cat,
       title,
-      author: cat === 'notice' ? '마이크레 운영팀' : (_profile.name || '익명'),
+      author: cat === 'notice' ? '볏마루도감 운영팀' : (_profile.name || '익명'),
       avatar: cat === 'notice' ? '📢' : '🦎',
       price: cat !== 'notice' ? (document.getElementById('post-price-input')?.value || null) : null,
       body: aiPrefix + document.getElementById('post-body-input').value,
@@ -6460,7 +6460,7 @@ function generateQR() {
   document.getElementById('qr-selected-name').textContent = g.name;
 
   // QR에 담을 URL — 개체 상세 페이지 링크
-  const qrData = `https://mycre.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
+  const qrData = `https://byetmaru.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
 
   // qrcode.js로 로컬 QR 생성
   try {
@@ -6494,7 +6494,7 @@ function saveQRImage() {
   const canvas = document.querySelector('#qr-canvas canvas');
   if (!canvas) { showToast('QR코드를 먼저 생성해주세요'); return; }
   const g = state.geckos.find(x => x.id == _currentQRGeckoId);
-  const fileName = `마이크레_QR_${g ? g.name : 'gecko'}.png`;
+  const fileName = `볏마루도감_QR_${g ? g.name : 'gecko'}.png`;
 
   const link = document.createElement('a');
   link.download = fileName;
@@ -6512,7 +6512,7 @@ function printQR() {
   const imgSrc = canvas.toDataURL('image/png');
 
   const printWin = window.open('', '_blank', 'width=800,height=600');
-  printWin.document.write(`<!DOCTYPE html><html><head><title>마이크레 QR - ${g?.name||'개체'}</title>
+  printWin.document.write(`<!DOCTYPE html><html><head><title>볏마루도감 QR - ${g?.name||'개체'}</title>
     <style>
       body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}
       .card{text-align:center;border:2px solid #2E7D57;border-radius:20px;padding:40px 30px;max-width:360px}
@@ -6534,7 +6534,7 @@ function printQR() {
         ${m.price ? `<div>시세: ${m.price}</div>` : ''}
         ${g?.dad||g?.mom ? `<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>` : ''}
       </div>
-      <div class="footer">마이크레 · mycre.netlify.app</div>
+      <div class="footer">볏마루도감 · byetmaru.netlify.app</div>
     </div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script>
   
@@ -6549,7 +6549,7 @@ function printQR() {
   <div class="ob-slide active" id="ob-slide-1">
     <div class="ob-illust">🦎📸</div>
     <div class="ob-headline">안녕하세요, 크레 사육자님</div>
-    <div class="ob-sub">마이크레는 크레스티드 게코 사육자를 위한 기록 앱이에요.<br>개체 정보·사진·혈통까지 한 곳에서 관리해 보세요.</div>
+    <div class="ob-sub">볏마루도감은 크레스티드 게코 사육자를 위한 기록 앱이에요.<br>개체 정보·사진·혈통까지 한 곳에서 관리해 보세요.</div>
     <div class="ob-dots">
       <div class="ob-dot active"></div>
       <div class="ob-dot"></div>
@@ -6686,7 +6686,7 @@ function saveDetailQR(id) {
   if (!canvas) { showToast('QR코드가 없습니다'); return; }
   const g = state.geckos.find(x => x.id == id);
   const link = document.createElement('a');
-  link.download = `마이크레_QR_${g ? g.name : 'gecko'}.png`;
+  link.download = `볏마루도감_QR_${g ? g.name : 'gecko'}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
   showToast('📥 QR 이미지가 저장되었어요!');
@@ -6699,12 +6699,12 @@ function printDetailQR(id) {
   const m = MORPHS[g?.morph] || {};
   const imgSrc = canvas.toDataURL('image/png');
   const printWin = window.open('', '_blank', 'width=800,height=600');
-  printWin.document.write(`<!DOCTYPE html><html><head><title>마이크레 QR - ${g?.name||'개체'}</title>
+  printWin.document.write(`<!DOCTYPE html><html><head><title>볏마루도감 QR - ${g?.name||'개체'}</title>
     <style>body{font-family:-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#fff}.card{text-align:center;border:2px solid #2E7D57;border-radius:20px;padding:40px 30px;max-width:360px}.title{font-size:24px;font-weight:900;margin-bottom:4px}.sub{font-size:14px;color:#666;margin-bottom:20px}.qr{margin:20px auto}.info{text-align:left;font-size:13px;line-height:2;color:#333;margin-top:16px;border-top:1px solid #ddd;padding-top:12px}.footer{margin-top:16px;font-size:10px;color:#999}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
     <div class="card"><div class="title">🦎 ${g?.name||'개체'}</div><div class="sub">${g?.morph||'미상'}</div>
     <div class="qr"><img src="${imgSrc}" width="200" height="200"></div>
     <div class="info">${g?.sex?`<div>성별: ${g.sex==='암컷'?'♀ 암컷':'♂ 수컷'}</div>`:''} ${g?.dob?`<div>출생: ${g.dob}</div>`:''} ${g?.weight?`<div>몸무게: ${g.weight}g</div>`:''} ${m.price?`<div>시세: ${m.price}</div>`:''} ${g?.dad||g?.mom?`<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>`:''}</div>
-    <div class="footer">마이크레 · mycre.netlify.app</div></div>
+    <div class="footer">볏마루도감 · byetmaru.netlify.app</div></div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script></body></html>`);
   printWin.document.close();
 }
@@ -6771,9 +6771,9 @@ const GUIDE_DATA = {
   first: {
     title: '🏠 처음 데려왔을 때',
     sections: [
-      { heading: '첫날 체크리스트', body: '마이크레에 개체를 등록하면서 아래 항목을 함께 기록해두세요.\n\n✅ 사육장 준비 완료 (체중에 맞는 크기)\n✅ 바닥재 깔기 (키친타올 추천)\n✅ 벽면 분무 1회\n✅ 온습도계 설치 확인\n✅ 데려온 날짜 기록' },
-      { heading: '적응기 48시간', body: '새 환경에 온 크레는 긴장 상태예요.\n\n<b>48시간 동안은 관찰만</b> — 핸들링이나 피딩 없이, 분무만 해주세요. 사육장 = 내 영역이라고 인식하는 시간이 필요합니다.\n\n48시간 뒤 첫 피딩을 시도하고, 마이크레에 첫 급이 기록을 남겨보세요.' },
-      { heading: '📱 이렇게 기록하세요', body: '마이크레에 개체를 등록할 때 "입양일"을 넣으면, 얼마나 키웠는지 자동으로 계산돼요. 첫 피딩일, 첫 탈피일도 기록해두면 나중에 성장 히스토리가 됩니다.', action: '🦎 내 크레 등록하기', actionFn: "showPage('myge');setTimeout(openAddGecko,300)" }
+      { heading: '첫날 체크리스트', body: '볏마루도감에 개체를 등록하면서 아래 항목을 함께 기록해두세요.\n\n✅ 사육장 준비 완료 (체중에 맞는 크기)\n✅ 바닥재 깔기 (키친타올 추천)\n✅ 벽면 분무 1회\n✅ 온습도계 설치 확인\n✅ 데려온 날짜 기록' },
+      { heading: '적응기 48시간', body: '새 환경에 온 크레는 긴장 상태예요.\n\n<b>48시간 동안은 관찰만</b> — 핸들링이나 피딩 없이, 분무만 해주세요. 사육장 = 내 영역이라고 인식하는 시간이 필요합니다.\n\n48시간 뒤 첫 피딩을 시도하고, 볏마루도감에 첫 급이 기록을 남겨보세요.' },
+      { heading: '📱 이렇게 기록하세요', body: '볏마루도감에 개체를 등록할 때 "입양일"을 넣으면, 얼마나 키웠는지 자동으로 계산돼요. 첫 피딩일, 첫 탈피일도 기록해두면 나중에 성장 히스토리가 됩니다.', action: '🦎 내 크레 등록하기', actionFn: "showPage('myge');setTimeout(openAddGecko,300)" }
     ]
   },
   temp: {
@@ -6789,7 +6789,7 @@ const GUIDE_DATA = {
     title: '🍽️ 피딩 가이드',
     sections: [
       { heading: '슈퍼푸드란?', body: '크레 전용 분말 사료예요. 야생 식단을 연구해서 곤충 단백질·칼슘·비타민을 균형 있게 배합한 완전식품.\n\n물에 타서 급여하는데, 숟가락에서 1~3초 안에 뚝 떨어지는 정도의 농도가 적당해요.\n\n<b>과일 베이스</b>: 향이 진해 스스로 찾아 먹는 경우가 많음\n<b>벌레 베이스</b>: 단백질 비율 높아 성장기에 유리\n\n⚠️ 슈퍼푸드 자체에 칼슘이 포함돼 있어요. 추가로 넣지 마세요.' },
-      { heading: '얼마나, 얼마 간격으로?', body: '<b>간격</b>: 2~3일에 1회\n<b>양</b>: 체중의 5~10% (cc 기준)\n\n예) 8g → 0.4~0.8cc / 15g → 0.75~1.5cc\n\n마이크레에 체중을 입력하면 적정 급여 범위를 바로 확인할 수 있어요.' },
+      { heading: '얼마나, 얼마 간격으로?', body: '<b>간격</b>: 2~3일에 1회\n<b>양</b>: 체중의 5~10% (cc 기준)\n\n예) 8g → 0.4~0.8cc / 15g → 0.75~1.5cc\n\n볏마루도감에 체중을 입력하면 적정 급여 범위를 바로 확인할 수 있어요.' },
       { heading: '안 먹을 때 대처법', body: '탈피 전후, 환경 변화 직후, 직전 피딩에서 많이 먹었을 때 — 식욕이 떨어지는 건 자연스러워요.\n\n1~2회 시도 후 거부하면 억지로 먹이지 말고 다음 피딩일로. 건강한 크레는 며칠 안 먹어도 괜찮아요. 다만 2주 넘게 이어지면 건강 체크가 필요합니다.' },
       { heading: '📱 이렇게 기록하세요', body: '급이 기록을 꾸준히 남기면 "우리 애는 벌레 베이스를 더 좋아하네", "월요일마다 잘 먹네" 같은 패턴이 보여요.', action: '📋 급이 기록하기', actionFn: "showPage('myge')" }
     ]
@@ -6815,7 +6815,7 @@ const GUIDE_DATA = {
     title: '🎨 모프 이해하기',
     sections: [
       { heading: '유전의 기본 원리', body: '모프를 이해하려면 두 가지 개념만 알면 돼요.\n\n<b>우성 유전</b>: 부모 중 한쪽만 가지고 있어도 자식에게 나타날 수 있음. 릴리화이트, 카푸치노, 세이블, 하이포가 대표적.\n\n<b>열성 유전</b>: 양쪽 부모 모두에게 유전자가 있어야 발현. 한쪽만 있으면 겉으로 안 보이고 "헤테로(Het)" 상태로 숨어서 다음 세대로 넘어가요. 아잔틱, 초초가 여기 해당.' },
-      { heading: '마이크레가 판별하는 모프들', body: '· <b>릴리화이트</b> — 배·꼬리·발가락이 하얀 게 핵심 단서\n· <b>카푸치노</b> — 진한 갈색 톤 + 꼬리 기부의 밝은 마크\n· <b>아잔틱</b> — 적색·황색 없이 흑백 무채색으로만 구성\n· <b>할리퀸</b> — 등과 옆구리의 색 대비가 뚜렷\n· <b>차콜</b> — 극도로 어두운 단색 기반\n· <b>하이포</b> — 밝고 반투명한 피부 톤' },
+      { heading: '볏마루도감가 판별하는 모프들', body: '· <b>릴리화이트</b> — 배·꼬리·발가락이 하얀 게 핵심 단서\n· <b>카푸치노</b> — 진한 갈색 톤 + 꼬리 기부의 밝은 마크\n· <b>아잔틱</b> — 적색·황색 없이 흑백 무채색으로만 구성\n· <b>할리퀸</b> — 등과 옆구리의 색 대비가 뚜렷\n· <b>차콜</b> — 극도로 어두운 단색 기반\n· <b>하이포</b> — 밝고 반투명한 피부 톤' },
       { heading: '색의 3단계 구조', body: '크레의 색은 세 겹으로 쌓여 있어요.\n\n<b>1차 (베이스)</b>: 피부 가장 아래의 바탕색\n<b>2차 (커버리지)</b>: 베이스 위를 덮는 색. 옆구리까지 완전히 덮으면 "풀커버리지"\n<b>3차 (화이트)</b>: 가장 위에 얹히는 흰색 패턴\n\nAI 판별 결과에서 이 구조를 이해하면 우리 애의 형질을 더 정확하게 읽을 수 있어요.' },
       { heading: '📱 이렇게 활용하세요', body: '사진을 찍어서 AI 판별을 돌려보세요. 결과에 나오는 형질 확률이 위 모프들과 어떻게 연결되는지 확인할 수 있어요. 혈통 트리에 부모 정보를 넣으면 유전 예측에도 도움이 됩니다.', action: '📸 AI 판별 해보기', actionFn: "showPage('scan')" }
     ]
@@ -7394,7 +7394,7 @@ async function _showSharedGeckoPage(geckoId, ownerId) {
           </div>` : ''}
         </div>
       </div>
-      <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--tx3)">이 프로필은 마이크레 앱에서 QR코드로 공유되었습니다.</div>`;
+      <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--tx3)">이 프로필은 볏마루도감 앱에서 QR코드로 공유되었습니다.</div>`;
   } catch(err) {
     console.error('공유 페이지 로드 오류:', err);
     _debugLog('error', 'general', '공유 페이지 로드 실패: ' + err.message, { stack: err.stack });
@@ -7406,11 +7406,11 @@ async function _showSharedGeckoPage(geckoId, ownerId) {
 // 이용약관 / 개인정보처리방침
 // ══════════════════════════════
 const TERMS_TEXT = {
-  terms: `마이크레 이용약관
+  terms: `볏마루도감 이용약관
 개정일: 2026년 4월 15일 | 시행일: 2026년 4월 30일
 
 제1조 (목적)
-이 약관은 마이크레(이하 "서비스")가 제공하는 크레스티드 게코 올인원 관리 서비스의 이용과 관련하여 서비스와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
+이 약관은 볏마루도감(이하 "서비스")가 제공하는 크레스티드 게코 올인원 관리 서비스의 이용과 관련하여 서비스와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
 
 제2조 (서비스의 내용)
 ① 개체 등록 및 관리 기능 (프로필, 혈통, 사진)
@@ -7451,7 +7451,7 @@ AI 모프 판별 기능은 참고 자료로만 제공되며, 결과의 정확성
 
 부칙: 이 약관은 2026년 4월 30일부터 시행됩니다.`,
 
-  privacy: `마이크레 개인정보 처리방침
+  privacy: `볏마루도감 개인정보 처리방침
 개정일: 2026년 4월 15일 | 시행일: 2026년 4월 30일
 
 1. 수집하는 개인정보
@@ -7629,7 +7629,7 @@ function startPayment(tier) {
     pg: 'kakaopay',
     pay_method: 'card',
     merchant_uid: merchantUid,
-    name: `마이크레 ${tierLabels[tier]} 정기구독 (${labels[_selectedPlan]})`,
+    name: `볏마루도감 ${tierLabels[tier]} 정기구독 (${labels[_selectedPlan]})`,
     amount: amount,
     buyer_email: _currentUser.email || '',
     buyer_name: _currentUser.user_metadata?.nickname || '',
@@ -7767,7 +7767,7 @@ function _openInExternalBrowser(url) {
 // ── Google 로그인 ──
 async function signInWithGoogle() {
   if (_isWebView()) {
-    const url = window.location.origin || 'https://mycre.netlify.app';
+    const url = window.location.origin || 'https://byetmaru.netlify.app';
     showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬/사파리로 이동합니다...');
     setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
@@ -7778,7 +7778,7 @@ async function signInWithGoogle() {
     const { error } = await _supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://mycre.netlify.app',
+        redirectTo: 'https://byetmaru.netlify.app',
         skipBrowserRedirect: false, // 항상 redirect 방식
       }
     });
@@ -7796,7 +7796,7 @@ async function signInWithGoogle() {
 async function signInWithKakao() {
   const { error } = await _supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: { redirectTo: 'https://mycre.netlify.app' }
+    options: { redirectTo: 'https://byetmaru.netlify.app' }
   });
   if (error) showAuthErr('카카오 로그인 실패: ' + error.message);
 }
@@ -7848,12 +7848,12 @@ async function handleAuthSubmit() {
       return;
     }
     // 마케팅 동의는 프로필 저장 시 활용
-    try { localStorage.setItem('mycre_marketing_opt_in', document.getElementById('agree-marketing')?.checked ? '1' : '0'); } catch(e) {}
+    try { localStorage.setItem('byetmaru_marketing_opt_in', document.getElementById('agree-marketing')?.checked ? '1' : '0'); } catch(e) {}
     const submitBtn = document.getElementById('auth-submit-btn');
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '가입 중...'; }
     const { data, error } = await _supabase.auth.signUp({
       email, password: pw,
-      options: { emailRedirectTo: 'https://mycre.netlify.app' }
+      options: { emailRedirectTo: 'https://byetmaru.netlify.app' }
     });
     if (error) {
       errEl.textContent = '❌ ' + (error.message || '가입 실패');
@@ -7928,7 +7928,7 @@ function _forceCleanStorage() {
   try {
     const keys = [];
     for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
-    keys.forEach(k => { if (k && (k.includes('supabase') || k.includes('sb-') || k.includes('mycre'))) localStorage.removeItem(k); });
+    keys.forEach(k => { if (k && (k.includes('supabase') || k.includes('sb-') || k.includes('byetmaru'))) localStorage.removeItem(k); });
   } catch(e) {}
 }
 
@@ -7985,14 +7985,14 @@ async function downloadMyData() {
       geckos: geckos || [],
       records: records || [],
       profile: {
-        marketing_opt_in: localStorage.getItem('mycre_marketing_opt_in') === '1',
+        marketing_opt_in: localStorage.getItem('byetmaru_marketing_opt_in') === '1',
       }
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `mycre-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `byetmaru-backup-${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -8022,7 +8022,7 @@ async function confirmDeleteAllGeckos() {
   try {
     await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
     state.geckos = [];
-    try { localStorage.removeItem('mycre_geckos_' + _currentUser.id); } catch(e) {}
+    try { localStorage.removeItem('byetmaru_geckos_' + _currentUser.id); } catch(e) {}
     renderHome(); renderGeckoList();
     showToast('✅ 모든 개체가 삭제되었습니다');
   } catch(e) {
@@ -8147,7 +8147,7 @@ function showObSlide(n) {
 
 function _onboardingKey() {
   // 유저별 온보딩 플래그 — 계정 탈퇴 후 새 계정 가입 시에도 온보딩 다시 표시
-  return 'mycre_onboarded_' + (_currentUser?.id || 'anon');
+  return 'byetmaru_onboarded_' + (_currentUser?.id || 'anon');
 }
 
 function finishOnboarding() {
@@ -8187,13 +8187,13 @@ const DEFAULT_NOTIF_PREFS = {
 
 function _loadNotifPrefs() {
   try {
-    const raw = localStorage.getItem('mycre_notif_prefs_' + (_currentUser?.id || 'anon'));
+    const raw = localStorage.getItem('byetmaru_notif_prefs_' + (_currentUser?.id || 'anon'));
     return raw ? { ...DEFAULT_NOTIF_PREFS, ...JSON.parse(raw) } : { ...DEFAULT_NOTIF_PREFS };
   } catch(e) { return { ...DEFAULT_NOTIF_PREFS }; }
 }
 
 function _saveNotifPrefs(prefs) {
-  try { localStorage.setItem('mycre_notif_prefs_' + (_currentUser?.id || 'anon'), JSON.stringify(prefs)); } catch(e) {}
+  try { localStorage.setItem('byetmaru_notif_prefs_' + (_currentUser?.id || 'anon'), JSON.stringify(prefs)); } catch(e) {}
 }
 
 async function openNotifSettings() {
@@ -8245,9 +8245,9 @@ async function requestNotifPermission() {
   if (result === 'granted') {
     showToast('🔔 알림이 허용되었어요');
     try {
-      new Notification('마이크레 🦎', {
+      new Notification('볏마루도감 🦎', {
         body: '알림이 활성화되었어요. 급이·체중·탈피 리마인더를 받아보세요.',
-        icon: '/icon-192.svg',
+        icon: '/icon-192.png',
       });
     } catch(e) {}
     openNotifSettings(); // UI 새로고침
@@ -8256,7 +8256,7 @@ async function requestNotifPermission() {
   }
 }
 
-function sendLocalNotification(title, body, icon = '/icon-192.svg') {
+function sendLocalNotification(title, body, icon = '/icon-192.png') {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
   try {
     new Notification(title, { body, icon });
@@ -8273,7 +8273,7 @@ function _checkDailyReminders() {
   const weekKey = _getISOWeekKey(new Date()); // 예: "2026-W16"
   const firstGecko = state.geckos[0];
   const nickname = firstGecko.name || '크레';
-  const lsKey = (suffix) => `mycre_reminder_${suffix}_${_currentUser.id}`;
+  const lsKey = (suffix) => `byetmaru_reminder_${suffix}_${_currentUser.id}`;
   const checkAndSet = (key, value) => {
     try {
       if (localStorage.getItem(lsKey(key)) === value) return false;
@@ -8353,7 +8353,7 @@ async function _onSignedIn() {
 
   // 로컬 개체 즉시 표시
   try {
-    const localData = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+    const localData = localStorage.getItem('byetmaru_geckos_' + _currentUser.id);
     if (localData) {
       const parsed = JSON.parse(localData);
       if (parsed.length > 0) { state.geckos = parsed; }
@@ -8525,7 +8525,7 @@ async function _loadGeckosFromDB() {
 
   // 먼저 로컬 데이터 복원 (항상 — DB 로딩 중에도 화면에 표시되도록)
   try {
-    const localData = localStorage.getItem('mycre_geckos_' + _currentUser.id);
+    const localData = localStorage.getItem('byetmaru_geckos_' + _currentUser.id);
     if (localData) {
       const parsed = JSON.parse(localData);
       if (parsed.length > 0) {
@@ -8560,7 +8560,7 @@ async function _loadGeckosFromDB() {
       ai_prob: row.ai_prob || null,
       ai_scanned_at: row.ai_scanned_at || null,
     }));
-    try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(state.geckos)); } catch(e) {}
+    try { localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(state.geckos)); } catch(e) {}
     renderHome(); renderGeckoList();
   } else if (state.geckos.length > 0) {
     // DB 비어있는데 로컬에 데이터 있음 → DB에 복구 시도
@@ -8579,7 +8579,7 @@ async function _saveGeckoToDB(gecko) {
     ...g,
     photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null
   }));
-  try { localStorage.setItem('mycre_geckos_' + _currentUser.id, JSON.stringify(localSafe)); } catch(e) {}
+  try { localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(localSafe)); } catch(e) {}
 
   // DB에는 Storage URL만 저장 (base64는 너무 크므로 제외)
   let dbPhoto = gecko.photo || null;

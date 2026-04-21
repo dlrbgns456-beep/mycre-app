@@ -1,8 +1,8 @@
-const CACHE_NAME = 'mycre-v10';
+const CACHE_NAME = 'byetmaru-v11';
 const ASSETS = [
   '/manifest.json',
-  '/icon-192.svg',
-  '/icon-512.svg',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 // index.html은 캐시하지 않음 — 항상 최신 버전을 네트워크에서 가져옴
 
