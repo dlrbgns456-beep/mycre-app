@@ -657,7 +657,7 @@ input[type=file]{display:none}
   <div id="shared-gecko-content"></div>
   <div style="text-align:center;margin-top:20px">
     <a href="/" style="display:inline-block;background:var(--ac);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:700">볏마루도감 앱 시작하기</a>
-    <div style="font-size:10px;color:var(--tx3);margin-top:10px">byetmaru.netlify.app</div>
+    <div style="font-size:10px;color:var(--tx3);margin-top:10px">byetmaru.com</div>
   </div>
 </div>
 
@@ -684,7 +684,7 @@ input[type=file]{display:none}
       <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:12px">
         카카오톡/인스타 등의 인앱 브라우저에서는<br>Google 로그인이 제한돼요.
       </div>
-      <button onclick="_openInExternalBrowser('https://byetmaru.netlify.app')"
+      <button onclick="_openInExternalBrowser('https://byetmaru.com')"
         style="width:100%;padding:12px;border-radius:12px;background:var(--am);color:#1a0a00;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;margin-bottom:8px">
         🌐 Safari / Chrome으로 열기
       </button>
@@ -4784,7 +4784,7 @@ function openGeckoDetail(id) {
   if (state.isPro && typeof QRCode !== 'undefined') {
     const qrEl = document.getElementById('detail-qr-' + id);
     if (qrEl) {
-      const qrData = `https://byetmaru.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
+      const qrData = `https://byetmaru.com/?gecko=${id}&owner=${_currentUser.id}`;
       try { new QRCode(qrEl, { text: qrData, width: 140, height: 140, colorDark:'#1A2B22', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
     }
   }
@@ -5577,7 +5577,7 @@ async function saveResultCard() {
   // URL 라인 (유입 유도)
   ctx.fillStyle = 'rgba(255,255,255,.55)';
   ctx.font = '500 14px "DM Mono", monospace';
-  ctx.fillText('byetmaru.netlify.app', SIZE / 2, wmY + 2);
+  ctx.fillText('byetmaru.com', SIZE / 2, wmY + 2);
 
   // ── 다운로드 ──
   try {
@@ -5594,7 +5594,7 @@ async function saveResultCard() {
 // ══════════════════════════════════════
 // 🔗 공유 링크 복사 / 📣 공유 리워드
 // ══════════════════════════════════════
-const APP_URL = 'https://byetmaru.netlify.app';
+const APP_URL = 'https://byetmaru.com';
 
 async function _copyToClipboard(text) {
   try {
@@ -6460,7 +6460,7 @@ function generateQR() {
   document.getElementById('qr-selected-name').textContent = g.name;
 
   // QR에 담을 URL — 개체 상세 페이지 링크
-  const qrData = `https://byetmaru.netlify.app/?gecko=${id}&owner=${_currentUser.id}`;
+  const qrData = `https://byetmaru.com/?gecko=${id}&owner=${_currentUser.id}`;
 
   // qrcode.js로 로컬 QR 생성
   try {
@@ -6534,7 +6534,7 @@ function printQR() {
         ${m.price ? `<div>시세: ${m.price}</div>` : ''}
         ${g?.dad||g?.mom ? `<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>` : ''}
       </div>
-      <div class="footer">볏마루도감 · byetmaru.netlify.app</div>
+      <div class="footer">볏마루도감 · byetmaru.com</div>
     </div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script>
   
@@ -6704,7 +6704,7 @@ function printDetailQR(id) {
     <div class="card"><div class="title">🦎 ${g?.name||'개체'}</div><div class="sub">${g?.morph||'미상'}</div>
     <div class="qr"><img src="${imgSrc}" width="200" height="200"></div>
     <div class="info">${g?.sex?`<div>성별: ${g.sex==='암컷'?'♀ 암컷':'♂ 수컷'}</div>`:''} ${g?.dob?`<div>출생: ${g.dob}</div>`:''} ${g?.weight?`<div>몸무게: ${g.weight}g</div>`:''} ${m.price?`<div>시세: ${m.price}</div>`:''} ${g?.dad||g?.mom?`<div>혈통: ${g.dad||'?'} × ${g.mom||'?'}</div>`:''}</div>
-    <div class="footer">볏마루도감 · byetmaru.netlify.app</div></div>
+    <div class="footer">볏마루도감 · byetmaru.com</div></div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script></body></html>`);
   printWin.document.close();
 }
@@ -7767,7 +7767,7 @@ function _openInExternalBrowser(url) {
 // ── Google 로그인 ──
 async function signInWithGoogle() {
   if (_isWebView()) {
-    const url = window.location.origin || 'https://byetmaru.netlify.app';
+    const url = window.location.origin || 'https://byetmaru.com';
     showAuthErr('⚠️ 인앱 브라우저에서는 Google 로그인이 안 돼요. 크롬/사파리로 이동합니다...');
     setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
@@ -7778,7 +7778,7 @@ async function signInWithGoogle() {
     const { error } = await _supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://byetmaru.netlify.app',
+        redirectTo: 'https://byetmaru.com',
         skipBrowserRedirect: false, // 항상 redirect 방식
       }
     });
@@ -7796,7 +7796,7 @@ async function signInWithGoogle() {
 async function signInWithKakao() {
   const { error } = await _supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: { redirectTo: 'https://byetmaru.netlify.app' }
+    options: { redirectTo: 'https://byetmaru.com' }
   });
   if (error) showAuthErr('카카오 로그인 실패: ' + error.message);
 }
@@ -7853,7 +7853,7 @@ async function handleAuthSubmit() {
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '가입 중...'; }
     const { data, error } = await _supabase.auth.signUp({
       email, password: pw,
-      options: { emailRedirectTo: 'https://byetmaru.netlify.app' }
+      options: { emailRedirectTo: 'https://byetmaru.com' }
     });
     if (error) {
       errEl.textContent = '❌ ' + (error.message || '가입 실패');
