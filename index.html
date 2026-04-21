@@ -863,10 +863,10 @@ input[type=file]{display:none}
       <div class="quick-title">분양 게시판</div>
       <div class="quick-sub">키퍼들과 개체 거래 및 정보 공유</div>
     </div>
-    <div class="quick-card" onclick="openMoreSheet('report')">
-      <div class="quick-icon">🏛️</div>
-      <div class="quick-title">환경부 신고</div>
-      <div class="quick-sub">양서류 보유 신고서 자동 생성</div>
+    <div class="quick-card" onclick="showPage('guide')">
+      <div class="quick-icon">📖</div>
+      <div class="quick-title">크레 가이드</div>
+      <div class="quick-sub">기록하면서 배우는 사육 가이드</div>
     </div>
   </div>
 
@@ -1295,6 +1295,133 @@ input[type=file]{display:none}
 </div>
 
 <!-- ══════════════════════════════════════
+     PAGE: 크레 가이드
+══════════════════════════════════════ -->
+<div class="page" id="page-guide">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon" style="background:var(--sf2);font-size:20px">📖</div>
+      <div><div class="logo-text" style="color:var(--tx)">크레 가이드</div><div class="logo-sub">CRESTIE GUIDE</div></div>
+    </div>
+  </div>
+
+  <div style="padding:14px 18px 6px">
+    <div style="font-size:12px;color:var(--tx2);line-height:1.6;background:var(--sf2);border-radius:12px;padding:12px 14px;border:1px solid var(--br)">
+      앱을 쓰면서 자연스럽게 배우는 크레 사육 가이드.<br>기록할수록 내 크레의 패턴이 보여요.
+    </div>
+  </div>
+
+  <!-- 입문 가이드 -->
+  <div style="padding:8px 18px 4px"><div style="font-size:13px;font-weight:800;color:var(--tx)">🐣 입문 가이드</div></div>
+  <div style="padding:4px 18px;display:flex;flex-direction:column;gap:8px">
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('first')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🏠</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">처음 데려왔을 때</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">사육장 세팅 → 적응기 → 첫 피딩까지</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('temp')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🌡️</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">온도·습도 관리</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">22~28°C · 습도 40~80% 사이클</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('feeding')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🍽️</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">피딩 가이드</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">슈퍼푸드 급여법 · 체중별 적정량 계산</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('shed')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🔄</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">탈피 체크</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">주기 · 주의사항 · 탈피 기록 활용법</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('clean')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🧹</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">청소·위생</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">매일 청소 루틴 · 안전한 물티슈 고르기</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 심화 가이드 -->
+  <div style="padding:16px 18px 4px"><div style="font-size:13px;font-weight:800;color:var(--tx)">🧬 심화 가이드</div></div>
+  <div style="padding:4px 18px 100px;display:flex;flex-direction:column;gap:8px">
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('morph')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🎨</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">모프 이해하기</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">우성·열성 · 주요 모프 특징 · AI 판별 연계</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('cricket')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🦗</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">귀뚜라미·곤충 급여</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">것로딩 · 칼슘 더스팅 · 급여 주의점</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('cohabit')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">⚠️</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">합사, 왜 안 될까?</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">영역 동물의 특성 · 안전한 사육 환경</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="openGuideSheet('size')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">📐</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">사육장 크기 가이드</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">체중별 적정 사육장 · FTS 예방</div>
+        </div>
+        <span style="color:var(--tx3);font-size:12px">→</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      PAGE: 더보기
 ══════════════════════════════════════ -->
 <div class="page" id="page-more">
@@ -1491,6 +1618,20 @@ input[type=file]{display:none}
       </div>
       <div id="terms-content" style="font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-line;max-height:60vh;overflow-y:auto;padding:0 4px"></div>
       <button onclick="closeSheetDirect('sheet-terms')" style="width:100%;margin-top:16px;padding:14px;border-radius:12px;background:var(--ac);border:none;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 크레 가이드 시트 -->
+<div class="sheet-overlay" id="sheet-guide" onclick="closeSheet('sheet-guide',event)">
+  <div class="sheet" style="max-height:85vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body" style="padding-top:0">
+      <div style="text-align:center;padding:16px 0 12px">
+        <div id="guide-sheet-title" style="font-size:18px;font-weight:900;color:var(--tx)"></div>
+      </div>
+      <div id="guide-sheet-content" style="font-size:12px;color:var(--tx2);line-height:1.8;max-height:60vh;overflow-y:auto;padding:0 4px"></div>
+      <button onclick="closeSheetDirect('sheet-guide')" style="width:100%;margin-top:16px;padding:14px;border-radius:12px;background:var(--ac);border:none;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">닫기</button>
     </div>
   </div>
 </div>
@@ -6608,6 +6749,109 @@ function openReportSheet() {
 
 function openMoreSheet(type) {
   if (type === 'report') openReportSheet();
+}
+
+// ══════════════════════════════
+// CRESTIE GUIDE SHEETS
+// ══════════════════════════════
+const GUIDE_DATA = {
+  first: {
+    title: '🏠 처음 데려왔을 때',
+    sections: [
+      { heading: '사육장 준비', body: '크레를 데려오면 가장 먼저 적절한 크기의 사육장이 필요해요. 크레는 영역 동물이라 너무 넓은 집은 오히려 스트레스를 줍니다.\n\n<b>체중별 추천 크기</b>\n· 베이비 (1~10g): 소형 적재 or 10~15cm 큐브\n· 아성체 (10~20g): 중형 적재 or 20~25cm 큐브\n· 성체 (20g~): 대형 적재 or 30cm+ 큐브/유리' },
+      { heading: '도착 후 루틴', body: '① 사육장에 키친타올 2장 이상 깔기\n② 벽면 위주로 분무\n③ <b>2일간 핸들링 자제</b> — 적응 시간 필요\n④ 분무만 아침·밤 1~2회\n⑤ 2일 뒤부터 첫 피딩 시작' },
+      { heading: '💡 마이크레 활용 팁', body: '개체 등록 시 데려온 날짜를 기록하면, 적응기가 지났는지 자동으로 알려줘요.', action: '🦎 내 크레 등록하기', actionFn: "showPage('myge');setTimeout(openAddGecko,300)" }
+    ]
+  },
+  temp: {
+    title: '🌡️ 온도·습도 관리',
+    sections: [
+      { heading: '적정 온도', body: '크레가 편안한 온도는 <b>22~28°C</b>예요.\n최적 구간은 24~26°C.\n\n⚠️ 30°C 이상은 위험 — 열사병 가능\n⚠️ 20°C 이하에서는 활력이 크게 떨어져요' },
+      { heading: '습도 사이클', body: '습도는 <b>40~80%</b> 사이에서 건조↔습함이 반복되는 게 핵심이에요. 항상 축축한 것보다 마르고 젖는 사이클이 크레에게 좋아요.\n\n분무 후 약 6시간 뒤 바닥재가 바짝 마르는 게 정상.' },
+      { heading: '분무 타이밍', body: '· 하루 1~2회 (아침 + 밤, 또는 밤만)\n· 1회만 한다면 <b>밤 자기 전</b>이 가장 좋아요\n· 이유: 크레는 야행성이라 밤에 물방울을 핥아 수분 섭취' },
+      { heading: '💡 마이크레 활용 팁', body: '사육 기록에 온습도를 함께 메모하면, 계절별 패턴이 보여요. 탈피 주기와 비교하면 최적 환경을 찾을 수 있어요.' }
+    ]
+  },
+  feeding: {
+    title: '🍽️ 피딩 가이드',
+    sections: [
+      { heading: '슈퍼푸드 급여', body: '크레는 <b>슈퍼푸드(분말 사료)</b>만으로도 건강하게 자랄 수 있어요. 물에 섞어서 <b>케첩 농도</b>로 만들어 급여합니다.\n\n· 과일 베이스: 향이 강해 자율 피딩에 유리\n· 벌레 베이스: 단백질 함량 높음\n\n⚠️ 슈퍼푸드에 칼슘을 추가로 타지 마세요 — 이미 포함되어 있어요.' },
+      { heading: '급여 주기와 양', body: '· <b>2~3일에 1번</b> 급여\n· 피딩 숟가락: 머리 삼각형 크기만큼\n· 주사기 정량: 체중의 <b>5~10%</b> (cc 단위)\n\n예시) 10g 크레 → 0.5~1.0cc\n\n5% 이상 먹으면 충분한 양이에요. 10%는 넘기지 않는 게 좋아요.' },
+      { heading: '밥을 안 먹을 때', body: '크레가 밥을 거부하는 건 생각보다 흔해요.\n\n· 탈피 전후에는 식욕이 떨어지는 게 정상\n· 이전 피딩에서 많이 먹었을 수 있음\n· 2~3회 시도 후 안 먹으면 다음 피딩으로 넘기기\n· 2주 이상 거부 시에는 건강 체크 필요' },
+      { heading: '💡 마이크레 활용 팁', body: '급이 기록을 남기면 우리 애의 식사 패턴이 보여요. 체중 기록과 함께 보면 성장 곡선까지 확인할 수 있어요.', action: '📋 급이 기록하기', actionFn: "showPage('myge')" }
+    ]
+  },
+  shed: {
+    title: '🔄 탈피 체크',
+    sections: [
+      { heading: '탈피 주기', body: '· 베이비: <b>3~5일</b>에 한 번\n· 성체: <b>월 1~2회</b>\n\n크레는 탈피 후 껍질을 직접 먹어서 흔적을 지워요. "우리 애가 탈피를 안 해요"는 대부분 자는 사이에 이미 끝낸 거예요.' },
+      { heading: '탈피 전후 주의', body: '· 탈피 직전·직후에는 <b>먹이 거부가 정상</b>\n· 탈피 중에는 최대한 건들지 않기\n· 분무와 습도 유지를 잘 해주면 스스로 해결해요' },
+      { heading: '⚠️ 위험 신호', body: '발가락이나 꼬리에 <b>반지 모양으로 탈피 껍질이 남았을 때</b> — 방치하면 괴사할 수 있어요. 얇은 핀셋으로 조심히 제거하거나, 파충류 샵 전문가에게 도움 요청.' },
+      { heading: '💡 마이크레 활용 팁', body: '탈피 날짜를 기록하면 우리 애만의 탈피 주기를 알 수 있어요. 습도·온도 기록과 비교하면 최적 환경을 찾는 데 도움이 돼요.' }
+    ]
+  },
+  clean: {
+    title: '🧹 청소·위생',
+    sections: [
+      { heading: '매일 청소 루틴', body: '크레의 청소는 간단해요 — <b>"보이면 바로 치우기"</b>가 원칙.\n\n· 똥이 보이면 치우기\n· 오줌(요산)이 보이면 닦기\n· 하루 1회 이상이면 충분\n\n방치하면 악취 + 세균 번식 → 피부병 위험.' },
+      { heading: '요산이란?', body: '똥 옆에 있는 <b>하얀 덩어리 = 요산</b>이에요. 크레의 오줌이 하얗게 뭉쳐서 나오는 정상 배설물.\n\n⚠️ 노란색이면 수분 부족 신호 → 분무를 더 해주세요.' },
+      { heading: '안전한 물티슈 고르기', body: '천연 성분 기반 아기용 물티슈가 가장 안전해요.\n\n피해야 할 성분:\n· 소듐벤조에이트 (벤젠 생성 가능)\n· 피리디늄 클로라이드 (합성 보존제)\n· 헥산디올 (섭취 시 문제)' }
+    ]
+  },
+  morph: {
+    title: '🎨 모프 이해하기',
+    sections: [
+      { heading: '우성과 열성', body: '<b>우성</b> = 50% 확률로 바로 유전\n혈액형의 A·B형처럼, 부모 중 하나만 있어도 자식에게 발현 가능.\n\n<b>열성</b> = 바로 발현되지 않음\n혈액형 O형처럼, 헤테로(Het) 형태로 숨어서 유전. 3세대에서 발현될 수 있어요.' },
+      { heading: '주요 우성 모프', body: '· <b>릴리화이트</b> — 배·발가락이 하얀 게 특징. 릴리끼리 교배 금지(치사유전)\n· <b>카푸치노</b> — 갈색 + 꼬리 시작점 Y자 화이트. 카푸치노끼리 교배 비권장\n· <b>세이블</b> — 클수록 어두워지고 화이트 번짐. 카푸치노와 대립유전\n· <b>하이포</b> — 반투명 피부, 색감 다양성에 영향' },
+      { heading: '주요 열성 모프', body: '· <b>아잔틱</b> — 적·황색 색소 결핍. 흑백으로만 표현. 릴리+아잔틱 조합 인기\n· <b>초초</b> — 태어날 때 빨간색, 클수록 짙은 갈색으로 변화' },
+      { heading: '1차·2차·3차 형질', body: '· <b>1차 (베이스)</b>: 가장 아래 바탕색. 차콜의 검정, 크림시클의 크림색\n· <b>2차 (커버리지)</b>: 1차를 덮는 색. 옆구리까지 덮으면 "풀커버리지"\n· <b>3차 (화이트)</b>: 2차 위에 나타나는 흰색. 월·스팟·드리피 등' },
+      { heading: '💡 마이크레 활용 팁', body: 'AI 모프 판별로 우리 애의 형질을 확인해보세요. 혈통 기록과 함께 보면 유전 패턴을 이해하는 데 도움이 돼요.', action: '📸 AI 모프 판별', actionFn: "showPage('scan')" }
+    ]
+  },
+  cricket: {
+    title: '🦗 귀뚜라미·곤충 급여',
+    sections: [
+      { heading: '것로딩이 필수인 이유', body: '귀뚜라미에는 <b>인(P) 성분</b>이 있어서 칼슘 흡수를 방해해요. 것로딩은 귀뚜라미에게 채소를 먹여 영양을 보충한 뒤 크레에게 급여하는 방법.\n\n· 추천 것로딩 채소: 당근 (가장 추천), 무, 고구마, 케일, 청경채\n· 전날 것로딩 → 다음날 급여가 가장 좋아요' },
+      { heading: '칼슘+D3 더스팅', body: '귀뚜라미 표면에 <b>칼슘+D3 파우더</b>를 묻혀서 급여해요.\n\n· 인 성분을 보완하기 위한 필수 과정\n· D3는 칼슘 흡수를 도와주는 비타민\n· 충분히 더스팅해도 OK — 인이 흡수를 방해해서 과잉 걱정 적음\n\n⚠️ 슈퍼푸드에는 별도 칼슘을 타지 마세요. 귀뚜라미 급여 시에만 더스팅.' },
+      { heading: '귀뚜라미 관리', body: '· 사육통 매일 청소 — 시체 방치 시 암모니아 발생\n· 동족 포식 주의 (시체를 먹으면 비리비리해짐)\n· 활발하게 뛰어다니는 귀뚜라미 = 건강한 귀뚜라미' }
+    ]
+  },
+  cohabit: {
+    title: '⚠️ 합사, 왜 안 될까?',
+    sections: [
+      { heading: '크레는 영역 동물', body: '크레스티드 게코에게 다른 개체는 <b>먹이 또는 적</b>이에요.\n\n· 같은 성별이어도 공격 가능\n· 동배 형제라도 안전하지 않음\n· 부모-자식 관계도 없음 (부모가 새끼를 잡아먹을 수 있어요)' },
+      { heading: '"아직 괜찮았다"의 위험', body: '"괜찮은 것처럼 보이는" 합사도 언제든 사고로 이어질 수 있어요.\n\n· 꼬리 자름\n· 발가락 부상\n· 극도의 스트레스 → 식욕 저하, 탈피 실패\n\n결국 분리 사육하게 될 거라면, 처음부터 개별 사육이 답이에요.' },
+      { heading: '💡 마이크레 활용 팁', body: '개체별로 따로 등록하고, 각각의 사육 기록을 관리하세요. 한 마리 한 마리가 소중하니까요.', action: '🦎 개체 등록하기', actionFn: "showPage('myge');setTimeout(openAddGecko,300)" }
+    ]
+  },
+  size: {
+    title: '📐 사육장 크기 가이드',
+    sections: [
+      { heading: '체중별 추천', body: '· <b>베이비 (1~10g)</b>: 소형 적재 / 10~15cm 큐브\n· <b>아성체 (10~20g)</b>: 중형 적재 / 20~25cm 큐브\n· <b>성체 (20g~)</b>: 대형 적재 / 30cm+ 큐브 또는 유리' },
+      { heading: 'FTS 예방', body: 'FTS(플로피테일 신드롬)는 잘못된 자세로 꼬리가 변형되는 질환이에요.\n\n· 사육장이 체구에 비해 너무 크면 발생 위험 증가\n· 적절한 구조물로 지지 기반 제공\n· 체중에 맞는 사육장 크기가 근본적인 예방' },
+      { heading: '사육장 종류별 장단점', body: '· <b>적재형 플라스틱</b>: 다수 케어에 유리, 청소 편함, 가성비 좋음\n· <b>아크릴</b>: 예쁜 크테리어 가능, 통풍 상대적 약점\n· <b>유리</b>: 환기 좋고 예쁨, 무겁고 비쌈' },
+      { heading: '💡 마이크레 활용 팁', body: '체중을 꾸준히 기록하면 사육장 업그레이드 시기를 알 수 있어요. 10g, 20g 도달 시 알림으로 알려드릴게요.' }
+    ]
+  }
+};
+
+function openGuideSheet(key) {
+  const data = GUIDE_DATA[key];
+  if (!data) return;
+  document.getElementById('guide-sheet-title').textContent = data.title;
+  let html = '<div style="padding:0 4px 20px">';
+  data.sections.forEach(s => {
+    html += '<div style="margin-bottom:16px">';
+    html += '<div style="font-size:13px;font-weight:800;color:var(--ac);margin-bottom:8px">' + s.heading + '</div>';
+    html += '<div style="font-size:12px;color:var(--tx2);line-height:1.7;white-space:pre-line">' + s.body + '</div>';
+    if (s.action) {
+      html += '<button class="btn-primary" style="margin-top:10px;width:100%;padding:11px" onclick="closeSheetDirect(\'sheet-guide\');' + s.actionFn + '">' + s.action + '</button>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  document.getElementById('guide-sheet-content').innerHTML = html;
+  openSheet('sheet-guide');
 }
 
 // ══════════════════════════════
