@@ -845,12 +845,14 @@ input[type=file]{display:none}
 
   <!-- 분무 리마인더 카드 -->
   <div id="home-misting-card" style="display:none;margin:0 18px 8px;background:linear-gradient(135deg,rgba(62,140,181,.08),rgba(46,125,87,.08));border:1.5px solid var(--blue);border-radius:14px;padding:13px 15px">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:14px;font-weight:800;color:var(--blue)">💦 오늘의 분무</div>
-        <div id="misting-status-text" style="font-size:12px;color:var(--tx2);margin-top:3px">아침 08:00 · 저녁 20:00</div>
-      </div>
-      <button class="btn-sm" style="border-color:var(--blue);color:var(--blue);background:var(--bl2)" onclick="markMistingDone()">✅ 완료</button>
+    <div style="font-size:14px;font-weight:800;color:var(--blue);margin-bottom:10px">💦 오늘의 분무</div>
+    <div style="display:flex;gap:8px">
+      <button id="mist-btn-am" class="btn-sm" style="flex:1;border-color:var(--blue);color:var(--blue);background:var(--bl2);padding:10px;font-size:12px" onclick="toggleMisting('am')">
+        <span id="mist-am-label">☀️ 아침 08:00</span>
+      </button>
+      <button id="mist-btn-pm" class="btn-sm" style="flex:1;border-color:var(--blue);color:var(--blue);background:var(--bl2);padding:10px;font-size:12px" onclick="toggleMisting('pm')">
+        <span id="mist-pm-label">🌙 저녁 20:00</span>
+      </button>
     </div>
   </div>
 
@@ -8732,33 +8734,51 @@ function updateMistingCard() {
   if (!prefs.misting) { card.style.display = 'none'; return; }
 
   const today = new Date().toISOString().slice(0, 10);
-  const mornDone = localStorage.getItem(`byetmaru_mist_done_am_${_currentUser.id}`) === today;
-  const eveDone  = localStorage.getItem(`byetmaru_mist_done_pm_${_currentUser.id}`) === today;
+  const amDone = localStorage.getItem(`byetmaru_mist_done_am_${_currentUser.id}`) === today;
+  const pmDone = localStorage.getItem(`byetmaru_mist_done_pm_${_currentUser.id}`) === today;
 
   card.style.display = 'block';
-  const txt = document.getElementById('misting-status-text');
-  if (txt) {
-    const am = `아침 ${prefs.mistMorning || '08:00'} ${mornDone ? '✅' : ''}`;
-    const pm = `저녁 ${prefs.mistEvening || '20:00'} ${eveDone ? '✅' : ''}`;
-    txt.textContent = `${am} · ${pm}`;
+
+  const amBtn = document.getElementById('mist-btn-am');
+  const pmBtn = document.getElementById('mist-btn-pm');
+  const amLabel = document.getElementById('mist-am-label');
+  const pmLabel = document.getElementById('mist-pm-label');
+
+  if (amLabel) amLabel.textContent = `${amDone ? '✅' : '☀️'} 아침 ${prefs.mistMorning || '08:00'}`;
+  if (pmLabel) pmLabel.textContent = `${pmDone ? '✅' : '🌙'} 저녁 ${prefs.mistEvening || '20:00'}`;
+
+  // 완료 상태면 채운 스타일, 아니면 외곽선
+  if (amBtn) {
+    amBtn.style.background = amDone ? 'var(--blue)' : 'var(--bl2)';
+    amBtn.style.color      = amDone ? '#fff'        : 'var(--blue)';
+  }
+  if (pmBtn) {
+    pmBtn.style.background = pmDone ? 'var(--blue)' : 'var(--bl2)';
+    pmBtn.style.color      = pmDone ? '#fff'        : 'var(--blue)';
   }
 }
 
-function markMistingDone() {
+function toggleMisting(slot) {
   if (!_currentUser) return;
+  if (slot !== 'am' && slot !== 'pm') return;
   const today = new Date().toISOString().slice(0, 10);
-  const hour = new Date().getHours();
-  const key = hour < 14 ? 'am' : 'pm';
-  const lsKey = `byetmaru_mist_done_${key}_${_currentUser.id}`;
+  const lsKey = `byetmaru_mist_done_${slot}_${_currentUser.id}`;
   const already = localStorage.getItem(lsKey) === today;
+  const slotLabel = slot === 'am' ? '아침' : '저녁';
   if (already) {
     localStorage.removeItem(lsKey);
-    showToast('↩️ 분무 체크 취소됨');
+    showToast(`↩️ ${slotLabel} 분무 체크 취소`);
   } else {
     localStorage.setItem(lsKey, today);
-    showToast('💦 분무 완료!');
+    showToast(`💦 ${slotLabel} 분무 완료!`);
   }
   updateMistingCard();
+}
+
+// 하위 호환 — 기존 markMistingDone 호출이 남아 있어도 현재 시간 기준 슬롯 토글
+function markMistingDone() {
+  const hour = new Date().getHours();
+  toggleMisting(hour < 14 ? 'am' : 'pm');
 }
 
 // ══════════════════════════════
