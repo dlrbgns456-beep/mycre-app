@@ -18,6 +18,7 @@ DROP POLICY IF EXISTS "Users can insert non-notice posts" ON posts;
 -- 3) 공지 INSERT: 관리자 이메일만 허용
 CREATE POLICY "Admin only can insert notices"
 ON posts
+AS RESTRICTIVE
 FOR INSERT
 TO authenticated
 WITH CHECK (
@@ -29,6 +30,7 @@ WITH CHECK (
 DROP POLICY IF EXISTS "Admin only can update notices" ON posts;
 CREATE POLICY "Admin only can update notices"
 ON posts
+AS RESTRICTIVE
 FOR UPDATE
 TO authenticated
 USING (
@@ -43,6 +45,7 @@ WITH CHECK (
 DROP POLICY IF EXISTS "Admin only can delete notices" ON posts;
 CREATE POLICY "Admin only can delete notices"
 ON posts
+AS RESTRICTIVE
 FOR DELETE
 TO authenticated
 USING (
