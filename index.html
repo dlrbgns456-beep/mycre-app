@@ -4007,7 +4007,7 @@ function renderHome() {
     const match = m.price.match(/(\d+)/);
     return s + (match ? parseInt(match[1]) : 0);
   }, 0);
-  document.getElementById('stat-value').textContent = totalMin > 0 ? totalMin + '만+' : '—';
+  const _sv = document.getElementById('stat-value'); if (_sv) _sv.textContent = totalMin > 0 ? totalMin + '만+' : '—';
 
   // Gecko row
   const row = document.getElementById('home-gecko-row');
