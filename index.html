@@ -4865,12 +4865,19 @@ function detailItem(label, val) {
 
 function getAge(dob) {
   if (!dob) return '—';
-  const diff = Date.now() - new Date(dob).getTime();
+  // YYYYMMDD · YYYY-MM-DD · YYYY/MM/DD 모두 수용
+  const s = String(dob).replace(/[-/]/g, '');
+  if (s.length < 8 || !/^\d{8}$/.test(s)) return '—';
+  const y = +s.slice(0, 4), m = +s.slice(4, 6), d = +s.slice(6, 8);
+  const dobDate = new Date(y, m - 1, d);
+  if (isNaN(dobDate.getTime())) return '—';
+  const diff = Date.now() - dobDate.getTime();
+  if (diff < 0) return '—';
   const days = Math.floor(diff / 86400000);
   if (days < 30) return days + '일';
   const months = Math.floor(days / 30);
   if (months < 12) return months + '개월';
-  return Math.floor(months/12) + '년 ' + (months%12) + '개월';
+  return Math.floor(months / 12) + '년 ' + (months % 12) + '개월';
 }
 
 function editGecko(id) {
