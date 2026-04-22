@@ -4431,9 +4431,9 @@ async function saveGecko() {
     })();
 
   } catch(err) {
-    console.error('개체 저장 오류:', err);
+    console.error('개체 저장 오류:', err, err?.stack);
     _debugLog('error', 'gecko', '개체 저장 실패: ' + err.message, { stack: err.stack, geckoName: document.getElementById('gecko-name')?.value });
-    showToast('⚠️ 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+    showToast('⚠️ 저장 오류: ' + (err.message || '알 수 없는 오류'));
   } finally {
     // 버튼 원상복구
     if (btn) { btn.disabled = false; btn.textContent = '저장하기'; btn.style.opacity = '1'; }
@@ -8393,9 +8393,25 @@ async function _onSignedIn() {
 
   // ── 2) 백그라운드: DB 동기화 (화면은 이미 떠 있음) ──
   (async () => {
+    // ★ 세션 토큰이 Supabase 클라이언트에 반영될 때까지 대기
+    // onAuthStateChange 콜백 시점에 내부 auth 헤더가 아직 세팅 안 될 수 있음
+    try {
+      const { data: { session: currentSession } } = await _supabase.auth.getSession();
+      if (!currentSession) {
+        console.warn('[Auth] DB 동기화 스킵: 세션 없음');
+        return;
+      }
+    } catch(e) {
+      console.warn('[Auth] 세션 확인 실패:', e);
+    }
+
     try {
       // 프로필 체크 + 신규 사용자 처리
-      const { data: existCheck } = await _supabase.from('profiles').select('id,nickname,is_pro,tier,pro_until').eq('id', _currentUser.id).maybeSingle();
+      console.log('[Auth] 프로필 동기화 시작...');
+      const { data: existCheck, error: profileError } = await _supabase.from('profiles').select('id,nickname,is_pro,tier,pro_until').eq('id', _currentUser.id).maybeSingle();
+      if (profileError) {
+        console.error('[Auth] 프로필 쿼리 오류:', profileError);
+      }
       if (!existCheck) {
         const randomNick = _currentUser.user_metadata?.full_name || _generateRandomNickname();
         await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick, tier: 'free' });
@@ -8428,10 +8444,15 @@ async function _onSignedIn() {
         _loadDailyScanCount();
         _updateScanBadge();
       }
-    } catch(e) { console.warn('프로필 로드 실패:', e); }
+      console.log('[Auth] 프로필 동기화 완료:', _profile.name);
+    } catch(e) { console.error('[Auth] 프로필 로드 실패:', e); }
 
     // DB에서 개체 로드
-    try { await _loadGeckosFromDB(); } catch(e) { console.warn('개체 로드 실패:', e); }
+    try {
+      console.log('[Auth] 개체 로드 시작...');
+      await _loadGeckosFromDB();
+      console.log('[Auth] 개체 로드 완료:', state.geckos.length + '마리');
+    } catch(e) { console.error('[Auth] 개체 로드 실패:', e); }
     renderHome();
     renderGeckoList();
 
@@ -8545,7 +8566,7 @@ function _showAuthScreen() {
 
 // DB에서 개체 목록 불러오기
 async function _loadGeckosFromDB() {
-  if (!_currentUser) return;
+  if (!_currentUser) { console.warn('[DB] _loadGeckosFromDB: 로그인 필요'); return; }
 
   // 먼저 로컬 데이터 복원 (항상 — DB 로딩 중에도 화면에 표시되도록)
   try {
@@ -8597,7 +8618,12 @@ async function _loadGeckosFromDB() {
 
 // DB에 개체 저장 (upsert = 추가 + 수정 겸용)
 async function _saveGeckoToDB(gecko) {
-  if (!_currentUser) return;
+  if (!_currentUser) { console.warn('[DB] _saveGeckoToDB: 로그인 필요'); return; }
+  // 세션 유효성 확인
+  try {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) { console.warn('[DB] _saveGeckoToDB: 세션 없음, 저장 스킵'); return; }
+  } catch(e) { console.warn('[DB] 세션 확인 실패:', e); }
   // 로컬 백업 (사진은 URL만 저장, base64는 제외)
   const localSafe = state.geckos.map(g => ({
     ...g,
