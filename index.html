@@ -841,6 +841,23 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  <!-- 분무 리마인더 카드 -->
+  <div id="home-misting-card" style="display:none;margin:0 18px 8px;background:linear-gradient(135deg,rgba(62,140,181,.08),rgba(46,125,87,.08));border:1.5px solid var(--blue);border-radius:14px;padding:13px 15px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:var(--blue)">💦 오늘의 분무</div>
+        <div id="misting-status-text" style="font-size:12px;color:var(--tx2);margin-top:3px">아침 08:00 · 저녁 20:00</div>
+      </div>
+      <button class="btn-sm" style="border-color:var(--blue);color:var(--blue);background:var(--bl2)" onclick="markMistingDone()">✅ 완료</button>
+    </div>
+  </div>
+
+  <!-- 산란 예정 카드 -->
+  <div id="home-breeding-card" style="display:none;margin:0 18px 8px;background:rgba(255,143,177,.06);border:1.5px solid #ff8fb1;border-radius:14px;padding:13px 15px;cursor:pointer" onclick="openBreedingSheet()">
+    <div style="font-size:14px;font-weight:800;color:#ff8fb1">🥚 산란 예정</div>
+    <div id="breeding-upcoming-text" style="font-size:12px;color:var(--tx2);margin-top:3px"></div>
+  </div>
+
   <!-- Quick Grid -->
   <div class="sec-head"><span class="sec-title">빠른 기능</span></div>
   <div class="quick-grid">
@@ -1491,6 +1508,15 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow">›</div>
     </div>
+
+    <div class="more-item" onclick="openBreedingSheet()">
+      <div class="more-icon" style="background:rgba(255,143,177,.12)">🥚</div>
+      <div class="more-item-info">
+        <div class="more-item-title">메이팅 트래커</div>
+        <div class="more-item-sub">교배 기록 + 예상 산란일 자동 계산</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
   </div>
 
   <div class="more-section">
@@ -1728,7 +1754,7 @@ input[type=file]{display:none}
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">부화일 or 입수일</label>
-          <input class="form-input" id="gecko-dob" type="text" placeholder="예: 20240315 (숫자만)" inputmode="numeric" maxlength="10" oninput="formatDobInput(this)" onchange="updateCageAndBreeding()" onfocus="this.placeholder='YYYYMMDD (숫자만)'" onblur="this.placeholder='예: 20240315 (숫자만)'">
+          <input class="form-input" id="gecko-dob" type="text" placeholder="예: 20240315 (숫자만)" inputmode="numeric" maxlength="10" oninput="formatDobInput(this);updateWeightHint()" onchange="updateCageAndBreeding()" onfocus="this.placeholder='YYYYMMDD (숫자만)'" onblur="this.placeholder='예: 20240315 (숫자만)'">
         </div>
         <div class="form-group">
           <label class="form-label">취득가격 (만원)</label>
@@ -1768,7 +1794,8 @@ input[type=file]{display:none}
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">무게 (g) <span style="color:var(--tx3);font-size:10px;font-weight:400">최초 측정값</span></label>
-          <input class="form-input" id="gecko-weight" type="number" step="0.1" placeholder="예: 25.5" oninput="updateCageAndBreeding()">
+          <input class="form-input" id="gecko-weight" type="number" step="0.1" placeholder="예: 25.5" oninput="updateCageAndBreeding()" onfocus="updateWeightHint()">
+          <div id="weight-guide-hint" style="font-size:11px;color:var(--tx3);margin-top:4px;display:none"></div>
         </div>
         <div class="form-group">
           <label class="form-label">상태</label>
@@ -4041,6 +4068,10 @@ function renderHome() {
   } else {
     preview.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:12px;text-align:center">아직 게시글이 없어요</div>';
   }
+
+  // 분무 / 브리딩 카드 갱신
+  updateMistingCard();
+  updateBreedingCard();
 }
 
 // ══════════════════════════════
@@ -4747,6 +4778,7 @@ function openGeckoDetail(id) {
         ${detailItem('취득가격', g.price ? g.price + '만원' : '—')}
         ${detailItem('시세 범위', m.price || '—')}
       </div>
+      ${getWeightStatus(g.weight, g.dob) ? `<div style="background:var(--sf2);border-radius:10px;padding:8px 12px;margin-bottom:12px">${getWeightStatus(g.weight, g.dob)}</div>` : ''}
 
       ${(g.sex === '암컷' && (g.egg_infertile || g.egg_fertile)) ? `
         <div style="background:var(--sf2);border:1.5px solid #ff8fb1;border-radius:12px;padding:12px 13px;margin-bottom:12px">
@@ -6636,6 +6668,60 @@ function printQR() {
   </div>
 </div>
 
+<!-- 메이팅 / 브리딩 트래커 시트 -->
+<div class="sheet-overlay" id="sheet-breeding" onclick="closeSheet('sheet-breeding',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🥚 메이팅 기록</div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label class="form-label">♂ 수컷 선택</label>
+        <select class="form-select" id="breed-male-select">
+          <option value="">— 수컷 선택 —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">♀ 암컷 선택</label>
+        <select class="form-select" id="breed-female-select">
+          <option value="">— 암컷 선택 —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">교배 시작일</label>
+        <input class="form-input" id="breed-mate-date" type="date" onchange="updateBreedEstimate()">
+      </div>
+      <div id="breed-estimate" style="display:none;background:var(--ac2);border:1.5px solid var(--ac);border-radius:12px;padding:13px 15px;margin-bottom:14px">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--ac);letter-spacing:1px;margin-bottom:8px">📅 예상 산란일</div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">이른 산란</div>
+            <div id="breed-est-early" style="font-size:16px;font-weight:800;color:var(--ac)">—</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">평균</div>
+            <div id="breed-est-avg" style="font-size:16px;font-weight:800;color:var(--ac)">—</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">늦은 산란</div>
+            <div id="breed-est-late" style="font-size:16px;font-weight:800;color:var(--ac)">—</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center">교배 후 약 30~45일 후 첫 산란 (개체차 있음)</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모</label>
+        <textarea class="form-textarea" id="breed-memo" placeholder="교배 상황, 특이사항 등"></textarea>
+      </div>
+      <button class="btn-primary" onclick="saveBreedingRecord()">💾 메이팅 기록 저장</button>
+
+      <div style="margin-top:20px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:10px">📋 기록 목록</div>
+        <div id="breed-record-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 혈통 트리 시트 -->
 <div class="sheet-overlay" id="sheet-lineage" onclick="closeSheet('sheet-lineage',event)">
   <div class="sheet">
@@ -8202,12 +8288,65 @@ function showOnboarding() {
 // 알림 설정 & 푸시 알림 (Web Notification API 기반 로컬 리마인더)
 // ══════════════════════════════
 const DEFAULT_NOTIF_PREFS = {
-  feed: true,        // 급이 리마인더
-  weight: true,      // 주간 체중
-  shed: true,        // 탈피 주기
-  community: true,   // 커뮤니티 댓글·좋아요
-  marketing: false,  // 마케팅
+  feed: true,             // 급이 리마인더
+  weight: true,           // 주간 체중
+  shed: true,             // 탈피 주기
+  community: true,        // 커뮤니티 댓글·좋아요
+  marketing: false,       // 마케팅
+  misting: true,          // 분무 알람
+  mistMorning: '08:00',   // 아침 분무 시간
+  mistEvening: '20:00',   // 저녁 분무 시간
 };
+
+// ══════════════════════════════
+// 개월수별 적정 무게 가이드
+// ══════════════════════════════
+const WEIGHT_GUIDE = [
+  { maxMonth: 1,   min: 1,  max: 2,  label: '해칭~1개월' },
+  { maxMonth: 3,   min: 2,  max: 5,  label: '1~3개월' },
+  { maxMonth: 6,   min: 5,  max: 12, label: '3~6개월' },
+  { maxMonth: 9,   min: 10, max: 22, label: '6~9개월' },
+  { maxMonth: 12,  min: 18, max: 35, label: '9~12개월' },
+  { maxMonth: 18,  min: 30, max: 45, label: '12~18개월' },
+  { maxMonth: 24,  min: 35, max: 55, label: '18~24개월' },
+  { maxMonth: 999, min: 40, max: 65, label: '성체 (24개월+)' },
+];
+
+function getWeightGuide(dob) {
+  if (!dob) return null;
+  // YYYYMMDD 또는 YYYY-MM-DD 모두 처리
+  const s = String(dob).replace(/-/g, '');
+  if (s.length < 8) return null;
+  const dobDate = new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8));
+  if (isNaN(dobDate.getTime())) return null;
+  const months = Math.floor((Date.now() - dobDate.getTime()) / (86400000 * 30));
+  const guide = WEIGHT_GUIDE.find(g => months < g.maxMonth) || WEIGHT_GUIDE[WEIGHT_GUIDE.length - 1];
+  return { ...guide, months };
+}
+
+function getWeightStatus(weight, dob) {
+  if (!weight || !dob) return '';
+  const w = parseFloat(weight);
+  const guide = getWeightGuide(dob);
+  if (!guide) return '';
+  if (w < guide.min) return `<span style="color:var(--coral);font-size:11px;font-weight:700">⚠️ 저체중 (적정 ${guide.min}~${guide.max}g)</span>`;
+  if (w > guide.max) return `<span style="color:var(--blue);font-size:11px;font-weight:700">📈 과체중 (적정 ${guide.min}~${guide.max}g)</span>`;
+  return `<span style="color:var(--ac);font-size:11px;font-weight:700">✅ 정상 (${guide.min}~${guide.max}g)</span>`;
+}
+
+function updateWeightHint() {
+  const hint = document.getElementById('weight-guide-hint');
+  if (!hint) return;
+  const dob = document.getElementById('gecko-dob')?.value;
+  if (!dob) { hint.style.display = 'none'; return; }
+  const guide = getWeightGuide(dob);
+  if (guide) {
+    hint.style.display = 'block';
+    hint.textContent = `${guide.label} 적정 무게: ${guide.min}~${guide.max}g`;
+  } else {
+    hint.style.display = 'none';
+  }
+}
 
 function _loadNotifPrefs() {
   try {
@@ -8251,7 +8390,25 @@ async function openNotifSettings() {
     + item('weight', '📊 주간 체중 측정', '주 1회, 개체별 체중 기록 권장')
     + item('shed', '✨ 탈피 주기 알림', '평균 탈피 주기 기반 예측 알림')
     + item('community', '💬 커뮤니티 알림', '내 글에 댓글·좋아요가 달릴 때')
-    + item('marketing', '🎁 마케팅 · 이벤트 소식', '신규 기능·쿠폰 등 (선택)');
+    + item('marketing', '🎁 마케팅 · 이벤트 소식', '신규 기능·쿠폰 등 (선택)')
+    + `<div style="border-top:2px solid var(--br);margin-top:12px;padding-top:12px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">💦 분무 알람</div>
+        ${item('misting', '분무 알림', '아침·저녁 분무 시간에 알림')}
+        <div style="display:flex;gap:10px;padding:10px 0">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">아침</label>
+            <input type="time" value="${prefs.mistMorning || '08:00'}"
+              style="width:100%;padding:8px;border:1.5px solid var(--br);border-radius:10px;background:var(--bg);font-family:inherit;font-size:14px"
+              onchange="updateNotifPref('mistMorning', this.value); _scheduleMistingAlarms(); updateMistingCard();">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">저녁</label>
+            <input type="time" value="${prefs.mistEvening || '20:00'}"
+              style="width:100%;padding:8px;border:1.5px solid var(--br);border-radius:10px;background:var(--bg);font-family:inherit;font-size:14px"
+              onchange="updateNotifPref('mistEvening', this.value); _scheduleMistingAlarms(); updateMistingCard();">
+          </div>
+        </div>
+      </div>`;
 
   openSheet('sheet-notif-settings');
 }
@@ -8260,7 +8417,9 @@ function updateNotifPref(key, value) {
   const prefs = _loadNotifPrefs();
   prefs[key] = value;
   _saveNotifPrefs(prefs);
-  showToast(value ? '알림 켜짐' : '알림 꺼짐');
+  // time 문자열은 토스트 생략, boolean만 켜짐/꺼짐 표시
+  if (typeof value === 'boolean') showToast(value ? '알림 켜짐' : '알림 꺼짐');
+  if (key === 'misting') { _scheduleMistingAlarms(); updateMistingCard(); }
 }
 
 async function requestNotifPermission() {
@@ -8329,6 +8488,251 @@ function _checkDailyReminders() {
   }
 }
 
+// ══════════════════════════════
+// 💦 분무 알람 스케줄러
+// ══════════════════════════════
+let _mistingTimers = [];
+
+function _scheduleMistingAlarms() {
+  // 기존 타이머 클리어
+  _mistingTimers.forEach(t => clearTimeout(t));
+  _mistingTimers = [];
+
+  if (!_currentUser || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const prefs = _loadNotifPrefs();
+  if (!prefs.misting) return;
+
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+
+  [prefs.mistMorning, prefs.mistEvening].forEach((timeStr, idx) => {
+    if (!timeStr) return;
+    const [h, m] = String(timeStr).split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return;
+    const target = new Date(now);
+    target.setHours(h, m, 0, 0);
+
+    if (target <= now) return;
+
+    const label = idx === 0 ? '아침' : '저녁';
+    const lsKey = `byetmaru_mist_${label}_${_currentUser.id}`;
+    try { if (localStorage.getItem(lsKey) === today) return; } catch(e) {}
+
+    const delay = target.getTime() - now.getTime();
+    const timer = setTimeout(() => {
+      sendLocalNotification(
+        `💦 ${label} 분무 시간이에요!`,
+        `크레스티드 게코의 습도를 맞춰주세요. (${timeStr})`
+      );
+      try { localStorage.setItem(lsKey, today); } catch(e) {}
+    }, delay);
+    _mistingTimers.push(timer);
+  });
+}
+
+function updateMistingCard() {
+  const card = document.getElementById('home-misting-card');
+  if (!card || !_currentUser) return;
+  const prefs = _loadNotifPrefs();
+  if (!prefs.misting) { card.style.display = 'none'; return; }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const mornDone = localStorage.getItem(`byetmaru_mist_done_am_${_currentUser.id}`) === today;
+  const eveDone  = localStorage.getItem(`byetmaru_mist_done_pm_${_currentUser.id}`) === today;
+
+  card.style.display = 'block';
+  const txt = document.getElementById('misting-status-text');
+  if (txt) {
+    const am = `아침 ${prefs.mistMorning || '08:00'} ${mornDone ? '✅' : ''}`;
+    const pm = `저녁 ${prefs.mistEvening || '20:00'} ${eveDone ? '✅' : ''}`;
+    txt.textContent = `${am} · ${pm}`;
+  }
+}
+
+function markMistingDone() {
+  if (!_currentUser) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const hour = new Date().getHours();
+  const key = hour < 14 ? 'am' : 'pm';
+  localStorage.setItem(`byetmaru_mist_done_${key}_${_currentUser.id}`, today);
+  updateMistingCard();
+  showToast('💦 분무 완료!');
+}
+
+// ══════════════════════════════
+// 🥚 메이팅 / 브리딩 트래커
+// ══════════════════════════════
+function openBreedingSheet() {
+  const maleSelect = document.getElementById('breed-male-select');
+  const femaleSelect = document.getElementById('breed-female-select');
+  if (!maleSelect || !femaleSelect) return;
+
+  maleSelect.innerHTML = '<option value="">— 수컷 선택 —</option>';
+  femaleSelect.innerHTML = '<option value="">— 암컷 선택 —</option>';
+
+  state.geckos.forEach(g => {
+    const opt = new Option(`${g.name} (${g.morph || '미상'})`, g.id);
+    if (g.sex === '수컷') maleSelect.appendChild(opt);
+    else if (g.sex === '암컷') femaleSelect.appendChild(opt.cloneNode(true));
+  });
+  // 이미 clone을 쓰면 수컷 option도 영향 받을 수 있어 다시 한번 옵션 분리 생성
+  maleSelect.innerHTML = '<option value="">— 수컷 선택 —</option>';
+  femaleSelect.innerHTML = '<option value="">— 암컷 선택 —</option>';
+  state.geckos.forEach(g => {
+    if (g.sex === '수컷') {
+      const o = document.createElement('option');
+      o.value = g.id; o.textContent = `${g.name} (${g.morph || '미상'})`;
+      maleSelect.appendChild(o);
+    } else if (g.sex === '암컷') {
+      const o = document.createElement('option');
+      o.value = g.id; o.textContent = `${g.name} (${g.morph || '미상'})`;
+      femaleSelect.appendChild(o);
+    }
+  });
+
+  renderBreedingRecords();
+  openSheet('sheet-breeding');
+}
+
+function updateBreedEstimate() {
+  const dateStr = document.getElementById('breed-mate-date').value;
+  const box = document.getElementById('breed-estimate');
+  if (!dateStr || !box) return;
+
+  const mateDate = new Date(dateStr);
+  const early = new Date(mateDate); early.setDate(early.getDate() + 30);
+  const avg   = new Date(mateDate); avg.setDate(avg.getDate() + 38);
+  const late  = new Date(mateDate); late.setDate(late.getDate() + 45);
+
+  const fmt = d => `${d.getMonth() + 1}/${d.getDate()}`;
+  document.getElementById('breed-est-early').textContent = fmt(early);
+  document.getElementById('breed-est-avg').textContent = fmt(avg);
+  document.getElementById('breed-est-late').textContent = fmt(late);
+  box.style.display = 'block';
+}
+
+function _loadBreedingRecords() {
+  if (!_currentUser) return [];
+  try {
+    return JSON.parse(localStorage.getItem('byetmaru_breeding_' + _currentUser.id) || '[]');
+  } catch(e) { return []; }
+}
+
+function _saveBreedingRecords(records) {
+  if (!_currentUser) return;
+  try { localStorage.setItem('byetmaru_breeding_' + _currentUser.id, JSON.stringify(records)); } catch(e) {}
+}
+
+function saveBreedingRecord() {
+  const maleId = document.getElementById('breed-male-select').value;
+  const femaleId = document.getElementById('breed-female-select').value;
+  const mateDate = document.getElementById('breed-mate-date').value;
+  const memo = document.getElementById('breed-memo').value;
+
+  if (!maleId || !femaleId) { showToast('⚠️ 수컷과 암컷을 선택해주세요'); return; }
+  if (!mateDate) { showToast('⚠️ 교배 시작일을 입력해주세요'); return; }
+
+  const male = state.geckos.find(g => String(g.id) === String(maleId));
+  const female = state.geckos.find(g => String(g.id) === String(femaleId));
+
+  const record = {
+    id: Date.now().toString(),
+    maleId, maleName: male?.name || '?',
+    femaleId, femaleName: female?.name || '?',
+    mateDate,
+    estEarly: (() => { const d = new Date(mateDate); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10); })(),
+    estLate:  (() => { const d = new Date(mateDate); d.setDate(d.getDate() + 45); return d.toISOString().slice(0,10); })(),
+    memo,
+    createdAt: new Date().toISOString(),
+  };
+
+  const records = _loadBreedingRecords();
+  records.unshift(record);
+  _saveBreedingRecords(records);
+
+  // 암컷 상태 자동 변경
+  const fIdx = state.geckos.findIndex(g => String(g.id) === String(femaleId));
+  if (fIdx !== -1) {
+    state.geckos[fIdx].status = '브리딩중';
+    try {
+      const ls = state.geckos.map(g => ({ ...g, photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null }));
+      localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(ls));
+    } catch(e) {}
+  }
+
+  document.getElementById('breed-mate-date').value = '';
+  document.getElementById('breed-memo').value = '';
+  document.getElementById('breed-estimate').style.display = 'none';
+
+  renderBreedingRecords();
+  updateBreedingCard();
+  showToast('🥚 메이팅 기록 저장 완료!');
+}
+
+function renderBreedingRecords() {
+  const list = document.getElementById('breed-record-list');
+  if (!list) return;
+  const records = _loadBreedingRecords();
+
+  if (records.length === 0) {
+    list.innerHTML = '<div style="text-align:center;font-size:12px;color:var(--tx3);padding:16px">기록이 없습니다</div>';
+    return;
+  }
+
+  list.innerHTML = records.slice(0, 20).map(r => {
+    const today = new Date();
+    const estEarly = new Date(r.estEarly);
+    const estLate = new Date(r.estLate);
+    const daysLeft = Math.ceil((estEarly - today) / 86400000);
+    let badge;
+    if (today > estLate) badge = '<span style="color:var(--coral);font-size:10px;font-weight:700">산란 예정일 지남</span>';
+    else if (today >= estEarly) badge = '<span style="color:var(--am);font-size:10px;font-weight:700">🥚 산란 임박!</span>';
+    else badge = `<span style="color:var(--ac);font-size:10px;font-weight:700">D-${daysLeft}</span>`;
+
+    return `<div style="background:var(--bg);border:1px solid var(--br);border-radius:12px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:700">♂ ${r.maleName} × ♀ ${r.femaleName}</div>
+        ${badge}
+      </div>
+      <div style="font-size:11px;color:var(--tx2)">교배일: ${r.mateDate} · 예상 산란: ${r.estEarly} ~ ${r.estLate}</div>
+      ${r.memo ? `<div style="font-size:11px;color:var(--tx3);margin-top:4px">${r.memo}</div>` : ''}
+      <button style="margin-top:8px;font-size:11px;color:var(--coral);background:none;border:none;cursor:pointer;padding:0;font-family:inherit" onclick="deleteBreedingRecord('${r.id}')">삭제</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteBreedingRecord(id) {
+  const records = _loadBreedingRecords().filter(r => r.id !== id);
+  _saveBreedingRecords(records);
+  renderBreedingRecords();
+  updateBreedingCard();
+  showToast('삭제 완료');
+}
+
+function updateBreedingCard() {
+  const card = document.getElementById('home-breeding-card');
+  if (!card || !_currentUser) return;
+  const records = _loadBreedingRecords();
+  const today = new Date();
+  const upcoming = records.filter(r => {
+    const estLate = new Date(r.estLate);
+    estLate.setDate(estLate.getDate() + 7);
+    return today <= estLate;
+  });
+
+  if (upcoming.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const txt = document.getElementById('breeding-upcoming-text');
+  if (txt) {
+    txt.innerHTML = upcoming.slice(0, 3).map(r => {
+      const daysLeft = Math.ceil((new Date(r.estEarly) - today) / 86400000);
+      const label = daysLeft <= 0 ? '산란 임박!' : `D-${daysLeft}`;
+      return `♀ ${r.femaleName} — ${label}`;
+    }).join('<br>');
+  }
+}
+
 // ISO Week 계산 (예: 2026-W16)
 function _getISOWeekKey(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -8390,6 +8794,9 @@ async function _onSignedIn() {
   if (!shouldShowOnboarding()) {
     setTimeout(() => _checkDailyReminders(), 2000);
   }
+
+  // ── 분무 알람 스케줄링 (아침/저녁 예약 setTimeout) ──
+  _scheduleMistingAlarms();
 
   // ── 2) 백그라운드: DB 동기화 (화면은 이미 떠 있음) ──
   (async () => {
