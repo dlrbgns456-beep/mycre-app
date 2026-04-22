@@ -8569,7 +8569,7 @@ function markMistingDone() {
 // ══════════════════════════════
 // 🥚 메이팅 / 브리딩 트래커
 // ══════════════════════════════
-function openBreedingSheet() {
+async function openBreedingSheet() {
   const maleSelect = document.getElementById('breed-male-select');
   const femaleSelect = document.getElementById('breed-female-select');
   if (!maleSelect || !femaleSelect) return;
@@ -8597,8 +8597,14 @@ function openBreedingSheet() {
     }
   });
 
+  // 로컬 캐시 먼저 렌더링 → 즉시 표시
   renderBreedingRecords();
   openSheet('sheet-breeding');
+  // DB에서 최신 데이터 fetch 후 다시 렌더
+  _fetchBreedingRecords().then(() => {
+    renderBreedingRecords();
+    updateBreedingCard();
+  });
 }
 
 function updateBreedEstimate() {
@@ -8618,6 +8624,7 @@ function updateBreedEstimate() {
   box.style.display = 'block';
 }
 
+// 로컬 캐시 (DB 응답 전까지 즉시 표시용)
 function _loadBreedingRecords() {
   if (!_currentUser) return [];
   try {
@@ -8630,7 +8637,40 @@ function _saveBreedingRecords(records) {
   try { localStorage.setItem('byetmaru_breeding_' + _currentUser.id, JSON.stringify(records)); } catch(e) {}
 }
 
-function saveBreedingRecord() {
+// DB ↔ 로컬 필드 매핑
+function _dbRowToBreeding(r) {
+  return {
+    id: r.id,
+    maleId: r.male_id, maleName: r.male_name,
+    femaleId: r.female_id, femaleName: r.female_name,
+    mateDate: r.mate_date,
+    estEarly: r.est_early,
+    estLate:  r.est_late,
+    memo: r.memo || '',
+    createdAt: r.created_at,
+  };
+}
+
+// DB에서 전체 레코드 가져와 로컬 캐시 갱신
+async function _fetchBreedingRecords() {
+  if (!_currentUser) return [];
+  try {
+    const { data, error } = await _supabase
+      .from('breedings')
+      .select('*')
+      .eq('user_id', _currentUser.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    const records = (data || []).map(_dbRowToBreeding);
+    _saveBreedingRecords(records);
+    return records;
+  } catch(e) {
+    _debugLog?.('warn', 'breeding', 'fetch failed: ' + e.message);
+    return _loadBreedingRecords(); // DB 실패 시 로컬 폴백
+  }
+}
+
+async function saveBreedingRecord() {
   const maleId = document.getElementById('breed-male-select').value;
   const femaleId = document.getElementById('breed-female-select').value;
   const mateDate = document.getElementById('breed-mate-date').value;
@@ -8638,21 +8678,43 @@ function saveBreedingRecord() {
 
   if (!maleId || !femaleId) { showToast('⚠️ 수컷과 암컷을 선택해주세요'); return; }
   if (!mateDate) { showToast('⚠️ 교배 시작일을 입력해주세요'); return; }
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
 
   const male = state.geckos.find(g => String(g.id) === String(maleId));
   const female = state.geckos.find(g => String(g.id) === String(femaleId));
 
+  const id = Date.now().toString();
+  const estEarly = (() => { const d = new Date(mateDate); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10); })();
+  const estLate  = (() => { const d = new Date(mateDate); d.setDate(d.getDate() + 45); return d.toISOString().slice(0,10); })();
+
+  // DB 먼저 저장 (source of truth)
+  try {
+    const { error } = await _supabase.from('breedings').insert({
+      id,
+      user_id:   _currentUser.id,
+      male_id:   String(maleId),
+      male_name: male?.name || '?',
+      female_id: String(femaleId),
+      female_name: female?.name || '?',
+      mate_date: mateDate,
+      est_early: estEarly,
+      est_late:  estLate,
+      memo: memo || null,
+    });
+    if (error) throw error;
+  } catch(e) {
+    showToast('❌ 저장 실패: ' + (e.message || '네트워크 오류'));
+    _debugLog?.('error', 'breeding', 'insert failed: ' + e.message);
+    return;
+  }
+
+  // 로컬 캐시 즉시 반영
   const record = {
-    id: Date.now().toString(),
-    maleId, maleName: male?.name || '?',
+    id, maleId, maleName: male?.name || '?',
     femaleId, femaleName: female?.name || '?',
-    mateDate,
-    estEarly: (() => { const d = new Date(mateDate); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10); })(),
-    estLate:  (() => { const d = new Date(mateDate); d.setDate(d.getDate() + 45); return d.toISOString().slice(0,10); })(),
-    memo,
+    mateDate, estEarly, estLate, memo,
     createdAt: new Date().toISOString(),
   };
-
   const records = _loadBreedingRecords();
   records.unshift(record);
   _saveBreedingRecords(records);
@@ -8708,7 +8770,17 @@ function renderBreedingRecords() {
   }).join('');
 }
 
-function deleteBreedingRecord(id) {
+async function deleteBreedingRecord(id) {
+  if (!_currentUser) return;
+  // DB에서 먼저 삭제
+  try {
+    const { error } = await _supabase.from('breedings').delete().eq('id', id).eq('user_id', _currentUser.id);
+    if (error) throw error;
+  } catch(e) {
+    showToast('❌ 삭제 실패: ' + (e.message || '네트워크 오류'));
+    _debugLog?.('error', 'breeding', 'delete failed: ' + e.message);
+    return;
+  }
   const records = _loadBreedingRecords().filter(r => r.id !== id);
   _saveBreedingRecords(records);
   renderBreedingRecords();
@@ -8867,6 +8939,10 @@ async function _onSignedIn() {
       await _loadGeckosFromDB();
       console.log('[Auth] 개체 로드 완료:', state.geckos.length + '마리');
     } catch(e) { console.error('[Auth] 개체 로드 실패:', e); }
+
+    // DB에서 메이팅 기록 동기화 (홈 카드용)
+    try { await _fetchBreedingRecords(); } catch(e) {}
+
     renderHome();
     renderGeckoList();
 
