@@ -1,4 +1,4 @@
-const CACHE_NAME = 'byetmaru-v13';
+const CACHE_NAME = 'byetmaru-v14';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.png',
@@ -58,5 +58,43 @@ self.addEventListener('fetch', (e) => {
         return response;
       })
       .catch(() => caches.match(e.request))
+  );
+});
+
+// ══════════════════════════════
+// Web Push 수신 처리
+// ══════════════════════════════
+self.addEventListener('push', (e) => {
+  if (!e.data) return;
+  let data;
+  try { data = e.data.json(); }
+  catch (err) { data = { title: '볏마루도감', body: e.data.text() }; }
+
+  const title = data.title || '볏마루도감';
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: data.tag || 'byetmaru',
+    renotify: true,
+    data: { url: data.url || '/' },
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// 알림 클릭 → 앱 열기 / 기존 탭 포커스
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
   );
 });
