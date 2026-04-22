@@ -3897,20 +3897,27 @@ async function saveProfile() {
   const newBio  = document.getElementById('profile-bio').value.trim();
 
   // DB에 먼저 저장 — 성공해야 로컬에 반영 (DB가 진실이므로 순서 중요)
+  // upsert 사용: row가 없으면 생성, 있으면 업데이트. RLS 차단 시 error로 즉시 감지.
   if (_currentUser) {
     try {
-      const { error } = await _supabase
+      const { data, error } = await _supabase
         .from('profiles')
-        .update({ nickname: newName })
-        .eq('id', _currentUser.id);
+        .upsert({ id: _currentUser.id, nickname: newName }, { onConflict: 'id' })
+        .select();
       if (error) {
         showToast('❌ 닉네임 저장 실패: ' + (error.message || '권한 없음'));
-        _debugLog('error', 'profile', 'nickname update failed: ' + error.message, { user_id: _currentUser.id });
+        _debugLog('error', 'profile', 'nickname upsert failed: ' + error.message, { user_id: _currentUser.id });
+        return;
+      }
+      // RLS가 select를 차단하거나 row가 0개 반환되면 실제 반영 안 된 것
+      if (!data || data.length === 0) {
+        showToast('❌ 닉네임 저장 실패: 권한 없음 (RLS 정책 확인 필요)');
+        _debugLog('error', 'profile', 'nickname upsert returned 0 rows', { user_id: _currentUser.id });
         return;
       }
     } catch(e) {
       showToast('❌ 닉네임 저장 실패: ' + (e.message || '네트워크 오류'));
-      _debugLog('error', 'profile', 'nickname update exception: ' + e.message, { user_id: _currentUser.id });
+      _debugLog('error', 'profile', 'nickname upsert exception: ' + e.message, { user_id: _currentUser.id });
       return;
     }
   }
