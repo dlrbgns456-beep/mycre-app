@@ -4440,14 +4440,8 @@ async function saveGecko() {
       // 신규 등록 → AI 판별 유도 다이얼로그 (모프 미지정 시만)
       if (!morph) _showRegisterSuccessDialog(name);
       else showToast(`🦎 "${name}" 등록 완료!`);
-      // 🎉 자동 축하 카드 공유
-      autoPostCelebration('newGecko', {
-        name: gecko.name,
-        morph: gecko.morph,
-        sex: gecko.sex,
-        photo: gecko.photo || null,
-        geckoId: gecko.id,
-      });
+      // ⚠️ 개체 등록은 개인 기록 — 커뮤니티 자동 공유 안 함.
+      // 사용자가 원할 때 커뮤니티에서 직접 🎉 축하 카테고리로 글쓰기.
     }
 
     // ── 서버 저장 (사진 업로드 + DB) ──
@@ -8398,7 +8392,6 @@ const DEFAULT_NOTIF_PREFS = {
   mistMorning: '08:00',   // 아침 분무 시간
   mistEvening: '20:00',   // 저녁 분무 시간
   sound: true,            // 알림음 재생
-  autoCelebrate: true,    // 축하 카드 자동 공유
 };
 
 // ══════════════════════════════
@@ -8516,10 +8509,6 @@ async function openNotifSettings() {
         <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">🔔 알림음</div>
         ${item('sound', '알림 사운드', '알림 시 효과음 + 진동')}
         <button onclick="playNotificationSound('default');vibrateDevice('default')" style="margin-top:6px;padding:8px 16px;border-radius:10px;border:1.5px solid var(--br);background:var(--sf2);font-size:12px;font-family:inherit;color:var(--tx2);cursor:pointer">🔊 미리듣기</button>
-      </div>
-      <div style="border-top:2px solid var(--br);margin-top:12px;padding-top:12px">
-        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">🎉 축하 카드</div>
-        ${item('autoCelebrate', '자동 축하글', '새 개체 등록·메이팅 시 커뮤니티에 자동 공유')}
       </div>`;
 
   openSheet('sheet-notif-settings');
@@ -9054,15 +9043,7 @@ async function saveBreedingRecord() {
   renderBreedingRecords();
   updateBreedingCard();
   showToast('🥚 메이팅 기록 저장 완료!');
-
-  // 🎉 자동 축하 카드 공유
-  autoPostCelebration('mating', {
-    maleName: male?.name || '?',
-    femaleName: female?.name || '?',
-    mateDate, estEarly, estLate,
-    photo: female?.photo || male?.photo || null,
-    morph: female?.morph || male?.morph || null,
-  });
+  // ⚠️ 메이팅 기록은 개인 기록 — 커뮤니티 자동 공유 안 함.
 }
 
 function renderBreedingRecords() {
