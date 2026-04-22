@@ -4054,6 +4054,7 @@ function renderHome() {
       <div class="gecko-row-info">
         <div class="gecko-row-name">${g.name}</div>
         <div class="gecko-row-morph">${g.morph || '미상'}</div>
+        ${g.dob ? `<div style="font-size:9px;color:var(--blue);font-weight:700;margin-top:1px">${getAge(g.dob)}</div>` : ''}
       </div>`;
     row.appendChild(el);
   });
@@ -4737,6 +4738,7 @@ function renderGeckoList() {
           <span style="font-size:12px;color:${sexColor};font-weight:700">${sexEmoji}</span>
         </div>
         <div class="gecko-morph">${g.morph || '📷 모프 미판별'}</div>
+        ${g.dob ? `<div style="font-size:10px;color:var(--blue);background:var(--bl2);border-radius:6px;padding:2px 7px;display:inline-block;margin-top:3px;font-weight:700">${getAge(g.dob)}</div>` : ''}
         <div class="gecko-tags">${incompleteTag}${statusTag}${cageTag}</div>
       </div>
       <div class="gecko-right">
@@ -4764,6 +4766,7 @@ function openGeckoDetail(id) {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
         <div>
           <div style="font-size:22px;font-weight:900;margin-bottom:3px">${g.name}</div>
+          ${g.dob ? `<div style="font-size:13px;color:var(--blue);font-weight:800;margin-bottom:4px">🎂 ${getAge(g.dob)}</div>` : ''}
           <div style="color:${gInfo.color};font-size:14px;font-weight:700">${g.morph || '모프 미판별'}</div>
         </div>
         <div style="background:${gInfo.bg};color:${gInfo.color};border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:900;font-size:18px">${grade}</div>
