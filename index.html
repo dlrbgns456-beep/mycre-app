@@ -3893,18 +3893,35 @@ function openProfileEdit() {
 }
 
 async function saveProfile() {
-  _profile.name = document.getElementById('profile-name').value.trim() || _generateRandomNickname();
-  _profile.bio  = document.getElementById('profile-bio').value.trim();
+  const newName = document.getElementById('profile-name').value.trim() || _generateRandomNickname();
+  const newBio  = document.getElementById('profile-bio').value.trim();
+
+  // DB에 먼저 저장 — 성공해야 로컬에 반영 (DB가 진실이므로 순서 중요)
+  if (_currentUser) {
+    try {
+      const { error } = await _supabase
+        .from('profiles')
+        .update({ nickname: newName })
+        .eq('id', _currentUser.id);
+      if (error) {
+        showToast('❌ 닉네임 저장 실패: ' + (error.message || '권한 없음'));
+        _debugLog('error', 'profile', 'nickname update failed: ' + error.message, { user_id: _currentUser.id });
+        return;
+      }
+    } catch(e) {
+      showToast('❌ 닉네임 저장 실패: ' + (e.message || '네트워크 오류'));
+      _debugLog('error', 'profile', 'nickname update exception: ' + e.message, { user_id: _currentUser.id });
+      return;
+    }
+  }
+
+  // DB 저장 성공 → 로컬 반영
+  _profile.name = newName;
+  _profile.bio  = newBio;
   _saveProfileLocal();
   _updateProfileUI();
   closeSheetDirect('sheet-profile-edit');
   showToast('✅ 프로필이 수정됐어요');
-  // DB에도 닉네임 저장
-  if (_currentUser) {
-    try {
-      await _supabase.from('profiles').update({ nickname: _profile.name }).eq('id', _currentUser.id);
-    } catch(e) {}
-  }
 }
 
 // ══════════════════════════════
