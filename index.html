@@ -1296,6 +1296,7 @@ input[type=file]{display:none}
     <div class="fp" onclick="setCommFilter('wanted')">🔍 구합니다</div>
     <div class="fp" onclick="setCommFilter('qna')">❓ QnA</div>
     <div class="fp" onclick="setCommFilter('info')">📚 정보공유</div>
+    <div class="fp" onclick="setCommFilter('celebrate')">🎉 축하</div>
   </div>
 
   <div style="padding:0 18px 8px">
@@ -2165,7 +2166,7 @@ input[type=file]{display:none}
           <option value="wanted">🔍 구합니다</option>
           <option value="qna">❓ QnA</option>
           <option value="info">📚 정보공유</option>
-          <option value="info">📚 정보공유</option>
+          <option value="celebrate">🎉 축하</option>
         </select>
       </div>
       <div class="form-group">
@@ -4435,6 +4436,14 @@ async function saveGecko() {
       // 신규 등록 → AI 판별 유도 다이얼로그 (모프 미지정 시만)
       if (!morph) _showRegisterSuccessDialog(name);
       else showToast(`🦎 "${name}" 등록 완료!`);
+      // 🎉 자동 축하 카드 공유
+      autoPostCelebration('newGecko', {
+        name: gecko.name,
+        morph: gecko.morph,
+        sex: gecko.sex,
+        photo: gecko.photo || null,
+        geckoId: gecko.id,
+      });
     }
 
     // ── 서버 저장 (사진 업로드 + DB) ──
@@ -6017,7 +6026,7 @@ function _isAdmin() {
 function setCommFilter(f) {
   state.commFilter = f;
   document.querySelectorAll('#comm-filter-row .fp').forEach(el => el.classList.remove('active'));
-  const fMap = {all:0,notice:1,sale:2,wanted:3,qna:4,info:5};
+  const fMap = {all:0,notice:1,sale:2,wanted:3,qna:4,info:5,celebrate:6};
   document.querySelectorAll('#comm-filter-row .fp')[fMap[f]]?.classList.add('active');
   renderPosts();
 }
@@ -6102,8 +6111,9 @@ function _timeAgo(dateStr) {
 }
 
 function buildPostCard(p, compact) {
-  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보'};
+  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',celebrate:'🎉 축하'};
   const isNotice = p.cat === 'notice';
+  const isCelebrate = p.cat === 'celebrate';
   const div = document.createElement('div');
   div.className = 'post-card';
 
@@ -6115,6 +6125,12 @@ function buildPostCard(p, compact) {
     div.style.overflow = 'hidden';
     // 골드 그라데이션 테두리 효과 (::before 대체 — 인라인이므로 box-shadow 사용)
     div.style.boxShadow = '0 0 0 1.5px rgba(212,175,55,.45), 0 0 12px rgba(212,175,55,.1)';
+  }
+
+  // 🎉 축하 카드 — 골드×핑크 그라데이션 배경
+  if (isCelebrate) {
+    div.style.background = 'linear-gradient(135deg, rgba(255,215,0,.08), rgba(255,143,177,.08))';
+    div.style.border = '1.5px solid rgba(255,215,0,.35)';
   }
 
   const proBadge = p.authorIsBreeder ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;margin-left:3px;letter-spacing:.3px">🧬 브리더</span>` : '';
@@ -6166,7 +6182,7 @@ let _currentPostId = null;
 
 async function openPostDetail(p) {
   _currentPostId = p.id;
-  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보'};
+  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',celebrate:'🎉 축하'};
   const isNotice = p.cat === 'notice';
   const bodyHtml = (p.body || '').replace(/\n/g, '<br>');
   const proBadge = p.authorIsBreeder ? `<span style="font-size:10px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:2px 6px;letter-spacing:.3px">🧬 브리더 인증</span>` : '';
@@ -8313,6 +8329,8 @@ const DEFAULT_NOTIF_PREFS = {
   misting: true,          // 분무 알람
   mistMorning: '08:00',   // 아침 분무 시간
   mistEvening: '20:00',   // 저녁 분무 시간
+  sound: true,            // 알림음 재생
+  autoCelebrate: true,    // 축하 카드 자동 공유
 };
 
 // ══════════════════════════════
@@ -8425,6 +8443,15 @@ async function openNotifSettings() {
               onchange="updateNotifPref('mistEvening', this.value); _scheduleMistingAlarms(); updateMistingCard();">
           </div>
         </div>
+      </div>
+      <div style="border-top:2px solid var(--br);margin-top:12px;padding-top:12px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">🔔 알림음</div>
+        ${item('sound', '알림 사운드', '알림 시 효과음 + 진동')}
+        <button onclick="playNotificationSound('default');vibrateDevice('default')" style="margin-top:6px;padding:8px 16px;border-radius:10px;border:1.5px solid var(--br);background:var(--sf2);font-size:12px;font-family:inherit;color:var(--tx2);cursor:pointer">🔊 미리듣기</button>
+      </div>
+      <div style="border-top:2px solid var(--br);margin-top:12px;padding-top:12px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">🎉 축하 카드</div>
+        ${item('autoCelebrate', '자동 축하글', '새 개체 등록·메이팅 시 커뮤니티에 자동 공유')}
       </div>`;
 
   openSheet('sheet-notif-settings');
@@ -8456,10 +8483,71 @@ async function requestNotifPermission() {
   }
 }
 
-function sendLocalNotification(title, body, icon = '/icon-192.png') {
+// ══════════════════════════════
+// 🔔 알림음 (Web Audio API — 외부 MP3 파일 불필요)
+// ══════════════════════════════
+function _playTone(ctx, freq, duration, delay) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  const startTime = ctx.currentTime + delay;
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
+  gain.gain.linearRampToValueAtTime(0, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function playNotificationSound(type = 'default') {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (type === 'misting') {
+      _playTone(ctx, 880, 0.12, 0);
+      _playTone(ctx, 1047, 0.12, 0.15);
+      _playTone(ctx, 1319, 0.15, 0.30);
+    } else if (type === 'feed') {
+      _playTone(ctx, 523, 0.15, 0);
+      _playTone(ctx, 659, 0.15, 0.18);
+      _playTone(ctx, 784, 0.20, 0.36);
+    } else if (type === 'breeding') {
+      _playTone(ctx, 440, 0.10, 0);
+      _playTone(ctx, 554, 0.10, 0.12);
+      _playTone(ctx, 659, 0.10, 0.24);
+      _playTone(ctx, 880, 0.20, 0.36);
+    } else if (type === 'celebration') {
+      _playTone(ctx, 523, 0.08, 0);
+      _playTone(ctx, 659, 0.08, 0.10);
+      _playTone(ctx, 784, 0.08, 0.20);
+      _playTone(ctx, 1047, 0.25, 0.30);
+    } else {
+      _playTone(ctx, 660, 0.15, 0);
+      _playTone(ctx, 880, 0.20, 0.18);
+    }
+    setTimeout(() => ctx.close(), 2000);
+  } catch(e) { console.warn('[Sound] 재생 실패:', e.message); }
+}
+
+function vibrateDevice(type = 'default') {
+  if (!('vibrate' in navigator)) return;
+  const patterns = {
+    misting:     [100, 50, 100, 50, 200],
+    feed:        [200, 100, 200],
+    breeding:    [100, 50, 100, 50, 100, 50, 300],
+    celebration: [50, 30, 50, 30, 50, 30, 50, 100, 300],
+    default:     [150, 100, 150],
+  };
+  try { navigator.vibrate(patterns[type] || patterns.default); } catch(e) {}
+}
+
+function sendLocalNotification(title, body, icon = '/icon-192.png', soundType = 'default') {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
   try {
     new Notification(title, { body, icon });
+    const prefs = _loadNotifPrefs();
+    if (prefs.sound !== false) playNotificationSound(soundType);
+    vibrateDevice(soundType);
     return true;
   } catch(e) { return false; }
 }
@@ -8484,7 +8572,7 @@ function _checkDailyReminders() {
 
   // 1) 급이 리마인더 (매일)
   if (prefs.feed && checkAndSet('feed', todayKey)) {
-    sendLocalNotification(`🦎 오늘 ${nickname} 급이 하셨나요?`, '오늘의 급이 시간이에요.');
+    sendLocalNotification(`🦎 오늘 ${nickname} 급이 하셨나요?`, '오늘의 급이 시간이에요.', '/icon-192.png', 'feed');
   }
 
   // 2) 주간 체중 리마인더 (주 1회)
@@ -8539,7 +8627,9 @@ function _scheduleMistingAlarms() {
     const timer = setTimeout(() => {
       sendLocalNotification(
         `💦 ${label} 분무 시간이에요!`,
-        `크레스티드 게코의 습도를 맞춰주세요. (${timeStr})`
+        `크레스티드 게코의 습도를 맞춰주세요. (${timeStr})`,
+        '/icon-192.png',
+        'misting'
       );
       try { localStorage.setItem(lsKey, today); } catch(e) {}
     }, delay);
@@ -8574,6 +8664,109 @@ function markMistingDone() {
   localStorage.setItem(`byetmaru_mist_done_${key}_${_currentUser.id}`, today);
   updateMistingCard();
   showToast('💦 분무 완료!');
+}
+
+// ══════════════════════════════
+// 🎉 커뮤니티 축하 카드 자동 생성
+// ══════════════════════════════
+const CELEBRATE_TEMPLATES = {
+  newGecko: {
+    titleFn: (d) => `🦎 새 가족이 왔어요! "${d.name}"`,
+    bodyFn: (d) => {
+      const morph = d.morph || '미상 모프';
+      const sex = d.sex && d.sex !== '미상' ? ` (${d.sex})` : '';
+      return `새로운 크레스티드 게코 "${d.name}"을(를) 가족으로 맞이했습니다!${sex}\n모프: ${morph}\n\n다들 축하해주세요! 🎉`;
+    },
+    emoji: '🦎',
+    tag: '새가족',
+  },
+  hatching: {
+    titleFn: (d) => `🥚 해칭 성공! "${d.femaleName}" 베이비 탄생`,
+    bodyFn: (d) => `${d.femaleName}의 알에서 건강한 베이비가 태어났습니다!\n♂ ${d.maleName} × ♀ ${d.femaleName}\n교배일: ${d.mateDate}\n\n해칭 축하해주세요! 🐣`,
+    emoji: '🥚',
+    tag: '해칭',
+  },
+  mating: {
+    titleFn: (d) => `💕 메이팅 시작! ${d.maleName} × ${d.femaleName}`,
+    bodyFn: (d) => `${d.maleName}와 ${d.femaleName}의 메이팅이 시작되었습니다!\n교배일: ${d.mateDate}\n예상 산란일: ${d.estEarly} ~ ${d.estLate}\n\n건강한 알을 기원해주세요! 🙏`,
+    emoji: '💕',
+    tag: '메이팅',
+  },
+  milestone: {
+    titleFn: (d) => `🎂 ${d.geckoName} ${d.milestone} 달성!`,
+    bodyFn: (d) => `"${d.geckoName}"이(가) ${d.milestone}을(를) 달성했습니다!\n현재 무게: ${d.weight || '미측정'}g\n\n함께 축하해주세요! 🎊`,
+    emoji: '🎂',
+    tag: '마일스톤',
+  },
+};
+
+async function autoPostCelebration(type, data) {
+  if (!_currentUser) return;
+  const prefs = _loadNotifPrefs();
+  if (prefs.autoCelebrate === false) return;
+
+  const template = CELEBRATE_TEMPLATES[type];
+  if (!template) return;
+
+  const row = {
+    user_id: _currentUser.id,
+    cat: 'celebrate',
+    title: template.titleFn(data),
+    body:  template.bodyFn(data),
+    author: _profile?.name || '익명',
+    avatar: template.emoji,
+    photo: data.photo || null,
+    morph: data.morph || null,
+    emoji: template.emoji,
+    tags: ['축하', template.tag],
+    is_verified: !!data.photo,
+    linked_gecko_id: data.geckoId || null,
+  };
+
+  try {
+    const { error } = await _supabase.from('posts').insert(row);
+    if (error) {
+      console.error('[Celebrate] 축하글 자동 등록 실패:', error.message);
+      _debugLog?.('warn', 'post', 'autoCelebrate failed: ' + error.message);
+      return;
+    }
+    playNotificationSound('celebration');
+    vibrateDevice('celebration');
+    showToast('🎉 축하 카드가 커뮤니티에 공유되었어요!');
+  } catch(e) {
+    console.error('[Celebrate] 오류:', e.message);
+  }
+}
+
+function _checkWeightMilestone(gecko) {
+  if (!gecko || !gecko.weight || !gecko.dob) return;
+  const guide = getWeightGuide(gecko.dob);
+  if (!guide) return;
+
+  const milestones = [
+    { month: 1,  label: '1개월' },
+    { month: 3,  label: '3개월' },
+    { month: 6,  label: '6개월' },
+    { month: 12, label: '1년' },
+    { month: 24, label: '2년 (성체)' },
+  ];
+  const current = [...milestones].reverse().find(m => guide.months >= m.month);
+  if (!current) return;
+
+  const lsKey = `byetmaru_milestone_${gecko.id}_${current.month}`;
+  try {
+    if (localStorage.getItem(lsKey)) return;
+    localStorage.setItem(lsKey, 'posted');
+  } catch(e) { return; }
+
+  autoPostCelebration('milestone', {
+    geckoName: gecko.name,
+    milestone: current.label,
+    weight: gecko.weight,
+    photo: gecko.photo || null,
+    morph: gecko.morph || null,
+    geckoId: gecko.id,
+  });
 }
 
 // ══════════════════════════════
@@ -8746,6 +8939,15 @@ async function saveBreedingRecord() {
   renderBreedingRecords();
   updateBreedingCard();
   showToast('🥚 메이팅 기록 저장 완료!');
+
+  // 🎉 자동 축하 카드 공유
+  autoPostCelebration('mating', {
+    maleName: male?.name || '?',
+    femaleName: female?.name || '?',
+    mateDate, estEarly, estLate,
+    photo: female?.photo || male?.photo || null,
+    morph: female?.morph || male?.morph || null,
+  });
 }
 
 function renderBreedingRecords() {
@@ -8836,7 +9038,7 @@ function _getISOWeekKey(date) {
 function notifyCommunityComment(commenterName) {
   const prefs = _loadNotifPrefs();
   if (!prefs.community) return;
-  sendLocalNotification(`💬 ${commenterName}님이 회원님 글에 댓글을 남겼어요.`, '커뮤니티에서 확인해 보세요.');
+  sendLocalNotification(`💬 ${commenterName}님이 회원님 글에 댓글을 남겼어요.`, '커뮤니티에서 확인해 보세요.', '/icon-192.png', 'default');
 }
 
 // 마케팅 알림 (관리자/승인자 호출)
