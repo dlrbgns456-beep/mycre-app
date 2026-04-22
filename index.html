@@ -8747,9 +8747,16 @@ function markMistingDone() {
   const today = new Date().toISOString().slice(0, 10);
   const hour = new Date().getHours();
   const key = hour < 14 ? 'am' : 'pm';
-  localStorage.setItem(`byetmaru_mist_done_${key}_${_currentUser.id}`, today);
+  const lsKey = `byetmaru_mist_done_${key}_${_currentUser.id}`;
+  const already = localStorage.getItem(lsKey) === today;
+  if (already) {
+    localStorage.removeItem(lsKey);
+    showToast('↩️ 분무 체크 취소됨');
+  } else {
+    localStorage.setItem(lsKey, today);
+    showToast('💦 분무 완료!');
+  }
   updateMistingCard();
-  showToast('💦 분무 완료!');
 }
 
 // ══════════════════════════════
