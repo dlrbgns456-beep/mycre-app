@@ -799,15 +799,15 @@ input[type=file]{display:none}
   </div>
 
 
-  <!-- 프리미엄 유도 배너 (한도 소진 시) -->
-  <div id="home-premium-prompt" style="display:none;margin:0 18px 12px;padding:14px 16px;background:linear-gradient(135deg,var(--am2),rgba(224,156,42,.05));border:1.5px solid var(--am);border-radius:12px;cursor:pointer" onclick="openProSheet()">
+  <!-- AI 크레딧 충전 유도 배너 (무료 소진 + 크레딧 0일 때만) -->
+  <div id="home-premium-prompt" style="display:none;margin:0 18px 12px;padding:14px 16px;background:linear-gradient(135deg,var(--ac2),rgba(46,125,87,.05));border:1.5px solid var(--ac);border-radius:12px;cursor:pointer" onclick="openProSheet()">
     <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:22px">✨</span>
+      <span style="font-size:22px">🔬</span>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:800;color:var(--am);margin-bottom:2px">오늘 한도를 다 쓰셨어요</div>
-        <div style="font-size:11px;color:var(--tx2);line-height:1.5">프리미엄은 무제한 등록·판별 + 광고 없음</div>
+        <div style="font-size:13px;font-weight:800;color:var(--ac);margin-bottom:2px">AI 판별을 모두 사용했어요</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.5">내일 자정 리셋까지 기다리거나 크레딧을 충전해 주세요</div>
       </div>
-      <span style="font-size:12px;font-weight:800;color:var(--am)">→ 프리미엄 보기</span>
+      <span style="font-size:12px;font-weight:800;color:var(--ac)">→ 충전하기</span>
     </div>
   </div>
 
@@ -1417,6 +1417,13 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  <!-- AI 크레딧 잔량 카드 -->
+  <div class="premium-card" style="margin:14px 18px 0;background:linear-gradient(135deg,rgba(46,125,87,.12),rgba(46,125,87,.04));border:1.5px solid var(--ac);cursor:pointer" onclick="openProSheet()">
+    <div class="premium-title" style="color:var(--ac)">🔬 AI 판별 크레딧</div>
+    <div class="premium-desc" style="color:var(--tx2)">매일 무료 3회 · 추가는 크레딧 충전<br><span id="more-credit-count" style="font-size:15px;font-weight:900;color:var(--ac)">—</span> <span style="font-size:12px;color:var(--tx3)">회 남음</span></div>
+    <button class="btn-premium" style="background:linear-gradient(135deg,var(--ac),#3A9968)" onclick="event.stopPropagation();openProSheet()">충전하기</button>
+  </div>
+
   <!-- Profile -->
   <div style="padding:18px 18px 10px;display:flex;align-items:center;gap:14px">
     <div id="more-profile-avatar" style="width:56px;height:56px;border-radius:18px;background:var(--ac2);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🦎</div>
@@ -1427,13 +1434,6 @@ input[type=file]{display:none}
     <button class="btn-sm" style="margin-left:auto" onclick="openProfileEdit()">프로필 수정</button>
   </div>
   <div class="divider"></div>
-
-  <!-- AI 크레딧 잔량 카드 (PRO 카드 대체) -->
-  <div class="premium-card" style="margin-top:14px;background:linear-gradient(135deg,rgba(46,125,87,.12),rgba(46,125,87,.04));border:1.5px solid var(--ac);cursor:pointer" onclick="openProSheet()">
-    <div class="premium-title" style="color:var(--ac)">🔬 AI 판별 크레딧</div>
-    <div class="premium-desc" style="color:var(--tx2)">매일 무료 3회 · 추가는 크레딧 충전<br><span id="more-credit-count" style="font-size:15px;font-weight:900;color:var(--ac)">—</span> <span style="font-size:12px;color:var(--tx3)">회 남음</span></div>
-    <button class="btn-premium" style="background:linear-gradient(135deg,var(--ac),#3A9968)" onclick="event.stopPropagation();openProSheet()">충전하기</button>
-  </div>
 
   <div class="more-section">
     <div class="more-section-label">🦎 개체 관리</div>
@@ -1768,7 +1768,7 @@ input[type=file]{display:none}
       <div id="egg-tracking-section" style="display:none;margin-bottom:14px">
         <div style="background:var(--bg);border:1.5px solid #ff8fb1;border-radius:12px;padding:13px 14px">
           <div style="font-size:10px;font-family:'DM Mono',monospace;color:#ff8fb1;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🥚 산란 기록</div>
-          <div style="display:flex;gap:12px">
+          <div style="display:flex;gap:12px;margin-bottom:10px">
             <label style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--sf2);border:1.5px solid var(--br);border-radius:10px;padding:10px 12px;transition:border-color .15s" id="egg-infertile-label">
               <input type="checkbox" id="gecko-egg-infertile" style="width:18px;height:18px;accent-color:var(--am);cursor:pointer" onchange="updateEggStyle()">
               <div>
@@ -1784,6 +1784,10 @@ input[type=file]{display:none}
               </div>
             </label>
           </div>
+          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">산란 날짜</label>
+          <input class="form-input" id="gecko-egg-date" type="date" style="background:var(--sf2);margin-bottom:6px">
+          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">메모 (선택)</label>
+          <input class="form-input" id="gecko-egg-note" type="text" placeholder="예: 클러치 2번째, 2알" style="background:var(--sf2)">
         </div>
       </div>
 
@@ -1990,7 +1994,7 @@ input[type=file]{display:none}
         </div>
       </div>
 
-      <button class="btn-primary" onclick="handlePDFExport()">PDF로 출력하기 (🧬 Breeder 전용)</button>
+      <button class="btn-primary" onclick="handlePDFExport()">📄 PDF로 출력하기</button>
       <a href="https://wims.mcee.go.kr/wims/minwon/main/main.do" target="_blank" rel="noopener"
         style="display:flex;align-items:center;gap:12px;background:var(--bl2);border:1.5px solid var(--blue);border-radius:14px;padding:14px 15px;text-decoration:none;color:var(--tx);margin-top:10px">
         <span style="font-size:24px;flex-shrink:0">🏛️</span>
@@ -2228,7 +2232,7 @@ input[type=file]{display:none}
   </div>
 </div>
 
-<!-- 베타 테스터 전용 화면 (프리미엄 평생 무료) -->
+<!-- 베타 테스터 전용 화면 — AI 판별 평생 무제한 -->
 <div class="sheet-overlay" id="sheet-beta-tester" onclick="closeSheet('sheet-beta-tester',event)">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -2236,15 +2240,15 @@ input[type=file]{display:none}
       <div style="font-size:56px;margin-bottom:12px">💚</div>
       <div style="font-size:22px;font-weight:900;color:var(--ac);margin-bottom:14px">베타 테스터 혜택</div>
       <div style="font-size:14px;color:var(--tx);line-height:1.8;margin-bottom:20px">
-        프리미엄이 <b style="color:var(--ac)">평생 무료</b>로 제공됩니다.<br>
-        결제 없이 모든 기능 이용하실 수 있어요.
+        AI 모프 판별이 <b style="color:var(--ac)">평생 무제한</b>으로 제공됩니다.<br>
+        추가 크레딧 결제 없이 계속 이용하실 수 있어요.
       </div>
       <div style="background:var(--ac2);border:1px solid var(--ac);border-radius:14px;padding:16px;margin-bottom:20px;text-align:left">
-        <div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:8px">✨ 포함 기능</div>
+        <div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:8px">✨ 포함 혜택</div>
         <div style="font-size:12px;color:var(--tx2);line-height:1.9">
-          ✅ 무제한 개체 등록<br>
-          ✅ 무제한 AI 모프 판별<br>
-          ✅ 혈통 트리 고급 기능<br>
+          ✅ 개체 등록 무제한<br>
+          ✅ AI 모프 판별 무제한<br>
+          ✅ 혈통 트리 · 유전자 예측<br>
           ✅ 우선 고객 지원<br>
           ✅ 광고 없음
         </div>
@@ -4362,6 +4366,10 @@ function openAddGecko() {
   document.getElementById('egg-tracking-section').style.display = 'none';
   document.getElementById('gecko-egg-infertile').checked = false;
   document.getElementById('gecko-egg-fertile').checked = false;
+  const eggDate = document.getElementById('gecko-egg-date');
+  const eggNote = document.getElementById('gecko-egg-note');
+  if (eggDate) eggDate.value = '';
+  if (eggNote) eggNote.value = '';
   updateEggStyle();
   selectGrade('');
   resetAddPhoto();
@@ -4632,6 +4640,8 @@ async function saveGecko() {
       photo: currentPhotoData || null, // 일단 로컬 미리보기 사용
       egg_infertile: document.getElementById('gecko-egg-infertile').checked,
       egg_fertile: document.getElementById('gecko-egg-fertile').checked,
+      egg_laid_at: document.getElementById('gecko-egg-date')?.value || '',
+      egg_note: document.getElementById('gecko-egg-note')?.value || '',
     };
 
     // AI 판별 이력 (스캔에서 직접 저장 흐름일 때만 세팅됨)
@@ -5019,13 +5029,15 @@ function openGeckoDetail(id) {
           </div>
         </div>` : ''}
 
-      ${(g.sex === '암컷' && (g.egg_infertile || g.egg_fertile)) ? `
+      ${(g.sex === '암컷' && (g.egg_infertile || g.egg_fertile || g.egg_laid_at)) ? `
         <div style="background:var(--sf2);border:1.5px solid #ff8fb1;border-radius:12px;padding:12px 13px;margin-bottom:12px">
           <div style="font-size:10px;font-family:'DM Mono',monospace;color:#ff8fb1;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">🥚 산란 기록</div>
-          <div style="display:flex;gap:10px">
+          <div style="display:flex;gap:10px;margin-bottom:${g.egg_laid_at || g.egg_note ? '8px' : '0'}">
             ${g.egg_infertile ? '<span style="background:var(--am2);color:var(--am);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700">무정란</span>' : ''}
             ${g.egg_fertile ? '<span style="background:var(--ac2);color:var(--ac);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700">유정란</span>' : ''}
           </div>
+          ${g.egg_laid_at ? `<div style="font-size:11px;color:#ff8fb1;font-weight:700">📅 산란일: ${g.egg_laid_at}</div>` : ''}
+          ${g.egg_note ? `<div style="font-size:11px;color:var(--tx2);margin-top:4px">${g.egg_note}</div>` : ''}
         </div>` : ''}
 
       ${(g.dad || g.mom) ? `
@@ -5055,9 +5067,12 @@ function openGeckoDetail(id) {
 
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn-outline" style="flex:1" onclick="editGecko(${id})">✏️ 수정</button>
-        ${state.isPro ? `<button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">📱 QR 시트</button>` :
-        `<button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">🔒 QR (PRO)</button>`}
+        <button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">📱 QR 시트</button>
       </div>
+      <!-- 빠른 탈피 체크 -->
+      <button class="btn-sm" style="width:100%;margin-top:8px;font-size:13px;padding:11px;background:var(--bl2);border-color:var(--blue);color:var(--blue)" onclick="quickMarkShed('${id}')">
+        🦎 오늘 탈피 체크
+      </button>
       <!-- 개체별 기록 -->
       <button class="btn-primary" style="width:100%;margin-top:8px;font-size:13px;padding:12px" onclick="closeSheetDirect('sheet-gecko-detail');setTimeout(()=>openGeckoRecords('${id}'),250)">
         📋 개체별 기록 보기
@@ -5140,6 +5155,10 @@ function editGecko(id) {
     document.getElementById('gecko-memo').value = g.memo || '';
     document.getElementById('gecko-egg-infertile').checked = !!g.egg_infertile;
     document.getElementById('gecko-egg-fertile').checked = !!g.egg_fertile;
+    const eggDateEl = document.getElementById('gecko-egg-date');
+    const eggNoteEl = document.getElementById('gecko-egg-note');
+    if (eggDateEl) eggDateEl.value = g.egg_laid_at || '';
+    if (eggNoteEl) eggNoteEl.value = g.egg_note || '';
     document.getElementById('egg-tracking-section').style.display = g.sex === '암컷' ? 'block' : 'none';
     updateEggStyle();
     document.getElementById('delete-gecko-btn').style.display = 'block';
@@ -5951,8 +5970,8 @@ function _markShareRewardClaimed() {
 async function shareForReward() {
   if (!_currentUser) { showToast('로그인이 필요해요'); return; }
 
-  // 유료 등급은 스캔 제한이 없어서 리워드 불필요
-  if (isBreeder()) { showToast('🧬 Breeder는 무제한이에요!'); return; }
+  // 베타 테스터는 AI 무제한이라 리워드 불필요
+  if (state._isBetaTester) { showToast('💚 베타 테스터는 무제한이에요!'); return; }
 
   // 오늘 이미 받았는지
   if (_hasClaimedShareRewardToday()) {
@@ -10016,6 +10035,8 @@ async function _loadGeckosFromDB() {
       memo: row.memo, photo: row.photo,
       egg_infertile: row.egg_infertile || false,
       egg_fertile: row.egg_fertile || false,
+      egg_laid_at: row.egg_laid_at || '',
+      egg_note: row.egg_note || '',
       ai_morph: row.ai_morph || null,
       ai_prob: row.ai_prob || null,
       ai_scanned_at: row.ai_scanned_at || null,
@@ -10068,6 +10089,8 @@ async function _saveGeckoToDB(gecko) {
     photo:   dbPhoto,
     egg_infertile: gecko.egg_infertile || false,
     egg_fertile:   gecko.egg_fertile || false,
+    egg_laid_at:   gecko.egg_laid_at || null,
+    egg_note:      gecko.egg_note || null,
   };
   // AI 이력이 실제로 있을 때만 컬럼 포함 (테이블에 컬럼이 없어도 통과)
   if (gecko.ai_morph)      row.ai_morph      = gecko.ai_morph;
@@ -10425,6 +10448,36 @@ async function saveRecord() {
   showToast('기록이 저장됐어요!');
   document.getElementById('record-add-form').style.display = 'none';
   loadRecords(_currentRecordGeckoId);
+  _updateRecordCount();
+}
+
+// 빠른 탈피 체크 — 개체 상세에서 한 번 눌러 오늘 날짜로 탈피 기록 저장
+async function quickMarkShed(geckoId) {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  const record = {
+    gecko_id: geckoId,
+    user_id: _currentUser.id,
+    type: 'shed',
+    date: today,
+    value: '완전 탈피',
+    note: '빠른 체크',
+    created_at: new Date().toISOString(),
+  };
+  try {
+    const { error } = await _supabase.from('gecko_logs').insert(record);
+    if (error) throw error;
+  } catch(e) {
+    // DB 실패 시 로컬 폴백
+    const key = 'gecko_logs_' + _currentUser.id;
+    const logs = JSON.parse(localStorage.getItem(key) || '[]');
+    logs.push(record);
+    localStorage.setItem(key, JSON.stringify(logs));
+  }
+  playNotificationSound('default');
+  showToast(`🦎 ${g.name} 탈피 기록 — ${today}`);
   _updateRecordCount();
 }
 
