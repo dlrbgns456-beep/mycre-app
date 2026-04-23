@@ -1565,6 +1565,14 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow">›</div>
     </div>
+    <div class="more-item" onclick="checkForAppUpdate()">
+      <div class="more-icon" style="background:var(--bl2)">🔄</div>
+      <div class="more-item-info">
+        <div class="more-item-title">앱 업데이트 확인</div>
+        <div class="more-item-sub">최신 버전으로 수동 갱신</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
   </div>
 
   <!-- AI 크레딧 잔량 카드 -->
@@ -1743,6 +1751,7 @@ input[type=file]{display:none}
         <input type="text" id="morph-inline-input" autocomplete="off"
           placeholder="모프 검색... (예: 릴리화이트)"
           onfocus="showMorphInline()"
+          onclick="showMorphInline()"
           oninput="filterMorphInline()"
           style="width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:11px 13px;color:var(--tx);font-family:'Noto Sans KR',sans-serif;font-size:14px;transition:border-color .15s;box-sizing:border-box">
         <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5)">
@@ -4054,9 +4063,16 @@ function resetScanPage() {
 // ══ 모프 인라인 드롭다운 ══
 function showMorphInline() {
   const dd = document.getElementById('morph-inline-dropdown');
+  const input = document.getElementById('morph-inline-input');
+  if (!dd || !input) return;
   dd.style.display = 'block';
-  document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
-  renderMorphInline(document.getElementById('morph-inline-input').value);
+  input.style.borderColor = 'var(--ac)';
+  // 이미 선택된 모프명이 입력돼 있으면 전체 목록 노출 (다른 모프 선택 편하게)
+  const currentVal = input.value.trim();
+  const isExactMatch = currentVal && Object.prototype.hasOwnProperty.call(MORPHS, currentVal);
+  renderMorphInline(isExactMatch ? '' : currentVal);
+  // 모바일: 드롭다운을 뷰포트에 보이도록 스크롤
+  setTimeout(() => { try { dd.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }, 50);
 }
 
 function hideMorphInline() {
@@ -10829,10 +10845,21 @@ async function _deleteGeckoFromDB(id) {
 // INIT
 // ══════════════════════════════
 // ── PWA 서비스워커 등록 + 업데이트 감지 ──
+let _swRegistration = null;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(reg => {
+    _swRegistration = reg;
+    // 즉시 업데이트 체크 (기존 SW가 있어도 새 버전 있는지 확인)
+    try { reg.update(); } catch(e) {}
     // 주기적으로 SW 업데이트 확인 (앱 켜둔 상태에서도)
-    setInterval(() => { try { reg.update(); } catch(e) {} }, 30 * 60 * 1000); // 30분마다
+    setInterval(() => { try { reg.update(); } catch(e) {} }, 15 * 60 * 1000); // 15분마다
+
+    // 페이지 가시성 복귀(앱 다시 열 때)에도 업데이트 체크
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        try { reg.update(); } catch(e) {}
+      }
+    });
 
     // 새 SW가 감지되면 업데이트 배너 표시
     reg.addEventListener('updatefound', () => {
@@ -10853,6 +10880,29 @@ if ('serviceWorker' in navigator) {
     _reloading = true;
     window.location.reload();
   });
+}
+
+// 수동 '새 버전 확인' — 사용자가 호출 가능
+async function checkForAppUpdate() {
+  showToast('🔄 새 버전 확인 중...');
+  if (!_swRegistration) {
+    if (!('serviceWorker' in navigator)) { showToast('이 브라우저는 업데이트 자동 확인을 지원하지 않아요'); return; }
+    try { _swRegistration = await navigator.serviceWorker.getRegistration(); } catch(e) {}
+  }
+  if (!_swRegistration) { showToast('❌ 서비스워커 등록 실패. 새로고침해주세요.'); return; }
+  try {
+    await _swRegistration.update();
+    // 대기 중 워커가 있으면 즉시 활성화
+    if (_swRegistration.waiting) {
+      _swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      return;
+    }
+    // 새 버전 없으면 강제 리로드 (캐시 bypass)
+    showToast('✅ 최신 버전입니다. 새로고침합니다...');
+    setTimeout(() => window.location.reload(), 800);
+  } catch(e) {
+    showToast('❌ 업데이트 확인 실패: ' + e.message);
+  }
 }
 
 function _showUpdateBanner(newWorker) {
