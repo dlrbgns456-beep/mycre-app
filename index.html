@@ -798,14 +798,6 @@ input[type=file]{display:none}
     <button class="btn-primary" style="max-width:200px" onclick="showPage('myge')">🦎 내 크레 등록하기</button>
   </div>
 
-  <!-- 이용 현황 안내 (무료 유저) — AI 판별 일일 한도만 -->
-  <div id="home-daily-limit" style="display:none;margin:0 18px 12px;padding:12px 14px;background:var(--sf2);border:1px solid var(--br);border-radius:12px;font-size:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <span style="font-weight:700;color:var(--tx)">📊 오늘의 AI 판별</span>
-      <span style="font-size:10px;color:var(--tx3)">자정(KST) 기준 초기화</span>
-    </div>
-    <div><span style="color:var(--tx3)">사용</span> <b id="home-limit-scan" style="color:var(--ac)">0/3</b></div>
-  </div>
 
   <!-- 프리미엄 유도 배너 (한도 소진 시) -->
   <div id="home-premium-prompt" style="display:none;margin:0 18px 12px;padding:14px 16px;background:linear-gradient(135deg,var(--am2),rgba(224,156,42,.05));border:1.5px solid var(--am);border-radius:12px;cursor:pointer" onclick="openProSheet()">
@@ -3909,23 +3901,15 @@ function closeSheetDirect(id) {
 // HOME
 // ══════════════════════════════
 function renderHome() {
-  // ── AI 판별 일일 한도 배너 (베타 테스터 제외) ──
-  const dailyBanner = document.getElementById('home-daily-limit');
+  // ── 무료 AI 소진 + 크레딧 0 시 충전 유도 배너 (베타 테스터 제외) ──
   const premiumPrompt = document.getElementById('home-premium-prompt');
-  if (dailyBanner) {
+  if (premiumPrompt) {
     if (!state._isBetaTester) {
-      const scanUsed = Math.max(0, 3 - (state.freeScansLeft || 0));
-      const limitScan = document.getElementById('home-limit-scan');
-      if (limitScan) limitScan.textContent = `${scanUsed}/3`;
-      dailyBanner.style.display = 'block';
-      // 무료 소진 + 크레딧 0일 때 프리미엄(크레딧 충전) 유도
-      if (premiumPrompt) {
-        const scanMaxed = (state.freeScansLeft || 0) <= 0;
-        premiumPrompt.style.display = (scanMaxed && (state.aiCredits || 0) === 0) ? 'block' : 'none';
-      }
+      const scanMaxed = (state.freeScansLeft || 0) <= 0;
+      const creditsZero = (state.aiCredits || 0) === 0;
+      premiumPrompt.style.display = (scanMaxed && creditsZero) ? 'block' : 'none';
     } else {
-      dailyBanner.style.display = 'none';
-      if (premiumPrompt) premiumPrompt.style.display = 'none';
+      premiumPrompt.style.display = 'none';
     }
   }
 
