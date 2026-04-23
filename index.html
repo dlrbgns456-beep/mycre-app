@@ -818,7 +818,7 @@ input[type=file]{display:none}
       <div class="stat-value" id="stat-count" style="font-size:18px">0</div>
       <div class="stat-sub">마리</div>
     </div>
-    <div class="stat-chip" style="padding:10px 6px">
+    <div class="stat-chip" style="cursor:pointer;padding:10px 6px" onclick="openAllRecordsSheet()">
       <div class="stat-label">사육 기록</div>
       <div class="stat-value" id="stat-records" style="font-size:18px">0</div>
       <div class="stat-sub">건</div>
@@ -7020,6 +7020,32 @@ function printQR() {
   </div>
 </div>
 
+<!-- 전체 사육 기록 타임라인 -->
+<div class="sheet-overlay" id="sheet-all-records" onclick="closeSheet('sheet-all-records',event)">
+  <div class="sheet" style="max-height:90vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📋 전체 사육 기록</div>
+    <div class="sheet-body">
+      <div style="font-size:12px;color:var(--tx2);line-height:1.6;background:var(--sf2);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        모든 개체의 체중·급여·탈피·산란·건강·메모 기록이 최신순으로 표시돼요. 항목을 누르면 해당 개체의 상세로 이동합니다.
+      </div>
+      <!-- 필터 -->
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="fp active" data-rfilter="all" onclick="filterAllRecords('all')">전체</button>
+        <button class="fp" data-rfilter="weight" onclick="filterAllRecords('weight')">⚖️ 체중</button>
+        <button class="fp" data-rfilter="feed" onclick="filterAllRecords('feed')">🍽️ 급여</button>
+        <button class="fp" data-rfilter="shed" onclick="filterAllRecords('shed')">🦎 탈피</button>
+        <button class="fp" data-rfilter="egg" onclick="filterAllRecords('egg')">🥚 산란</button>
+        <button class="fp" data-rfilter="health" onclick="filterAllRecords('health')">💊 건강</button>
+        <button class="fp" data-rfilter="memo" onclick="filterAllRecords('memo')">📝 메모</button>
+      </div>
+      <div id="all-records-timeline" class="record-timeline">
+        <div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">불러오는 중…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="sheet-gecko-records" onclick="closeSheet('sheet-gecko-records',event)">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -10403,13 +10429,96 @@ function onParentSelect(role) {
 
 function openGeckoRecords(geckoId) {
   const g = state.geckos.find(x => String(x.id) === String(geckoId));
-  if (!g) return;
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
   _currentRecordGeckoId = geckoId;
-  document.getElementById('record-gecko-name').textContent = g.name;
-  document.getElementById('record-gecko-morph').textContent = g.morph || '모프 미판별';
-  document.getElementById('record-add-form').style.display = 'none';
+  const nameEl = document.getElementById('record-gecko-name');
+  const morphEl = document.getElementById('record-gecko-morph');
+  const formEl = document.getElementById('record-add-form');
+  if (nameEl) nameEl.textContent = g.name;
+  if (morphEl) morphEl.textContent = g.morph || '모프 미판별';
+  if (formEl) formEl.style.display = 'none';
   loadRecords(geckoId);
   openSheet('sheet-gecko-records');
+}
+
+// 전체 사육 기록 (모든 개체 교차)
+let _allRecordsFilter = 'all';
+async function openAllRecordsSheet() {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  if (state.geckos.length === 0) { showToast('먼저 개체를 등록해주세요'); return; }
+  _allRecordsFilter = 'all';
+  // 필터 버튼 상태 초기화
+  document.querySelectorAll('#sheet-all-records [data-rfilter]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-rfilter') === 'all');
+  });
+  openSheet('sheet-all-records');
+  await _renderAllRecordsTimeline();
+}
+
+function filterAllRecords(type) {
+  _allRecordsFilter = type;
+  document.querySelectorAll('#sheet-all-records [data-rfilter]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-rfilter') === type);
+  });
+  _renderAllRecordsTimeline();
+}
+
+async function _renderAllRecordsTimeline() {
+  const timeline = document.getElementById('all-records-timeline');
+  if (!timeline) return;
+  timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">불러오는 중…</div>';
+
+  let records = [];
+  try {
+    const { data, error } = await _supabase
+      .from('gecko_logs')
+      .select('*')
+      .eq('user_id', _currentUser.id)
+      .order('date', { ascending: false })
+      .limit(200);
+    if (!error && data) records = data;
+  } catch(e) {}
+  // 로컬 폴백 병합
+  try {
+    const key = 'gecko_logs_' + _currentUser.id;
+    const local = JSON.parse(localStorage.getItem(key) || '[]');
+    const existing = new Set(records.map(r => r.created_at));
+    local.forEach(r => { if (!existing.has(r.created_at)) records.push(r); });
+  } catch(e) {}
+
+  // 필터 적용
+  if (_allRecordsFilter !== 'all') {
+    records = records.filter(r => r.type === _allRecordsFilter);
+  }
+  records.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  if (records.length === 0) {
+    timeline.innerHTML = '<div style="padding:24px;text-align:center;color:var(--tx3);font-size:13px">기록이 없어요.<br>개체 상세에서 🦎 탈피 체크 / 🥚 산란 체크 버튼으로 기록해보세요.</div>';
+    return;
+  }
+
+  const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, egg:{emoji:'🥚',label:'산란',color:'#ff8fb1',bg:'rgba(255,143,177,.15)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'} };
+
+  timeline.innerHTML = records.slice(0, 100).map(r => {
+    const c = tc[r.type] || tc.memo;
+    const gecko = state.geckos.find(g => String(g.id) === String(r.gecko_id));
+    const geckoName = gecko ? gecko.name : '(삭제됨)';
+    let detail = r.type === 'weight' ? `<b>${r.value}g</b>`
+               : r.type === 'feed'   ? r.value
+               : r.type === 'shed'   ? r.value
+               : r.type === 'egg'    ? `<b>${r.value}</b>`
+               : (r.note || '');
+    const noteHtml = (r.note && r.type !== 'health' && r.type !== 'memo') ? `<div style="font-size:11px;color:var(--tx3);margin-top:2px">${r.note}</div>` : '';
+    return `<div class="record-item type-${r.type}" style="cursor:pointer" onclick="closeSheetDirect('sheet-all-records');setTimeout(()=>openGeckoRecords('${r.gecko_id}'),250)">
+      <div class="record-date">${r.date || ''}</div>
+      <div class="record-content">
+        <span class="record-type-badge" style="background:${c.bg};color:${c.color}">${c.emoji} ${c.label}</span>
+        <b style="color:var(--tx);margin-right:6px">🦎 ${geckoName}</b>
+        ${detail}
+        ${noteHtml}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function openAddRecord(type) {
