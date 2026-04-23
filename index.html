@@ -5609,7 +5609,9 @@ async function saveDirectToMyGecko() {
   const morph = document.getElementById('save-direct-morph').value.trim();
   if (!name) { showToast('⚠️ 개체 이름을 입력해주세요'); document.getElementById('save-direct-name').focus(); return; }
 
-  // 1) 사진 Blob을 미리 준비 (시트 열기 전에 완료)
+  // 1) 스캔 사진 → 480px 이내 JPEG로 다운스케일 (임시 변수에 담아둠)
+  let preparedDataUrl = null;
+  let preparedBlob = null;
   if (scanPhotos.length > 0 && scanPhotos[0].data) {
     try {
       const img = new Image();
@@ -5623,19 +5625,23 @@ async function saveDirectToMyGecko() {
       const cvs = document.createElement('canvas');
       cvs.width = w; cvs.height = h;
       cvs.getContext('2d').drawImage(img, 0, 0, w, h);
-      currentPhotoData = cvs.toDataURL('image/jpeg', 0.5);
-      _pendingPhotoFile = await new Promise(r => cvs.toBlob(r, 'image/jpeg', 0.5));
+      preparedDataUrl = cvs.toDataURL('image/jpeg', 0.5);
+      preparedBlob = await new Promise(r => cvs.toBlob(r, 'image/jpeg', 0.5));
     } catch(e) {
       console.error('스캔 사진 변환 오류:', e);
-      currentPhotoData = scanPhotos[0].data; // fallback: 원본 사용
+      preparedDataUrl = scanPhotos[0].data; // fallback
     }
   }
 
-  // 2) 개체 등록 시트 열기 + 자동 채우기
+  // 2) 등록 시트 열기 (resetAddPhoto가 내부에서 호출돼 전역 사진 상태 초기화)
   showPage('myge');
   openAddGecko();
 
-  // AI 판별 이력을 개체에 연결 (저장 시 함께 저장됨)
+  // 3) 초기화 이후에 사진 전역 변수를 다시 주입 — 순서 중요 (openAddGecko가 덮어쓰기 때문)
+  if (preparedDataUrl) currentPhotoData = preparedDataUrl;
+  if (preparedBlob) _pendingPhotoFile = preparedBlob;
+
+  // AI 판별 이력을 개체에 연결 (saveGecko에서 함께 저장됨)
   const _aiTopProb = (lastScanResult.candidates && lastScanResult.candidates[0]?.prob) || null;
   state._pendingAI = {
     ai_morph: lastScanResult.morph || null,
@@ -5652,10 +5658,12 @@ async function saveDirectToMyGecko() {
     document.getElementById('morph-inline-input').style.borderColor = 'var(--ac)';
   }
 
-  // 사진 미리보기 자동 세팅
-  if (currentPhotoData) {
-    document.getElementById('add-photo-preview').src = currentPhotoData;
-    document.getElementById('add-photo-zone').classList.add('has-photo');
+  // 사진 미리보기 자동 세팅 — preparedDataUrl 사용 (currentPhotoData가 혹시 중간에 꺼져도 안전)
+  if (preparedDataUrl) {
+    const preview = document.getElementById('add-photo-preview');
+    const zone = document.getElementById('add-photo-zone');
+    if (preview) preview.src = preparedDataUrl;
+    if (zone) zone.classList.add('has-photo');
   }
 
   updateGeckoGrade();
