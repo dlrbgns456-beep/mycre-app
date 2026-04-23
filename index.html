@@ -1263,10 +1263,9 @@ input[type=file]{display:none}
   <div class="filter-row" style="margin-top:12px" id="comm-filter-row">
     <div class="fp active" onclick="setCommFilter('all')">전체</div>
     <div class="fp" onclick="setCommFilter('notice')">📢 공지</div>
-    <div class="fp" onclick="setCommFilter('sale')">🏷️ 분양</div>
-    <div class="fp" onclick="setCommFilter('wanted')">🔍 구합니다</div>
+    <div class="fp" onclick="setCommFilter('sale')">🏷️ 분양&입양</div>
     <div class="fp" onclick="setCommFilter('qna')">❓ QnA</div>
-    <div class="fp" onclick="setCommFilter('info')">📚 정보공유</div>
+    <div class="fp" onclick="setCommFilter('info')">✍️ 끄적끄적</div>
     <div class="fp" onclick="setCommFilter('celebrate')">🎉 축하</div>
   </div>
 
@@ -2105,10 +2104,9 @@ input[type=file]{display:none}
       <div class="form-group">
         <label class="form-label">카테고리</label>
         <select class="form-select" id="post-category">
-          <option value="sale">🏷️ 분양</option>
-          <option value="wanted">🔍 구합니다</option>
+          <option value="sale">🏷️ 분양 & 입양</option>
           <option value="qna">❓ QnA</option>
-          <option value="info">📚 정보공유</option>
+          <option value="info">✍️ 끄적끄적</option>
           <option value="celebrate">🎉 축하</option>
         </select>
       </div>
@@ -4901,6 +4899,71 @@ function deleteGecko() {
   showToast('🗑 개체가 삭제되었어요');
 }
 
+// 개체 상세에서 바로 삭제 (더블 탭 확인)
+let _deleteFromDetailStep = 0;
+let _deleteFromDetailTimer = null;
+function confirmDeleteGeckoFromDetail(id) {
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  if (!g) return;
+  if (_deleteFromDetailStep === 0) {
+    _deleteFromDetailStep = 1;
+    showToast(`⚠️ "${g.name}"을(를) 정말 삭제하려면 한 번 더 눌러주세요`);
+    _deleteFromDetailTimer = setTimeout(() => { _deleteFromDetailStep = 0; }, 4000);
+    return;
+  }
+  _deleteFromDetailStep = 0;
+  clearTimeout(_deleteFromDetailTimer);
+  _deleteGeckoFromDB(id);
+  state.geckos = state.geckos.filter(x => String(x.id) !== String(id));
+  closeSheetDirect('sheet-gecko-detail');
+  renderGeckoList();
+  renderHome();
+  updateCountBadges();
+  showToast(`🗑 "${g.name}" 삭제됨`);
+}
+
+// 💝 내 새끼 자랑하기 — 개체 정보를 자동으로 채워 커뮤니티 글쓰기 시트 오픈
+function shareGeckoToCommunity(id) {
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+  closeSheetDirect('sheet-gecko-detail');
+
+  setTimeout(() => {
+    showPage('comm');
+    // 개체 연결 드롭다운을 먼저 채움 (submitPost에서 photo·morph·태그 자동 세팅됨)
+    try { populateGeckoSelects(); } catch(e) {}
+
+    const catSel  = document.getElementById('post-category');
+    const titleIn = document.getElementById('post-title-input');
+    const bodyIn  = document.getElementById('post-body-input');
+    const priceIn = document.getElementById('post-price-input');
+    const linkSel = document.getElementById('post-gecko-link');
+
+    // 기본 카테고리: 🎉 축하 (자랑글)
+    if (catSel) {
+      const hasCelebrate = [...catSel.options].some(o => o.value === 'celebrate');
+      catSel.value = hasCelebrate ? 'celebrate' : 'info';
+    }
+    if (titleIn) titleIn.value = `💝 우리집 ${g.name} (${g.morph || '미상'})`;
+    if (bodyIn) {
+      const ageStr = g.dob ? getAge(g.dob) : '';
+      const lines = [`우리 ${g.name} 자랑합니다 🦎`];
+      if (g.morph) lines.push(`모프: ${g.morph}`);
+      if (g.sex && g.sex !== '미상') lines.push(`성별: ${g.sex === '암컷' ? '♀ 암컷' : '♂ 수컷'}`);
+      if (ageStr && ageStr !== '—') lines.push(`나이: ${ageStr}`);
+      if (g.weight) lines.push(`몸무게: ${g.weight}g`);
+      lines.push('', '예쁘게 봐주세요 💕');
+      bodyIn.value = lines.join('\n');
+    }
+    if (priceIn) priceIn.value = '';
+    // 핵심: 개체 연결 select에 이 개체 id 세팅 → submitPost가 사진·모프·인증 배지 자동 처리
+    if (linkSel) linkSel.value = String(g.id);
+
+    openSheet('sheet-write-post');
+    showToast('💝 자랑글이 자동 작성됐어요! 확인 후 올려주세요');
+  }, 250);
+}
+
 function setGeckoFilter(f) {
   state.geckoFilter = f;
   document.querySelectorAll('#gecko-filter-row .fp').forEach(el => el.classList.remove('active'));
@@ -5062,6 +5125,10 @@ function openGeckoDetail(id) {
         <button class="btn-outline" style="flex:1" onclick="editGecko(${id})">✏️ 수정</button>
         <button class="btn-sm" style="flex:1;padding:12px" onclick="openQRForGecko(${id})">📱 QR 시트</button>
       </div>
+      <!-- 내 새끼 자랑 (커뮤니티 공유) -->
+      <button class="btn-sm" style="width:100%;margin-top:8px;font-size:13px;padding:11px;background:linear-gradient(135deg,rgba(255,143,177,.15),rgba(245,200,66,.12));border-color:#ff8fb1;color:#ff8fb1" onclick="shareGeckoToCommunity('${id}')">
+        💝 내 새끼 자랑하기
+      </button>
       <!-- 빠른 탈피 체크 -->
       <button class="btn-sm" style="width:100%;margin-top:8px;font-size:13px;padding:11px;background:var(--bl2);border-color:var(--blue);color:var(--blue)" onclick="quickMarkShed('${id}')">
         🦎 오늘 탈피 체크
@@ -5087,6 +5154,10 @@ function openGeckoDetail(id) {
       <!-- 공유 링크 복사 (모든 등급) -->
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px" onclick="copyGeckoShareLink('${id}')">
         🔗 공유 링크 복사
+      </button>
+      <!-- 삭제 -->
+      <button class="btn-outline" style="width:100%;margin-top:12px;font-size:13px;padding:11px;border-color:var(--coral);color:var(--coral);background:var(--co2)" onclick="confirmDeleteGeckoFromDetail('${id}')">
+        🗑️ 이 개체 삭제
       </button>
     </div>`;
 
@@ -6275,7 +6346,7 @@ function _isAdmin() {
 function setCommFilter(f) {
   state.commFilter = f;
   document.querySelectorAll('#comm-filter-row .fp').forEach(el => el.classList.remove('active'));
-  const fMap = {all:0,notice:1,sale:2,wanted:3,qna:4,info:5,celebrate:6};
+  const fMap = {all:0,notice:1,sale:2,qna:3,info:4,celebrate:5};
   document.querySelectorAll('#comm-filter-row .fp')[fMap[f]]?.classList.add('active');
   renderPosts();
 }
@@ -6360,7 +6431,7 @@ function _timeAgo(dateStr) {
 }
 
 function buildPostCard(p, compact) {
-  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',celebrate:'🎉 축하'};
+  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양&입양',wanted:'🏷️ 분양&입양',info:'✍️ 끄적끄적',celebrate:'🎉 축하'};
   const isNotice = p.cat === 'notice';
   const isCelebrate = p.cat === 'celebrate';
   const div = document.createElement('div');
@@ -6431,7 +6502,7 @@ let _currentPostId = null;
 
 async function openPostDetail(p) {
   _currentPostId = p.id;
-  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양',wanted:'🔍 구합니다',info:'📚 정보',celebrate:'🎉 축하'};
+  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양&입양',wanted:'🏷️ 분양&입양',info:'✍️ 끄적끄적',celebrate:'🎉 축하'};
   const isNotice = p.cat === 'notice';
   const bodyHtml = (p.body || '').replace(/\n/g, '<br>');
   const proBadge = p.authorIsBreeder ? `<span style="font-size:10px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:2px 6px;letter-spacing:.3px">🧬 브리더 인증</span>` : '';
@@ -6460,6 +6531,17 @@ async function openPostDetail(p) {
         ${proBadge} ${verifiedInlineBadge}
       </div>
       <div style="background:var(--sf2);border-radius:12px;padding:14px;font-size:13px;line-height:1.9;color:var(--tx2);margin-bottom:14px;white-space:pre-wrap">${bodyHtml}</div>
+      ${(p.cat === 'sale' || p.cat === 'wanted') ? `
+        <div style="background:rgba(245,200,66,.08);border:1.5px solid rgba(245,200,66,.4);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:800;color:var(--am);margin-bottom:6px">🛡️ 안전 거래 안내</div>
+          <div style="font-size:11px;color:var(--tx2);line-height:1.7">
+            · <b>선입금 절대 금지</b> — 가급적 직거래로 현장에서 개체 확인 후 결제<br>
+            · <b>안전결제</b> 활용 (네이버페이 안전결제·당근 송금 등)<br>
+            · 개체 상태·혈통·AI 판별 이력 <b style="color:var(--ac)">✅ 볏마루도감 인증</b> 뱃지 확인<br>
+            · 거래 전 판매자 다른 게시글·활동 내역 확인<br>
+            · 의심스러우면 🚨 신고 버튼으로 운영팀에 제보
+          </div>
+        </div>` : ''}
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 <span id="comment-count">0</span>개</div>
       <div id="comments-list" style="margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
