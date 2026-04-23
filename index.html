@@ -2346,7 +2346,7 @@ function _incrementMonthlyScans() {}
 const MORPHS = {
   /* ── S급: 최고등급 / 희귀 유전 모프 ── */
   '아잔틱': {
-    grade:'S', price:'50~300만+',
+    grade:'S', price:'30~300만+',
     traits:['열성(Recessive) 유전','황색·적색 색소 완전 결여','흑백/회색/보라 톤'],
     desc:'노란색과 붉은색 색소(Pigment)가 결핍되어 오직 흑백·회색·보라빛만 띠는 오묘한 모프. 부모 양쪽이 모두 아잔틱 유전자를 보유해야만 자식에게 100% 발현됩니다(열성). 겉으로는 보통 개체처럼 보여도 유전자를 숨기고 있는 개체를 헷(Het) 아잔틱이라 부릅니다.',
     genetics:{type:'열성(Recessive)',allele:'aa',het:'헷 아잔틱(Aa) 가능 — 겉모습 노말이지만 유전자 보유',dom:'해당 없음'},
@@ -2443,7 +2443,7 @@ const MORPHS = {
 
   /* ── A급: 하이엔드 유전 / 고품질 패턴 ── */
   '릴리화이트': {
-    grade:'A', price:'40~150만',
+    grade:'A', price:'20~80만',
     traits:['우성(Dominant) 유전','새하얀 크림색 옆구리 덮임(Lateral Coverage)','우동 꼬리(무늬 없는 하얗고 통통한 꼬리)'],
     desc:'현대 하이엔드 브리딩의 핵심 기반 우성 모프. 새하얀 크림색(3차 형질)이 옆구리와 등을 서리처럼 두껍게 뒤덮습니다. 핵심 식별 포인트: 무늬 없이 하얗고 통통한 \'우동 꼬리(Udon Tail)\'. ⚠️ 릴리 × 릴리 = 슈퍼 릴리(치사).',
     genetics:{type:'우성(Dominant)',allele:'LW/lw',het:'해당 없음',dom:'슈퍼 릴리(LW/LW)는 치사 — 절대 릴리 × 릴리 교배 금지'},
@@ -2462,7 +2462,7 @@ const MORPHS = {
     }
   },
   '카푸치노': {
-    grade:'A', price:'15~60만',
+    grade:'A', price:'15~50만',
     traits:['우성(Dominant) 유전','진한 커피/갈색 체색','꼬리 기부 Y자 마크','성장 시 어두워지는 다크 테일'],
     desc:'가장 최근에 발견되어 파충류 업계의 모프 가격을 폭등시킨 우성 모프. 커피를 연상시키는 부드러운 갈색 톤이 특징. 해칭 시 꼬리 시작 부분에 선명한 Y자 형태의 하얀 마크. 성장하면 꼬리가 매우 어둡게 변합니다(다크 테일). ⚠️ 카푸치노 × 카푸치노 = 슈퍼 카푸치노(치사).',
     genetics:{type:'우성(Dominant)',allele:'Cap/cap',het:'해당 없음',dom:'슈퍼 카푸치노(Cap/Cap)는 치사 — 절대 카푸치노 × 카푸치노 교배 금지'},
@@ -2481,7 +2481,7 @@ const MORPHS = {
     }
   },
   '프라푸치노': {
-    grade:'A', price:'80~250만',
+    grade:'A', price:'20~80만',
     traits:['릴리화이트 + 카푸치노 콤보','카푸치노 어두운 머리·등색','릴리화이트 하얀 옆구리 발현'],
     desc:'릴리화이트(우성) × 카푸치노(우성) 조합으로 탄생하는 하이엔드 콤보 모프. 머리 쪽은 카푸치노의 짙은 색감, 옆구리는 릴리화이트의 우아한 백색. 상반된 두 형질의 공존이 식별 핵심.',
     genetics:{type:'우성+우성 복합',allele:'LW/lw + Cap/cap',het:'해당 없음',dom:'두 우성 유전자 모두 보유'},
@@ -2500,7 +2500,7 @@ const MORPHS = {
     }
   },
   '세이블': {
-    grade:'A', price:'15~50만',
+    grade:'A', price:'15~80만',
     traits:['불안정 우성(Unstable Dominant) 형질','도살·크라운에 두꺼운 흰색/노란색 블록','어두운 몸통과의 강한 대비'],
     desc:'카푸치노와 비슷해 보이지만 다른 특징. 도살(등)과 크라운(머리)에 두꺼운 흰색/노란색 블록이 형성되며, 레터럴에 화이트 스팟이 빈발. ⚠️ 세이블 × 세이블 = 루악(불안정 슈퍼폼).',
     genetics:{type:'불안정 우성(Unstable Dominant)',allele:'Sbl/sbl',het:'해당 없음',dom:'슈퍼 세이블(루악) — 불안정, 피하는 것이 브리더 철칙'},
@@ -2519,7 +2519,7 @@ const MORPHS = {
     }
   },
   '루악': {
-    grade:'A', price:'미정(희귀)',
+    grade:'S', price:'50~200만',
     traits:['세이블 × 세이블 슈퍼폼','불안정 우성 최상위 표현','극도로 희귀'],
     desc:'세이블끼리 교배 시 나타나는 슈퍼폼. 불안정 우성의 특성상 위험성이 존재하며, 국내에서 거의 유통되지 않는 극희귀 개체.',
     genetics:{type:'불안정 우성 슈퍼폼',allele:'Sbl/Sbl',het:'해당 없음',dom:'불안정 — 생존 및 건강 이슈 가능'},
@@ -2557,7 +2557,7 @@ const MORPHS = {
     }
   },
   '슈퍼 달마시안': {
-    grade:'A', price:'15~50만',
+    grade:'A', price:'15~80만',
     traits:['점의 개수 압도적','잉크를 쏜 듯한 최상위 개체','점이 크고 둥글수록 고퀄리티'],
     desc:'점 밀도가 압도적으로 높아 잉크를 쏜 듯한 최상위 달마시안. 점이 크고 둥글수록 고퀄리티. 베이스 모프 위에 독립적으로 발현.',
     genetics:{type:'폴리제닉(선택적 브리딩)',allele:'복수 유전자',het:'해당 없음',dom:'해당 없음'},
@@ -2808,7 +2808,7 @@ const MORPHS = {
 
   /* ── C급: 기본형 ── */
   '노멀': {
-    grade:'C', price:'1~5만',
+    grade:'C', price:'3~5만',
     traits:['야생형 기본 체색','할리퀸 게이지 10%','모든 모프의 기반'],
     desc:'뚜렷한 무늬 변이 없이 평범한 기본형. 할리퀸 게이지 10%. 갈색 계열의 자연스러운 체색. 모든 모프의 기반.',
     genetics:{type:'폴리제닉(야생형)',allele:'야생형',het:'헷 모프 보유 가능성 있음',dom:'해당 없음'},
@@ -2843,7 +2843,7 @@ const MORPHS = {
     visualLayers:{baseColor:['화이트'],pattern:['루왁','릴리'],pigment:[],structure:[],spot:[],tail:['일반'],special:['콤보']}
   },
   '릴리 세이블': {
-    grade:'S', price:'100~350만+',
+    grade:'S', price:'50~200만',
     traits:['릴리 + 세이블','어두운 바탕 + 화이트 덮임'],
     desc:'세이블의 어두운 바탕 위에 릴리의 흰 옆구리가 올라간 콤보. 대비가 강렬.',
     genetics:{type:'우성 복합',allele:'LW/lw + 세이블',het:null,dom:'릴리화이트 우성'},
@@ -3146,7 +3146,7 @@ const MORPHS = {
     visualLayers:{baseColor:['any'],pattern:['솔리드'],pigment:[],structure:[],spot:[],tail:['일반'],special:[]}
   },
   '100%헷아잔틱': {
-    grade:'C', price:'5~15만',
+    grade:'C', price:'10~25만',
     traits:['외형 노멀','아잔틱 유전자 100% 보유'],
     desc:'외형으로는 구분되지 않지만 부모가 아잔틱이라 아잔틱 유전자를 100% 가지고 있는 개체. 번식에 중요.',
     genetics:{type:'헷(Het)',allele:'Aa',het:'100% 헷 아잔틱',dom:null},
@@ -3157,7 +3157,7 @@ const MORPHS = {
     visualLayers:{baseColor:['노멀'],pattern:[],pigment:[],structure:[],spot:[],tail:['일반'],special:['헷']}
   },
   '100%헷초초': {
-    grade:'C', price:'5~15만',
+    grade:'C', price:'10~25만',
     traits:['외형 노멀','초초 유전자 100% 보유'],
     desc:'초초의 부모를 가진, 외형은 노멀이지만 초초 유전자를 100% 보유한 개체.',
     genetics:{type:'헷(Het)',allele:'Cc',het:'100% 헷 초초',dom:null},
