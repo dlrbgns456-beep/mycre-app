@@ -849,6 +849,18 @@ input[type=file]{display:none}
   </div>
 
   <!-- 산란 예정 카드 -->
+  <!-- 사육장 업그레이드 권고 카드 (해당 개체 있을 때만) -->
+  <div id="home-cage-card" style="display:none;margin:0 18px 8px;background:linear-gradient(135deg,rgba(245,200,66,.10),rgba(245,200,66,.04));border:1.5px solid var(--am);border-radius:14px;padding:13px 15px;cursor:pointer" onclick="showPage('myge')">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">🏠</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--am)">사육장 업그레이드 필요</div>
+        <div id="home-cage-text" style="font-size:11px;color:var(--tx2);margin-top:3px"></div>
+      </div>
+      <span style="color:var(--am);font-weight:800">→</span>
+    </div>
+  </div>
+
   <div id="home-breeding-card" style="display:none;margin:0 18px 8px;background:rgba(255,143,177,.06);border:1.5px solid #ff8fb1;border-radius:14px;padding:13px 15px;cursor:pointer" onclick="openBreedingSheet()">
     <div style="font-size:14px;font-weight:800;color:#ff8fb1">🥚 산란 예정</div>
     <div id="breeding-upcoming-text" style="font-size:12px;color:var(--tx2);margin-top:3px"></div>
@@ -4318,9 +4330,10 @@ function renderHome() {
     preview.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:12px;text-align:center">아직 게시글이 없어요</div>';
   }
 
-  // 분무 / 브리딩 카드 갱신
+  // 분무 / 브리딩 / 사육장 카드 갱신
   updateMistingCard();
   updateBreedingCard();
+  updateCageCard();
 
   // 홈 상단 크레딧 배지 + 더보기 크레딧 카드
   updateCreditDisplays();
@@ -5116,6 +5129,22 @@ function openGeckoDetail(id) {
             <div>${getWeightStatus(g.weight, g.dob)}</div>
           </div>
         </div>` : ''}
+      ${(() => {
+        const rec = _getCageRecommendation(g);
+        if (!rec || !rec.need) return '';
+        return `<div style="background:linear-gradient(135deg,rgba(245,200,66,.12),rgba(245,200,66,.04));border:1.5px solid var(--am);border-radius:12px;padding:12px 14px;margin-bottom:12px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="font-size:22px">🏠</span>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:800;color:var(--am);margin-bottom:4px">사육장을 업그레이드할 시기예요!</div>
+              <div style="font-size:11px;color:var(--tx2);line-height:1.6">
+                <b>${rec.from}</b> → <b style="color:var(--am)">${rec.to}</b><br>
+                <span style="color:var(--tx3)">사유: ${rec.reason}</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      })()}
 
       ${(g.sex === '암컷' && (g.egg_infertile || g.egg_fertile || g.egg_laid_at)) ? `
         <div style="background:var(--sf2);border:1.5px solid #ff8fb1;border-radius:12px;padding:12px 13px;margin-bottom:12px">
@@ -5186,6 +5215,10 @@ function openGeckoDetail(id) {
       <!-- 공유 링크 복사 (모든 등급) -->
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px" onclick="copyGeckoShareLink('${id}')">
         🔗 공유 링크 복사
+      </button>
+      <!-- 📜 개체 인증서 발급 -->
+      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px;border-color:var(--am);color:var(--am);background:var(--am2)" onclick="openGeckoCertificate('${id}')">
+        📜 개체 인증서 발급 (PDF)
       </button>
       <!-- 삭제 -->
       <button class="btn-outline" style="width:100%;margin-top:12px;font-size:13px;padding:11px;border-color:var(--coral);color:var(--coral);background:var(--co2)" onclick="confirmDeleteGeckoFromDetail('${id}')">
@@ -9035,6 +9068,182 @@ async function _downloadMyDataJSON() {
 }
 
 // PDF — 새 창에 인쇄 전용 HTML 그려서 window.print() (저장 대화상자에서 PDF 선택 가능)
+// ══════════════════════════════════════
+// 📜 개체 인증서 발급 — 모프·성별·혈통·AI 판별 이력을 정식 서식으로 PDF 출력
+// ══════════════════════════════════════
+function openGeckoCertificate(id) {
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+
+  const today = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+  const esc = (s) => String(s ?? '—').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const certNo = 'BYM-' + String(g.id).slice(-8) + '-' + Date.now().toString().slice(-4);
+  const m = MORPHS[g.morph] || {};
+  const grade = g.grade || m.grade || '—';
+  const gradeLabels = { S: 'S급 (최고등급)', A: 'A급 (프리미엄)', B: 'B급 (중급)', C: 'C급 (기본)' };
+  const ageText = g.dob ? getAge(g.dob) : '—';
+  const sexText = g.sex === '암컷' ? '♀ 암컷' : g.sex === '수컷' ? '♂ 수컷' : '미상';
+  const parentText = (g.dad || g.mom)
+    ? `${esc(g.dad || '—')} × ${esc(g.mom || '—')}`
+    : '정보 없음';
+  const aiText = g.ai_morph
+    ? `${esc(g.ai_morph)}${g.ai_prob ? ` · 신뢰도 ${g.ai_prob}%` : ''}${g.ai_scanned_at ? ` · ${new Date(g.ai_scanned_at).toLocaleDateString('ko-KR')}` : ''}`
+    : '판별 이력 없음';
+  const ownerEmail = _currentUser?.email || '—';
+  const ownerName = _profile?.name || '이름 미설정';
+
+  const win = window.open('', '_blank', 'width=800,height=1000');
+  if (!win) { showToast('❌ 팝업이 차단됐어요. 팝업을 허용해주세요'); return; }
+
+  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>볏마루도감 개체 인증서 — ${esc(g.name)}</title>
+  <style>
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, 'Noto Sans KR', sans-serif; margin:0; padding:0; background:#f5f5f0; }
+    .page {
+      width: 210mm; min-height: 297mm; margin: 0 auto; background:#fff; padding: 20mm 16mm;
+      border: 2px solid #2E7D57; position: relative;
+      background-image:
+        linear-gradient(45deg, transparent 49%, rgba(46,125,87,.03) 49%, rgba(46,125,87,.03) 51%, transparent 51%),
+        radial-gradient(circle at 50% 30%, rgba(46,125,87,.03) 0%, transparent 50%);
+    }
+    .header { text-align: center; border-bottom: 3px double #2E7D57; padding-bottom: 14px; margin-bottom:22px; }
+    .logo { font-size:32px; font-weight:900; color:#2E7D57; letter-spacing:-1px; margin-bottom:4px; }
+    .sub-logo { font-size:11px; color:#7a9686; letter-spacing:3px; font-family:'DM Mono',monospace; }
+    .cert-title { font-size:28px; font-weight:900; color:#1A2B22; margin:24px 0 6px; letter-spacing:6px; }
+    .cert-title-en { font-size:12px; color:#7a9686; letter-spacing:4px; margin-bottom:12px; }
+    .cert-no { font-size:11px; color:#888; font-family:'DM Mono',monospace; margin-bottom:14px; }
+    .divider { border:none; border-top:1px solid #ddd; margin:18px 0; }
+    h3 { font-size:13px; color:#2E7D57; border-left:4px solid #2E7D57; padding-left:10px; margin:22px 0 10px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    td { padding: 10px 12px; border-bottom:1px solid #eee; vertical-align:top; }
+    td.label { width: 30%; color:#666; font-weight:700; background:#fafaf5; }
+    td.value { font-weight:700; color:#1A2B22; }
+    .grade-badge { display:inline-block; padding:4px 12px; border-radius:8px; font-weight:900; font-size:13px; }
+    .grade-S { background:rgba(245,200,66,.15); color:#d4af37; border:1.5px solid #f5c842; }
+    .grade-A { background:rgba(245,200,66,.08); color:#c8860d; border:1.5px solid #e0a820; }
+    .grade-B { background:rgba(46,125,87,.08); color:#2E7D57; border:1.5px solid #3a9968; }
+    .grade-C { background:rgba(62,140,181,.08); color:#2e7a9e; border:1.5px solid #3e8cb5; }
+    .photo-box { width:130px; height:130px; border:2px solid #2E7D57; border-radius:14px; overflow:hidden; margin:0 auto 20px; background:#f5f5f0; display:flex; align-items:center; justify-content:center; font-size:48px; }
+    .photo-box img { width:100%; height:100%; object-fit:cover; }
+    .signature { margin-top:32px; padding-top:18px; border-top:2px solid #2E7D57; text-align:right; font-size:12px; color:#555; }
+    .signature-date { font-size:13px; color:#1A2B22; font-weight:700; letter-spacing:2px; margin-bottom:8px; }
+    .issuer { font-size:14px; font-weight:800; color:#2E7D57; margin-top:6px; }
+    .seal {
+      display:inline-block; width:72px; height:72px; border:3px solid #c0392b; border-radius:50%;
+      color:#c0392b; font-weight:900; font-size:10px; line-height:1.3; text-align:center;
+      padding: 16px 6px; margin-left:14px; vertical-align:middle; transform:rotate(-8deg);
+      font-family:'Noto Sans KR', serif;
+    }
+    .footer { position:absolute; bottom:12mm; left:16mm; right:16mm; text-align:center; font-size:9px; color:#999; border-top:1px solid #eee; padding-top:8px; }
+    .qr-note { margin-top:8px; font-size:10px; color:#666; text-align:center; }
+    .watermark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-30deg); font-size:120px; color:rgba(46,125,87,.04); font-weight:900; pointer-events:none; z-index:0; letter-spacing:8px; }
+    .page > * { position:relative; z-index:1; }
+    @media print { .no-print { display:none !important; } body{background:#fff} .page{border:none; box-shadow:none} }
+  </style></head><body>
+  <div class="no-print" style="position:sticky;top:0;background:#2E7D57;color:#fff;padding:12px 16px;text-align:center;z-index:100">
+    <button onclick="window.print()" style="background:#fff;color:#2E7D57;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:14px">📄 인증서 인쇄 / PDF 저장</button>
+    <span style="margin-left:10px;font-size:12px">인쇄 대화상자에서 "대상 → PDF로 저장"</span>
+  </div>
+  <div class="page">
+    <div class="watermark">BYETMARU</div>
+    <div class="header">
+      <div class="logo">🦎 볏마루도감</div>
+      <div class="sub-logo">CRESTED GECKO CERTIFICATE</div>
+    </div>
+
+    <div style="text-align:center">
+      <div class="cert-title">개 체 인 증 서</div>
+      <div class="cert-title-en">CERTIFICATE OF AUTHENTICITY</div>
+      <div class="cert-no">발급번호: ${certNo}</div>
+      <div class="photo-box">${g.photo ? `<img src="${esc(g.photo)}" alt="${esc(g.name)}">` : '🦎'}</div>
+    </div>
+
+    <h3>🦎 개체 정보</h3>
+    <table>
+      <tr><td class="label">이름</td><td class="value">${esc(g.name)}</td></tr>
+      <tr><td class="label">성별</td><td class="value">${esc(sexText)}</td></tr>
+      <tr><td class="label">생년월일</td><td class="value">${esc(g.dob || '—')} ${ageText && ageText !== '—' ? `<span style="color:#666;font-weight:400">(${esc(ageText)})</span>` : ''}</td></tr>
+      <tr><td class="label">몸무게</td><td class="value">${g.weight ? esc(g.weight) + 'g' : '—'}</td></tr>
+      <tr><td class="label">상태</td><td class="value">${esc(g.status || '정상')}</td></tr>
+      <tr><td class="label">케이지</td><td class="value">${esc(g.cage || '—')}</td></tr>
+    </table>
+
+    <h3>🧬 모프 · 등급</h3>
+    <table>
+      <tr><td class="label">판정 모프</td><td class="value">${esc(g.morph || '미판별')}</td></tr>
+      <tr><td class="label">등급</td><td class="value">${grade !== '—' ? `<span class="grade-badge grade-${grade}">${esc(gradeLabels[grade] || grade)}</span>` : '—'}</td></tr>
+      <tr><td class="label">시세 참고</td><td class="value">${esc(m.price || '—')}</td></tr>
+      <tr><td class="label">AI 판별 이력</td><td class="value" style="font-size:12px">${aiText}</td></tr>
+    </table>
+
+    <h3>👨‍👩‍👧 혈통</h3>
+    <table>
+      <tr><td class="label">부 × 모</td><td class="value">${parentText}</td></tr>
+    </table>
+
+    <div class="signature">
+      <div class="signature-date">${esc(today)}</div>
+      <div style="font-size:11px;color:#666">소유자: ${esc(ownerName)} (${esc(ownerEmail)})</div>
+      <div class="issuer">발급: 볏마루도감 — byetmaru.com</div>
+      <div class="seal">볏마루<br>도감<br>인증</div>
+    </div>
+
+    <div class="footer">
+      이 인증서는 사용자가 앱에 등록·기록한 정보를 기반으로 발급됩니다.<br>
+      유전자 검증이 필요한 경우 전문 브리더 검증을 별도로 받으시기 바랍니다.<br>
+      © 볏마루도감 · byetmaru.com
+    </div>
+  </div>
+  <script>setTimeout(()=>{try{window.print();}catch(e){}},500);<\/script>
+  </body></html>`);
+  win.document.close();
+  showToast('📜 인증서 창이 열렸어요');
+}
+
+// ══════════════════════════════════════
+// 🏠 사육장 크기 체크 — 체중·개월수 기반 업그레이드 권고
+// ══════════════════════════════════════
+function _getCageRecommendation(g) {
+  if (!g) return null;
+  const w = parseFloat(g.weight) || 0;
+  const guide = g.dob ? getWeightGuide(g.dob) : null;
+  const currentCage = g.cage || '';
+
+  // 현재 케이지 크기 추출
+  const isSmall  = /소형|10~15|15cm|10cm/.test(currentCage);
+  const isMedium = /중형|20~25|25cm|20cm/.test(currentCage);
+  const isLarge  = /대형|30cm|40cm/.test(currentCage);
+
+  // 체중 기준 추천
+  let recommendedLevel; // 'small' | 'medium' | 'large'
+  if (w >= 20) recommendedLevel = 'large';
+  else if (w >= 10) recommendedLevel = 'medium';
+  else if (w > 0) recommendedLevel = 'small';
+  else if (guide?.months >= 12) recommendedLevel = 'large';
+  else if (guide?.months >= 6) recommendedLevel = 'medium';
+  else recommendedLevel = 'small';
+
+  const currentLevel = isLarge ? 'large' : isMedium ? 'medium' : isSmall ? 'small' : 'unknown';
+  const sizeOrder = { small:1, medium:2, large:3, unknown:0 };
+
+  // 업그레이드 필요 시에만 반환
+  if (currentLevel !== 'unknown' && sizeOrder[recommendedLevel] > sizeOrder[currentLevel]) {
+    const labels = { small: '소형 (10~15cm 큐브)', medium: '중형 (20~25cm 큐브)', large: '대형 (30cm+ 큐브/유리)' };
+    return {
+      need: true,
+      from: labels[currentLevel] || currentCage,
+      to: labels[recommendedLevel],
+      reason: w >= 20 ? '체중 20g 이상 — 성체 크기'
+            : w >= 10 ? '체중 10g 이상 — 아성체 진입'
+            : guide?.months >= 12 ? '생후 12개월 이상'
+            : guide?.months >= 6 ? '생후 6개월 이상'
+            : '성장 단계 변화'
+    };
+  }
+  return { need: false };
+}
+
 async function _downloadMyDataPDF() {
   showToast('📄 PDF 리포트 생성 중...');
   let geckos = [], logs = [], breedings = [];
@@ -9581,6 +9790,21 @@ function _checkDailyReminders() {
       }
     }
   }
+
+  // 4) 사육장 업그레이드 권고 — 주 1회 (체중 초과 감지 시)
+  if (prefs.weight) {
+    state.geckos.forEach(g => {
+      const rec = _getCageRecommendation(g);
+      if (rec && rec.need && checkAndSet('cage_' + g.id, weekKey)) {
+        sendLocalNotification(
+          `🏠 ${g.name} 사육장 바꿔야 할 시기!`,
+          `${rec.reason} · ${rec.to}로 업그레이드 권장`,
+          '/icon-192.png',
+          'default'
+        );
+      }
+    });
+  }
 }
 
 // ══════════════════════════════
@@ -10107,6 +10331,22 @@ function updateBreedingCard() {
       return `♀ ${r.femaleName} — ${label}`;
     }).join('<br>');
   }
+}
+
+// 홈 '사육장 업그레이드 필요' 카드 — 해당 개체들 요약
+function updateCageCard() {
+  const card = document.getElementById('home-cage-card');
+  const txt = document.getElementById('home-cage-text');
+  if (!card || !txt) return;
+  const needList = state.geckos
+    .map(g => ({ g, rec: _getCageRecommendation(g) }))
+    .filter(x => x.rec && x.rec.need);
+  if (needList.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  txt.innerHTML = needList.slice(0, 3).map(x =>
+    `<b>${x.g.name}</b> — ${x.rec.to.split(' ')[0]}으로 변경 필요`
+  ).join('<br>');
+  if (needList.length > 3) txt.innerHTML += `<br><span style="color:var(--tx3)">외 ${needList.length - 3}마리</span>`;
 }
 
 // ISO Week 계산 (예: 2026-W16)
