@@ -4201,6 +4201,7 @@ function showToast(msg) {
 // ══════════════════════════════
 function openSheet(id) {
   const el = document.getElementById(id);
+  if (!el) { console.warn('[openSheet] not found:', id); return; }
   el.classList.remove('closing');
   el.style.display = 'flex';
   // force reflow for transition
@@ -8675,36 +8676,151 @@ async function _confirmedDeleteAccount() {
 // ══════════════════════════════
 // 내 데이터 다운로드 (JSON)
 // ══════════════════════════════
+// 데이터 다운로드 — PDF(인쇄) + JSON(백업) 선택
 async function downloadMyData() {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
-  showToast('데이터 준비 중...');
+  const choice = confirm('📄 PDF로 인쇄·저장하시겠어요?\n\n확인 = PDF 미리보기 창 열기\n취소 = JSON 백업 파일 다운로드');
+  if (choice) {
+    await _downloadMyDataPDF();
+  } else {
+    await _downloadMyDataJSON();
+  }
+}
+
+// JSON 백업 (복원용)
+async function _downloadMyDataJSON() {
+  showToast('JSON 백업 준비 중...');
   try {
     const { data: geckos } = await _supabase.from('geckos').select('*').eq('user_id', _currentUser.id);
-    const { data: records } = await _supabase.from('gecko_records').select('*').eq('user_id', _currentUser.id).maybeSingle().then(() => ({ data: [] })).catch(() => ({ data: [] }));
+    const { data: logs } = await _supabase.from('gecko_logs').select('*').eq('user_id', _currentUser.id);
+    const { data: breedings } = await _supabase.from('breedings').select('*').eq('user_id', _currentUser.id);
     const exportData = {
       exported_at: new Date().toISOString(),
       user_email: _currentUser.email,
       user_id: _currentUser.id,
       geckos: geckos || [],
-      records: records || [],
-      profile: {
-        marketing_opt_in: localStorage.getItem('byetmaru_marketing_opt_in') === '1',
-      }
+      records: logs || [],
+      breedings: breedings || [],
+      profile: { marketing_opt_in: localStorage.getItem('byetmaru_marketing_opt_in') === '1' }
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `byetmaru-backup-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('✅ 데이터 다운로드 완료');
+    showToast('✅ JSON 백업 완료');
   } catch(e) {
-    console.error('다운로드 실패:', e);
-    showToast('❌ 다운로드 실패: ' + e.message);
+    console.error('JSON 다운로드 실패:', e);
+    showToast('❌ 실패: ' + e.message);
   }
+}
+
+// PDF — 새 창에 인쇄 전용 HTML 그려서 window.print() (저장 대화상자에서 PDF 선택 가능)
+async function _downloadMyDataPDF() {
+  showToast('📄 PDF 리포트 생성 중...');
+  let geckos = [], logs = [], breedings = [];
+  try {
+    const res1 = await _supabase.from('geckos').select('*').eq('user_id', _currentUser.id).order('created_at');
+    geckos = res1.data || [];
+    const res2 = await _supabase.from('gecko_logs').select('*').eq('user_id', _currentUser.id).order('date', { ascending: false }).limit(500);
+    logs = res2.data || [];
+    const res3 = await _supabase.from('breedings').select('*').eq('user_id', _currentUser.id).order('mate_date', { ascending: false });
+    breedings = res3.data || [];
+  } catch(e) {
+    showToast('❌ 데이터 로드 실패: ' + e.message);
+    return;
+  }
+
+  const today = new Date().toLocaleString('ko-KR');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const typeLabel = { weight:'⚖️ 체중', feed:'🍽️ 급여', shed:'🦎 탈피', egg:'🥚 산란', health:'💊 건강', memo:'📝 메모' };
+
+  const geckoRows = geckos.map(g => `
+    <tr>
+      <td>${esc(g.name)}</td>
+      <td>${esc(g.sex || '—')}</td>
+      <td>${esc(g.morph || '—')}</td>
+      <td>${esc(g.grade || '—')}</td>
+      <td>${esc(g.dob || '—')}</td>
+      <td>${esc(g.weight ? g.weight + 'g' : '—')}</td>
+      <td>${esc(g.status || '—')}</td>
+      <td>${esc(g.dad || '—')} × ${esc(g.mom || '—')}</td>
+    </tr>`).join('');
+
+  // 개체별 기록 섹션
+  const geckoLogSections = geckos.map(g => {
+    const myLogs = logs.filter(l => String(l.gecko_id) === String(g.id));
+    if (myLogs.length === 0) return '';
+    const rows = myLogs.map(l => `
+      <tr>
+        <td>${esc(l.date || '')}</td>
+        <td>${esc(typeLabel[l.type] || l.type)}</td>
+        <td>${esc(l.value || '')}</td>
+        <td>${esc(l.note || '')}</td>
+      </tr>`).join('');
+    return `
+      <h3 style="margin-top:20px;color:#2E7D57">🦎 ${esc(g.name)} (${esc(g.morph || '미상')})</h3>
+      <table><thead><tr><th>날짜</th><th>유형</th><th>값</th><th>메모</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('');
+
+  const breedingRows = breedings.map(b => `
+    <tr>
+      <td>${esc(b.mate_date || '')}</td>
+      <td>${esc(b.male_name || '')} × ${esc(b.female_name || '')}</td>
+      <td>${esc(b.est_early || '')} ~ ${esc(b.est_late || '')}</td>
+      <td>${b.hatched_at ? `${esc(b.hatched_at)} · ${b.hatched_count ? b.hatched_count + '마리' : '-'}` : '대기 중'}</td>
+      <td>${esc(b.memo || '')}</td>
+    </tr>`).join('');
+
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) { showToast('❌ 팝업이 차단됐어요. 팝업을 허용해주세요'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>볏마루도감 내 데이터 리포트</title>
+    <style>
+      @page { size: A4; margin: 14mm; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; color:#1A2B22; padding:0; margin:0; line-height:1.5; }
+      h1 { color:#2E7D57; border-bottom:2px solid #2E7D57; padding-bottom:8px; margin-top:0; }
+      h2 { color:#2E7D57; margin-top:28px; border-left:4px solid #2E7D57; padding-left:10px; }
+      h3 { font-size:14px; }
+      table { width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; }
+      th, td { border:1px solid #ddd; padding:6px 8px; text-align:left; vertical-align:top; word-break:break-word; }
+      th { background:#F2EDE3; font-weight:700; font-size:11px; }
+      td { font-size:11px; }
+      .meta { color:#666; font-size:11px; margin-bottom:20px; }
+      .empty { color:#999; font-style:italic; padding:8px 0; font-size:12px; }
+      .footer { margin-top:32px; padding-top:12px; border-top:1px solid #ddd; color:#666; font-size:10px; text-align:center; }
+      @media print { .no-print { display:none !important; } }
+    </style></head><body>
+    <div class="no-print" style="position:sticky;top:0;background:#2E7D57;color:#fff;padding:12px 16px;text-align:center;z-index:100">
+      <button onclick="window.print()" style="background:#fff;color:#2E7D57;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:14px">📄 PDF로 저장 / 인쇄</button>
+      <span style="margin-left:10px;font-size:12px">인쇄 대화상자에서 "대상 → PDF로 저장" 선택</span>
+    </div>
+    <div style="padding:20px 24px">
+      <h1>🦎 볏마루도감 내 데이터 리포트</h1>
+      <div class="meta">
+        <b>이용자:</b> ${esc(_currentUser.email || '')}<br>
+        <b>내보낸 시각:</b> ${esc(today)}<br>
+        <b>등록 개체:</b> ${geckos.length}마리 · <b>사육 기록:</b> ${logs.length}건 · <b>메이팅 기록:</b> ${breedings.length}건
+      </div>
+
+      <h2>🦎 내 개체 목록</h2>
+      ${geckos.length ? `<table><thead><tr><th>이름</th><th>성별</th><th>모프</th><th>등급</th><th>생일</th><th>체중</th><th>상태</th><th>혈통 (부 × 모)</th></tr></thead><tbody>${geckoRows}</tbody></table>` : '<div class="empty">등록된 개체가 없어요.</div>'}
+
+      <h2>📋 개체별 사육 기록</h2>
+      ${geckoLogSections || '<div class="empty">사육 기록이 없어요.</div>'}
+
+      <h2>🥚 메이팅 · 해칭 기록</h2>
+      ${breedings.length ? `<table><thead><tr><th>교배일</th><th>조합</th><th>예상 산란</th><th>해칭 결과</th><th>메모</th></tr></thead><tbody>${breedingRows}</tbody></table>` : '<div class="empty">메이팅 기록이 없어요.</div>'}
+
+      <div class="footer">
+        © 볏마루도감 · byetmaru.com · 이 리포트는 개인 백업·기록용으로 생성되었습니다.
+      </div>
+    </div>
+    <script>setTimeout(()=>{try{window.print();}catch(e){}},500);<\/script>
+    </body></html>`);
+  win.document.close();
+  showToast('✅ PDF 미리보기 창 열림');
 }
 
 // ══════════════════════════════
@@ -10695,6 +10811,7 @@ async function loadRecords(geckoId) {
 function renderWeightChart(weightRecords) {
   const container = document.getElementById('record-weight-chart');
   const barsDiv = document.getElementById('weight-chart-bars');
+  if (!container || !barsDiv) return;
   if (weightRecords.length < 1) { container.style.display='none'; return; }
   container.style.display = 'block';
   const sorted = [...weightRecords].sort((a,b) => a.date.localeCompare(b.date));
