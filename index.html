@@ -1523,6 +1523,38 @@ input[type=file]{display:none}
     </button>
   </div>
 
+  <!-- 신뢰 & 안전 -->
+  <div class="more-section">
+    <div class="more-section-label">🛡️ 신뢰 & 안전</div>
+
+    <div class="more-item" onclick="openVerificationSheet()">
+      <div class="more-icon" style="background:var(--ac2)">✅</div>
+      <div class="more-item-info">
+        <div class="more-item-title">본인 인증 · 사업자 등록</div>
+        <div class="more-item-sub">휴대폰 인증 + 통신판매업 등록으로 신뢰 배지</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+
+    <div class="more-item" onclick="openTradesSheet()">
+      <div class="more-icon" style="background:var(--am2)">🤝</div>
+      <div class="more-item-info">
+        <div class="more-item-title">내 거래 · 평판</div>
+        <div class="more-item-sub">거래 내역 · 받은 평점 · 작성한 리뷰</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+
+    <div class="more-item" onclick="openSafetyGuide()">
+      <div class="more-icon" style="background:var(--bl2)">🛡️</div>
+      <div class="more-item-info">
+        <div class="more-item-title">안전 거래 가이드</div>
+        <div class="more-item-sub">사기 방지 팁 · 안전결제 · 블랙리스트</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+  </div>
+
   <!-- 앱 정보 / 문의 -->
   <div class="more-section">
     <div class="more-section-label">앱 정보</div>
@@ -6541,6 +6573,10 @@ async function openPostDetail(p) {
             · 거래 전 판매자 다른 게시글·활동 내역 확인<br>
             · 의심스러우면 🚨 신고 버튼으로 운영팀에 제보
           </div>
+          <div id="seller-rep-${p.id}" style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(245,200,66,.3);font-size:11px;color:var(--tx2)">
+            <span style="color:var(--tx3)">판매자 신뢰도 조회 중…</span>
+          </div>
+          ${!p.isOwn ? `<button class="btn-primary" style="width:100%;margin-top:10px;padding:10px;font-size:12px" onclick="startTrade(${p.id},'${p.user_id || ''}')">🤝 거래 시작 (에스크로)</button>` : ''}
         </div>` : ''}
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">💬 댓글 <span id="comment-count">0</span>개</div>
       <div id="comments-list" style="margin-bottom:8px"></div>
@@ -6553,6 +6589,63 @@ async function openPostDetail(p) {
     </div>`;
   openSheet('sheet-post-detail');
   loadComments(p.id);
+  // 판매자 평판 / 블랙리스트 조회 (sale/wanted만)
+  if ((p.cat === 'sale' || p.cat === 'wanted') && p.user_id) {
+    _renderSellerReputation(p.id, p.user_id);
+  }
+}
+
+// 판매자 평점 + 신고 누적 배지 렌더
+async function _renderSellerReputation(postId, sellerId) {
+  const target = document.getElementById(`seller-rep-${postId}`);
+  if (!target) return;
+  try {
+    const { data } = await _supabase.from('user_reputation').select('*').eq('user_id', sellerId).maybeSingle();
+    const { data: profile } = await _supabase.from('profiles').select('is_phone_verified,is_biz_verified').eq('id', sellerId).maybeSingle();
+    const avg = data?.avg_rating ? Number(data.avg_rating).toFixed(1) : null;
+    const count = data?.review_count || 0;
+    const reports = data?.report_count || 0;
+    const flagged = data?.is_flagged || false;
+
+    let html = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+    // 평점
+    if (avg) html += `<span style="background:var(--am2);color:var(--am);border:1px solid var(--am);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800">⭐ ${avg} (${count}명)</span>`;
+    else html += `<span style="color:var(--tx3);font-size:10px">신규 판매자 (리뷰 없음)</span>`;
+    // 인증 배지
+    if (profile?.is_phone_verified) html += `<span style="background:var(--ac2);color:var(--ac);border:1px solid var(--ac);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700">📱 본인인증</span>`;
+    if (profile?.is_biz_verified) html += `<span style="background:var(--bl2);color:var(--blue);border:1px solid var(--blue);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700">🏢 사업자</span>`;
+    // 블랙리스트
+    if (flagged) html += `<span style="background:rgba(255,60,60,.12);color:var(--coral);border:1px solid var(--coral);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800">⚠️ 주의 (신고 ${reports}회)</span>`;
+    html += '</div>';
+    target.innerHTML = html;
+  } catch(e) {
+    target.innerHTML = '<span style="color:var(--tx3);font-size:10px">신뢰도 조회 실패</span>';
+  }
+}
+
+// 🤝 거래 시작 — 구매자가 예약 레코드 생성
+async function startTrade(postId, sellerId) {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  if (!sellerId || sellerId === _currentUser.id) { showToast('⚠️ 본인 글에는 거래 시작할 수 없어요'); return; }
+  if (!confirm('🤝 이 개체에 대한 에스크로 거래를 시작할까요?\n\n· 예약 → 발송 → 수령 확인 3단계로 거래 추적\n· 수령 확인 후 리뷰 작성 가능\n· 외부 안전결제(네이버페이·당근머니 등) 병행 권장')) return;
+  try {
+    const { error } = await _supabase.from('trade_confirmations').insert({
+      post_id: postId,
+      buyer_id: _currentUser.id,
+      seller_id: sellerId,
+      status: 'reserved',
+    });
+    if (error) {
+      if (String(error.message).includes('duplicate')) {
+        showToast('⚠️ 이미 이 글에 거래를 시작했어요');
+        return;
+      }
+      throw error;
+    }
+    showToast('🤝 거래 예약 완료 · 더보기 > 내 거래에서 진행 상황 확인');
+    _notifyAdmin('trade_started', '🤝 거래 시작',
+      `구매자: ${_currentUser.email}\n판매자 ID: ${sellerId}\n게시글 ID: ${postId}`);
+  } catch(e) { showToast('❌ ' + e.message); }
 }
 
 async function loadComments(postId) {
@@ -7031,6 +7124,130 @@ function printQR() {
 
 <!-- 메이팅 / 브리딩 트래커 시트 -->
 <!-- 브리딩 · 혈통 통합 허브 (메이팅 + 혈통 + 유전자 예측) -->
+<!-- ══════════════════════════════════════ 신뢰 & 안전 시트 3개 ══════════════════════════════════════ -->
+
+<!-- 본인 인증 · 사업자 등록 -->
+<div class="sheet-overlay" id="sheet-verification" onclick="closeSheet('sheet-verification',event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">✅ 본인 인증 · 사업자</div>
+    <div class="sheet-body">
+      <div style="font-size:12px;color:var(--tx2);line-height:1.7;background:var(--sf2);border-radius:10px;padding:12px;margin-bottom:14px">
+        인증을 마치면 분양 게시글에 <b style="color:var(--ac)">✅ 인증 배지</b>가 붙어서 구매자의 신뢰를 얻을 수 있어요.
+      </div>
+
+      <!-- 휴대폰 본인인증 -->
+      <div id="verif-phone-row" style="background:var(--card);border:1.5px solid var(--br);border-radius:14px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:20px">📱</span>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:800">휴대폰 본인 인증</div>
+            <div style="font-size:11px;color:var(--tx3)">PASS 인증으로 1인 1계정 보증</div>
+          </div>
+          <span id="verif-phone-status" style="font-size:11px;color:var(--tx3);font-weight:700">미인증</span>
+        </div>
+        <button class="btn-primary" style="width:100%;padding:10px;font-size:13px" onclick="startPhoneVerification()">📱 휴대폰 인증하기</button>
+      </div>
+
+      <!-- 사업자 등록 (통신판매업) -->
+      <div id="verif-biz-row" style="background:var(--card);border:1.5px solid var(--br);border-radius:14px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:20px">🏢</span>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:800">사업자 / 통신판매업 등록</div>
+            <div style="font-size:11px;color:var(--tx3)">대량 분양·브리더 등록자 신뢰 배지</div>
+          </div>
+          <span id="verif-biz-status" style="font-size:11px;color:var(--tx3);font-weight:700">미인증</span>
+        </div>
+        <input class="form-input" id="verif-biz-number" type="text" placeholder="사업자등록번호 (10자리, 숫자만)" inputmode="numeric" maxlength="12" style="margin-bottom:8px">
+        <button class="btn-outline" style="width:100%;padding:10px;font-size:13px" onclick="submitBizNumber()">🏢 사업자 번호 등록</button>
+        <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.5">
+          운영팀이 국세청 공개 DB와 수동 대조 후 승인해드립니다 (평일 1~2일).
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--tx3);line-height:1.7;background:var(--sf2);border-radius:10px;padding:10px 12px;margin-top:10px">
+        ⚠️ <b>인증 준비 중</b>: 휴대폰 PASS API는 현재 연동 준비 중입니다. 사업자 번호는 지금 제출하면 운영팀이 수동으로 확인 후 배지를 부여해요.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 내 거래 · 평판 -->
+<div class="sheet-overlay" id="sheet-trades" onclick="closeSheet('sheet-trades',event)">
+  <div class="sheet" style="max-height:90vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🤝 내 거래 · 평판</div>
+    <div class="sheet-body">
+      <div id="my-reputation-summary" style="background:linear-gradient(135deg,var(--am2),rgba(245,200,66,.04));border:1.5px solid var(--am);border-radius:14px;padding:14px;margin-bottom:14px;text-align:center">
+        <div style="font-size:11px;color:#c9a850;font-weight:700;margin-bottom:6px">내 평점</div>
+        <div id="my-rep-rating" style="font-size:28px;font-weight:900;color:var(--am)">—</div>
+        <div id="my-rep-meta" style="font-size:11px;color:var(--tx3);margin-top:4px">아직 리뷰가 없어요</div>
+      </div>
+
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">📋 내 거래 내역</div>
+      <div id="my-trades-list" style="margin-bottom:14px">
+        <div style="text-align:center;padding:20px;color:var(--tx3);font-size:12px">불러오는 중…</div>
+      </div>
+
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">⭐ 받은 리뷰</div>
+      <div id="my-reviews-list">
+        <div style="text-align:center;padding:20px;color:var(--tx3);font-size:12px">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 안전 거래 가이드 -->
+<div class="sheet-overlay" id="sheet-safety-guide" onclick="closeSheet('sheet-safety-guide',event)">
+  <div class="sheet" style="max-height:90vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🛡️ 안전 거래 가이드</div>
+    <div class="sheet-body">
+      <div style="background:var(--co2);border:1.5px solid var(--coral);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;color:var(--coral);margin-bottom:6px">⚠️ 절대 하지 말아야 할 것</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--tx2);line-height:1.9">
+          <li>만남 전 전액 선입금</li>
+          <li>익명 계좌로 송금 (대포통장 의심)</li>
+          <li>카카오톡 외부 사이트 링크 클릭</li>
+          <li>비정상적으로 싼 가격의 희귀 모프</li>
+        </ul>
+      </div>
+
+      <div style="background:var(--ac2);border:1.5px solid var(--ac);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;color:var(--ac);margin-bottom:6px">✅ 권장 사항</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--tx2);line-height:1.9">
+          <li><b>직거래</b> 우선 — 현장에서 개체 상태 직접 확인</li>
+          <li><b>안전결제</b> — 네이버페이 안심결제, 당근머니 등</li>
+          <li><b>✅ 볏마루도감 인증</b> 뱃지 확인</li>
+          <li>판매자 <b>평점·거래 이력</b> 확인 (프로필 탭)</li>
+          <li>AI 모프 판별 이력이 있는 개체 선호</li>
+        </ul>
+      </div>
+
+      <div style="background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;margin-bottom:6px">🚨 의심스러운 판매자 신고</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.7">
+          신고 3회 이상 누적된 사용자는 자동으로 <b style="color:var(--coral)">⚠️ 주의</b> 배지가 붙어요. 각 분양 글 하단 🚨 버튼으로 신고 가능.
+        </div>
+      </div>
+
+      <div style="background:rgba(74,222,128,.08);border:1.5px solid rgba(74,222,128,.35);border-radius:12px;padding:12px 14px">
+        <div style="font-size:13px;font-weight:800;color:#4ade80;margin-bottom:6px">🛡️ 에스크로 (거래 보호)</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.7">
+          분양 글 댓글에서 <b>"거래하기"</b> 버튼으로 에스크로 거래 시작 →<br>
+          예약 → 발송 → 수령 확인의 3단계로 거래 추적.<br>
+          수령 확인 전까지 송금 보류 (외부 안전결제 서비스 활용 권장).
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:14px;font-size:10px;color:var(--tx3)">
+        © 볏마루도감 · 문제 발생 시 카카오톡/이메일 문의로 즉시 연락 주세요.
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="sheet-breeding-hub" onclick="closeSheet('sheet-breeding-hub',event)">
   <div class="sheet" style="max-height:92vh">
     <div class="sheet-handle"></div>
@@ -10371,9 +10588,50 @@ async function _deleteGeckoFromDB(id) {
 // ══════════════════════════════
 // INIT
 // ══════════════════════════════
-// ── PWA 서비스워커 등록 ──
+// ── PWA 서비스워커 등록 + 업데이트 감지 ──
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+    // 주기적으로 SW 업데이트 확인 (앱 켜둔 상태에서도)
+    setInterval(() => { try { reg.update(); } catch(e) {} }, 30 * 60 * 1000); // 30분마다
+
+    // 새 SW가 감지되면 업데이트 배너 표시
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          _showUpdateBanner(newWorker);
+        }
+      });
+    });
+  }).catch(() => {});
+
+  // SW에서 SW_UPDATED 메시지 받으면 한 번만 리로드 (controller 교체 감지용)
+  let _reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_reloading) return;
+    _reloading = true;
+    window.location.reload();
+  });
+}
+
+function _showUpdateBanner(newWorker) {
+  if (document.getElementById('update-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.style.cssText = 'position:fixed;bottom:80px;left:12px;right:12px;z-index:99995;background:linear-gradient(135deg,var(--ac),#3A9968);color:#fff;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:slideUp .3s ease';
+  banner.innerHTML = `
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:800;margin-bottom:2px">🎉 새 버전이 준비됐어요</div>
+      <div style="font-size:11px;opacity:.85">새로고침하면 최신 기능이 적용됩니다</div>
+    </div>
+    <button id="update-btn-apply" style="background:#fff;color:var(--ac);border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">지금 적용</button>
+    <button id="update-btn-later" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">나중에</button>`;
+  document.body.appendChild(banner);
+  document.getElementById('update-btn-apply').onclick = () => {
+    newWorker.postMessage({ type: 'SKIP_WAITING' }); // SW에게 즉시 활성화 지시 → controllerchange → reload
+  };
+  document.getElementById('update-btn-later').onclick = () => banner.remove();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -10662,6 +10920,158 @@ function openGeckoRecords(geckoId) {
 
 // 전체 사육 기록 (모든 개체 교차)
 let _allRecordsFilter = 'all';
+// ══════════════════════════════════════
+// 🛡️ 신뢰 & 안전 — 본인인증 / 거래·평판 / 안전 가이드
+// ══════════════════════════════════════
+
+async function openVerificationSheet() {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  openSheet('sheet-verification');
+  // 현재 인증 상태 로드
+  try {
+    const { data } = await _supabase.from('profiles')
+      .select('is_phone_verified, is_biz_verified, biz_number')
+      .eq('id', _currentUser.id)
+      .maybeSingle();
+    const phoneStat = document.getElementById('verif-phone-status');
+    const bizStat   = document.getElementById('verif-biz-status');
+    const bizInput  = document.getElementById('verif-biz-number');
+    if (phoneStat) {
+      phoneStat.textContent = data?.is_phone_verified ? '✅ 인증됨' : '미인증';
+      phoneStat.style.color = data?.is_phone_verified ? 'var(--ac)' : 'var(--tx3)';
+    }
+    if (bizStat) {
+      bizStat.textContent = data?.is_biz_verified ? '✅ 승인됨' : (data?.biz_number ? '⏳ 검토 중' : '미등록');
+      bizStat.style.color = data?.is_biz_verified ? 'var(--ac)' : (data?.biz_number ? 'var(--am)' : 'var(--tx3)');
+    }
+    if (bizInput && data?.biz_number) bizInput.value = data.biz_number;
+  } catch(e) {}
+}
+
+async function startPhoneVerification() {
+  // TODO: PASS 또는 포트원 본인인증 API 연동 (사업자 가입 후 활성화)
+  // 현재는 안내만 표시
+  showToast('📱 휴대폰 인증 API 연동 준비 중입니다. 출시 후 제공 예정.');
+}
+
+async function submitBizNumber() {
+  if (!_currentUser) return;
+  const raw = document.getElementById('verif-biz-number').value.trim();
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length !== 10) { showToast('⚠️ 사업자번호는 숫자 10자리입니다'); return; }
+  try {
+    const { error } = await _supabase.from('profiles')
+      .update({ biz_number: digits, is_biz_verified: false })
+      .eq('id', _currentUser.id);
+    if (error) throw error;
+    _notifyAdmin('biz_verification_request', '🏢 사업자 번호 검토 요청',
+      `사용자: ${_currentUser.email}\n사업자번호: ${digits}\n요청 시각: ${new Date().toLocaleString('ko-KR')}`);
+    const bizStat = document.getElementById('verif-biz-status');
+    if (bizStat) { bizStat.textContent = '⏳ 검토 중'; bizStat.style.color = 'var(--am)'; }
+    showToast('✅ 사업자번호 제출됨 · 운영팀 검토 후 배지 부여');
+  } catch(e) {
+    showToast('❌ 제출 실패: ' + e.message);
+  }
+}
+
+async function openTradesSheet() {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  openSheet('sheet-trades');
+
+  // 1) 내 평점 (seller_reviews avg)
+  try {
+    const { data: reviews } = await _supabase.from('seller_reviews')
+      .select('rating, comment, reviewer_id, created_at')
+      .eq('seller_id', _currentUser.id)
+      .order('created_at', { ascending: false });
+
+    const rating = document.getElementById('my-rep-rating');
+    const meta = document.getElementById('my-rep-meta');
+    const list = document.getElementById('my-reviews-list');
+
+    if (reviews && reviews.length > 0) {
+      const avg = (reviews.reduce((s,r) => s + r.rating, 0) / reviews.length).toFixed(1);
+      if (rating) rating.textContent = `⭐ ${avg}`;
+      if (meta) meta.textContent = `${reviews.length}명 평가`;
+      if (list) list.innerHTML = reviews.map(r =>
+        `<div style="background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;margin-bottom:6px">
+          <div style="font-size:14px;color:var(--am);font-weight:800">${'⭐'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+          ${r.comment ? `<div style="font-size:12px;color:var(--tx2);margin-top:4px;line-height:1.5">${r.comment}</div>` : ''}
+          <div style="font-size:10px;color:var(--tx3);margin-top:4px">${new Date(r.created_at).toLocaleDateString('ko-KR')}</div>
+        </div>`).join('');
+    } else {
+      if (rating) rating.textContent = '—';
+      if (meta) meta.textContent = '아직 리뷰가 없어요';
+      if (list) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3);font-size:12px">받은 리뷰가 없어요</div>';
+    }
+  } catch(e) {}
+
+  // 2) 내 거래 내역
+  try {
+    const { data: trades } = await _supabase.from('trade_confirmations')
+      .select('*')
+      .or(`buyer_id.eq.${_currentUser.id},seller_id.eq.${_currentUser.id}`)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    const tradesList = document.getElementById('my-trades-list');
+    if (!tradesList) return;
+    if (!trades || trades.length === 0) {
+      tradesList.innerHTML = '<div style="text-align:center;padding:16px;color:var(--tx3);font-size:12px">아직 거래 내역이 없어요</div>';
+      return;
+    }
+    const statusLabel = { reserved:'🟡 예약', shipped:'🟢 발송', received:'✅ 수령 완료', cancelled:'❌ 취소' };
+    tradesList.innerHTML = trades.map(t => {
+      const isBuyer = t.buyer_id === _currentUser.id;
+      const role = isBuyer ? '구매자' : '판매자';
+      const canConfirm = isBuyer && t.status === 'shipped';
+      const canReview = isBuyer && t.status === 'received';
+      return `<div style="background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--tx3)">${role}</span>
+          <span style="font-size:11px;font-weight:700">${statusLabel[t.status] || t.status}</span>
+        </div>
+        <div style="font-size:11px;color:var(--tx2)">게시글 #${t.post_id} · ${new Date(t.created_at).toLocaleDateString('ko-KR')}</div>
+        ${canConfirm ? `<button class="btn-sm" style="width:100%;margin-top:6px;padding:6px;font-size:11px;background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="confirmTradeReceived('${t.id}')">✅ 수령 확인</button>` : ''}
+        ${canReview ? `<button class="btn-sm" style="width:100%;margin-top:6px;padding:6px;font-size:11px;background:var(--am2);border-color:var(--am);color:var(--am)" onclick="openReviewDialog('${t.id}','${t.seller_id}','${t.post_id}')">⭐ 리뷰 작성</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function confirmTradeReceived(tradeId) {
+  try {
+    const { error } = await _supabase.from('trade_confirmations')
+      .update({ status: 'received', confirmed_at: new Date().toISOString() })
+      .eq('id', tradeId);
+    if (error) throw error;
+    showToast('✅ 수령 확인됨 · 이제 리뷰를 작성할 수 있어요');
+    openTradesSheet(); // 새로고침
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+async function openReviewDialog(tradeId, sellerId, postId) {
+  const ratingStr = prompt('⭐ 판매자 평점 (1~5)', '5');
+  if (ratingStr === null) return;
+  const rating = Math.max(1, Math.min(5, parseInt(ratingStr) || 5));
+  const comment = prompt('💬 간단한 후기 (선택)', '') || '';
+  try {
+    const { error } = await _supabase.from('seller_reviews').insert({
+      reviewer_id: _currentUser.id,
+      seller_id: sellerId,
+      post_id: parseInt(postId) || null,
+      rating,
+      comment,
+    });
+    if (error) throw error;
+    showToast('⭐ 리뷰 등록 완료! 감사합니다');
+    openTradesSheet();
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+function openSafetyGuide() {
+  openSheet('sheet-safety-guide');
+}
+
 async function openAllRecordsSheet() {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
   if (state.geckos.length === 0) { showToast('먼저 개체를 등록해주세요'); return; }

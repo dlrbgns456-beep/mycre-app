@@ -1,4 +1,4 @@
-const CACHE_NAME = 'byetmaru-v16';
+const CACHE_NAME = 'byetmaru-v17';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.png',
@@ -14,14 +14,23 @@ self.addEventListener('install', (e) => {
   self.skipWaiting(); // 대기 없이 즉시 교체
 });
 
-// 활성화 — 모든 이전 캐시 삭제 + 즉시 제어
+// 활성화 — 모든 이전 캐시 삭제 + 즉시 제어 + 열린 클라이언트에 업데이트 알림
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim(); // 즉시 모든 탭 제어
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+    await self.clients.claim();
+    // 열린 모든 탭/PWA 인스턴스에 '새 버전' 메시지 전송
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    all.forEach(c => c.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME }));
+  })());
+});
+
+// 클라이언트 → SW: 즉시 skipWaiting 요청
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // 요청 가로채기
