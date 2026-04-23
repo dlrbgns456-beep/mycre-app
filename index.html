@@ -1427,6 +1427,19 @@ input[type=file]{display:none}
   </div>
   <div class="divider"></div>
 
+  <!-- 알림 (맨 위) -->
+  <div class="more-section">
+    <div class="more-section-label">알림</div>
+    <div class="more-item" onclick="openNotifSettings()">
+      <div class="more-icon" style="background:var(--sf2)">🔔</div>
+      <div class="more-item-info">
+        <div class="more-item-title">알림 설정</div>
+        <div class="more-item-sub">급이·체중·탈피 리마인더, 커뮤니티 알림</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+  </div>
+
   <div class="more-section">
     <div class="more-section-label">🦎 개체 관리</div>
 
@@ -1489,40 +1502,6 @@ input[type=file]{display:none}
     </div>
   </div>
 
-  <!-- 알림 -->
-  <div class="more-section">
-    <div class="more-section-label">알림</div>
-    <div class="more-item" onclick="openNotifSettings()">
-      <div class="more-icon" style="background:var(--sf2)">🔔</div>
-      <div class="more-item-info">
-        <div class="more-item-title">알림 설정</div>
-        <div class="more-item-sub">급이·체중·탈피 리마인더, 커뮤니티 알림</div>
-      </div>
-      <div class="more-item-arrow">›</div>
-    </div>
-  </div>
-
-  <!-- 데이터 -->
-  <div class="more-section">
-    <div class="more-section-label">데이터</div>
-    <div class="more-item" onclick="downloadMyData()">
-      <div class="more-icon" style="background:var(--sf2)">💾</div>
-      <div class="more-item-info">
-        <div class="more-item-title">내 데이터 다운로드 (JSON)</div>
-        <div class="more-item-sub">개체·혈통·기록 전체 백업 파일</div>
-      </div>
-      <div class="more-item-arrow">›</div>
-    </div>
-    <button class="more-item" onclick="confirmDeleteAllGeckos()" style="width:100%;text-align:left;font-family:inherit;background:var(--sf);border:1px solid var(--br)">
-      <div class="more-icon" style="background:rgba(255,123,84,.12);pointer-events:none">🗑️</div>
-      <div class="more-item-info" style="pointer-events:none">
-        <div class="more-item-title" style="color:var(--coral)">모든 개체 삭제</div>
-        <div class="more-item-sub">등록된 개체·기록 전부 초기화</div>
-      </div>
-      <div class="more-item-arrow" style="pointer-events:none">›</div>
-    </button>
-  </div>
-
   <!-- 신뢰 & 안전 -->
   <div class="more-section">
     <div class="more-section-label">🛡️ 신뢰 & 안전</div>
@@ -1581,6 +1560,27 @@ input[type=file]{display:none}
     <div class="premium-title" style="color:var(--ac)">🔬 AI 판별 크레딧</div>
     <div class="premium-desc" style="color:var(--tx2)">매일 무료 3회 · 추가는 크레딧 충전<br><span id="more-credit-count" style="font-size:15px;font-weight:900;color:var(--ac)">—</span> <span style="font-size:12px;color:var(--tx3)">회 남음</span></div>
     <button class="btn-premium" style="background:linear-gradient(135deg,var(--ac),#3A9968)" onclick="event.stopPropagation();openProSheet()">충전하기</button>
+  </div>
+
+  <!-- 데이터 (로그아웃 직전) -->
+  <div class="more-section">
+    <div class="more-section-label">데이터</div>
+    <div class="more-item" onclick="downloadMyData()">
+      <div class="more-icon" style="background:var(--sf2)">💾</div>
+      <div class="more-item-info">
+        <div class="more-item-title">내 데이터 다운로드</div>
+        <div class="more-item-sub">PDF 리포트 · JSON 백업 선택</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+    <button class="more-item" onclick="confirmDeleteAllGeckos()" style="width:100%;text-align:left;font-family:inherit;background:var(--sf);border:1px solid var(--br)">
+      <div class="more-icon" style="background:rgba(255,123,84,.12);pointer-events:none">🗑️</div>
+      <div class="more-item-info" style="pointer-events:none">
+        <div class="more-item-title" style="color:var(--coral)">모든 개체 삭제</div>
+        <div class="more-item-sub">등록된 개체·기록 전부 초기화</div>
+      </div>
+      <div class="more-item-arrow" style="pointer-events:none">›</div>
+    </button>
   </div>
 
   <!-- 계정 -->
