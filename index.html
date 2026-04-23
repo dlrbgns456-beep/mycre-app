@@ -1489,20 +1489,11 @@ input[type=file]{display:none}
       <div class="more-item-arrow">›</div>
     </div>
 
-    <div class="more-item" onclick="openLineageTreePicker()">
-      <div class="more-icon" style="background:var(--ac2)">🌳</div>
+    <div class="more-item" onclick="openBreedingHub('mating')">
+      <div class="more-icon" style="background:var(--ac2)">🧬</div>
       <div class="more-item-info">
-        <div class="more-item-title">혈통 트리 + 유전자 예측</div>
-        <div class="more-item-sub">부모 → 자손 형질 시각화 · 자녀 모프 확률 계산</div>
-      </div>
-      <div class="more-item-arrow">›</div>
-    </div>
-
-    <div class="more-item" onclick="openBreedingSheet()">
-      <div class="more-icon" style="background:rgba(255,143,177,.12)">🥚</div>
-      <div class="more-item-info">
-        <div class="more-item-title">메이팅 트래커</div>
-        <div class="more-item-sub">교배 기록 + 예상 산란일 자동 계산</div>
+        <div class="more-item-title">브리딩 · 혈통 관리</div>
+        <div class="more-item-sub">메이팅 기록 · 혈통 트리 · 유전자 예측 (통합)</div>
       </div>
       <div class="more-item-arrow">›</div>
     </div>
@@ -6618,94 +6609,94 @@ function printQR() {
 </div>
 
 <!-- 메이팅 / 브리딩 트래커 시트 -->
-<div class="sheet-overlay" id="sheet-breeding" onclick="closeSheet('sheet-breeding',event)">
-  <div class="sheet">
+<!-- 브리딩 · 혈통 통합 허브 (메이팅 + 혈통 + 유전자 예측) -->
+<div class="sheet-overlay" id="sheet-breeding-hub" onclick="closeSheet('sheet-breeding-hub',event)">
+  <div class="sheet" style="max-height:92vh">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">🥚 메이팅 기록</div>
-    <div class="sheet-body">
-      <div class="form-group">
-        <label class="form-label">♂ 수컷 선택</label>
-        <select class="form-select" id="breed-male-select">
-          <option value="">— 수컷 선택 —</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">♀ 암컷 선택</label>
-        <select class="form-select" id="breed-female-select">
-          <option value="">— 암컷 선택 —</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">교배 시작일</label>
-        <input class="form-input" id="breed-mate-date" type="date" onchange="updateBreedEstimate()">
-      </div>
-      <div id="breed-estimate" style="display:none;background:var(--ac2);border:1.5px solid var(--ac);border-radius:12px;padding:13px 15px;margin-bottom:14px">
-        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--ac);letter-spacing:1px;margin-bottom:8px">📅 예상 산란일</div>
-        <div style="display:flex;gap:10px">
-          <div style="flex:1;text-align:center">
-            <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">이른 산란</div>
-            <div id="breed-est-early" style="font-size:16px;font-weight:800;color:var(--ac)">—</div>
-          </div>
-          <div style="flex:1;text-align:center">
-            <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">평균</div>
-            <div id="breed-est-avg" style="font-size:16px;font-weight:800;color:var(--ac)">—</div>
-          </div>
-          <div style="flex:1;text-align:center">
-            <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">늦은 산란</div>
-            <div id="breed-est-late" style="font-size:16px;font-weight:800;color:var(--ac)">—</div>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center">교배 후 약 30~45일 후 첫 산란 (개체차 있음)</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">메모</label>
-        <textarea class="form-textarea" id="breed-memo" placeholder="교배 상황, 특이사항 등"></textarea>
-      </div>
-      <button class="btn-primary" onclick="saveBreedingRecord()">💾 메이팅 기록 저장</button>
-
-      <div style="margin-top:20px">
-        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:10px">📋 기록 목록</div>
-        <div id="breed-record-list"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 혈통 트리 + 유전자 예측 시트 -->
-<div class="sheet-overlay" id="sheet-lineage" onclick="closeSheet('sheet-lineage',event)">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">🌳 혈통 · 유전자 예측</div>
-    <div class="sheet-body">
-      <!-- 탭 -->
-      <div style="display:flex;background:var(--sf2);border-radius:10px;padding:3px;margin-bottom:14px">
-        <button id="lineage-tab-tree" onclick="switchLineageTab('tree')" style="flex:1;background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🌳 혈통 트리</button>
-        <button id="lineage-tab-calc" onclick="switchLineageTab('calc')" style="flex:1;background:transparent;color:var(--tx2);border:none;border-radius:8px;padding:8px 0;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧬 유전자 예측</button>
+    <div class="sheet-title">🧬 브리딩 · 혈통 관리</div>
+    <div class="sheet-body" style="padding-top:0">
+      <!-- 탭 네비 -->
+      <div id="breeding-hub-tabs" style="display:flex;background:var(--sf2);border-radius:12px;padding:3px;margin-bottom:14px;position:sticky;top:0;z-index:10">
+        <button class="breeding-tab active" data-tab="mating" onclick="switchBreedingTab('mating')"
+                style="flex:1;background:var(--ac);color:#fff;border:none;border-radius:9px;padding:9px 0;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s">🥚 메이팅</button>
+        <button class="breeding-tab" data-tab="lineage" onclick="switchBreedingTab('lineage')"
+                style="flex:1;background:transparent;color:var(--tx2);border:none;border-radius:9px;padding:9px 0;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">🌳 혈통</button>
+        <button class="breeding-tab" data-tab="genetics" onclick="switchBreedingTab('genetics')"
+                style="flex:1;background:transparent;color:var(--tx2);border:none;border-radius:9px;padding:9px 0;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">🔬 유전 예측</button>
       </div>
 
-      <!-- 탭 1: 혈통 트리 -->
-      <div id="lineage-tab-content-tree">
-        <div id="lineage-tree-content" style="min-height:200px"></div>
-      </div>
-
-      <!-- 탭 2: 유전자 예측 -->
-      <div id="lineage-tab-content-calc" style="display:none">
-        <div style="font-size:12px;color:var(--tx2);line-height:1.6;background:var(--sf2);border-radius:10px;padding:10px 12px;margin-bottom:14px">
-          ♂ × ♀ 부모 조합으로 자녀 모프 가능성과 치사 유전 위험을 예측합니다.
-        </div>
+      <!-- ── 탭1: 메이팅 기록 ── -->
+      <div id="tab-mating" class="breeding-tab-content" style="display:block">
         <div class="form-group">
-          <label class="form-label">♂ 부(父) 선택</label>
-          <select class="form-select" id="calc-dad-select" onchange="runGeneticPrediction()">
+          <label class="form-label">♂ 수컷 선택</label>
+          <select class="form-select" id="breed-male-select">
             <option value="">— 수컷 선택 —</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">♀ 모(母) 선택</label>
-          <select class="form-select" id="calc-mom-select" onchange="runGeneticPrediction()">
+          <label class="form-label">♀ 암컷 선택</label>
+          <select class="form-select" id="breed-female-select">
             <option value="">— 암컷 선택 —</option>
           </select>
         </div>
-        <div id="calc-result" style="display:none;margin-top:14px"></div>
+        <div class="form-group">
+          <label class="form-label">교배 시작일</label>
+          <input class="form-input" id="breed-mate-date" type="date" onchange="updateBreedEstimate()">
+        </div>
+        <div id="breed-estimate" style="display:none;background:var(--ac2);border:1.5px solid var(--ac);border-radius:12px;padding:13px 15px;margin-bottom:14px">
+          <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--ac);letter-spacing:1px;margin-bottom:8px">📅 예상 산란일</div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;text-align:center"><div style="font-size:11px;color:var(--tx2);margin-bottom:3px">이른 산란</div><div id="breed-est-early" style="font-size:16px;font-weight:800;color:var(--ac)">—</div></div>
+            <div style="flex:1;text-align:center"><div style="font-size:11px;color:var(--tx2);margin-bottom:3px">평균</div><div id="breed-est-avg" style="font-size:16px;font-weight:800;color:var(--ac)">—</div></div>
+            <div style="flex:1;text-align:center"><div style="font-size:11px;color:var(--tx2);margin-bottom:3px">늦은 산란</div><div id="breed-est-late" style="font-size:16px;font-weight:800;color:var(--ac)">—</div></div>
+          </div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center">교배 후 약 30~45일 후 첫 산란 (개체차 있음)</div>
+        </div>
+
+        <!-- 치사 유전자 실시간 경고 -->
+        <div id="mating-lethal-warn" style="display:none"></div>
+
+        <div class="form-group">
+          <label class="form-label">메모</label>
+          <textarea class="form-textarea" id="breed-memo" placeholder="교배 상황, 특이사항 등"></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveBreedingRecord()">💾 메이팅 기록 저장</button>
+
+        <div style="margin-top:20px">
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:10px">📋 기록 목록</div>
+          <div id="breed-record-list"></div>
+        </div>
+      </div>
+
+      <!-- ── 탭2: 혈통 트리 ── -->
+      <div id="tab-lineage" class="breeding-tab-content" style="display:none">
+        <div id="lineage-gecko-picker"></div>
+        <div id="lineage-tree-content" style="min-height:200px"></div>
+      </div>
+
+      <!-- ── 탭3: 유전자 계산기 ── -->
+      <div id="tab-genetics" class="breeding-tab-content" style="display:none">
+        <div style="margin-bottom:14px">
+          <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">부모 모프 입력</div>
+          <div class="form-group">
+            <label class="form-label">♂ 아버지 모프</label>
+            <select class="form-select" id="calc-dad-morph" onchange="runGeneticCalc()">
+              <option value="">— 모프 선택 —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">♀ 어머니 모프</label>
+            <select class="form-select" id="calc-mom-morph" onchange="runGeneticCalc()">
+              <option value="">— 모프 선택 —</option>
+            </select>
+          </div>
+        </div>
+        <div id="calc-lethal-warn" style="display:none"></div>
+        <div id="calc-result" style="min-height:100px"></div>
+        <div id="calc-morph-info" style="display:none;background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:14px;margin-top:14px">
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">📖 선택한 모프 유전 정보</div>
+          <div id="calc-morph-detail"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -7593,117 +7584,338 @@ let _selectedPlan = 'yearly';
 
 let _selectedTier = 'breeder';
 
-// ── Breeder 전용 기능 게이트 핸들러 ──
-function handleGeneticCalc() {
-  // 혈통 트리 시트의 '유전자 예측' 탭으로 바로 이동
-  openLineageTreePicker();
-  setTimeout(() => switchLineageTab('calc'), 100);
+// ══════════════════════════════
+// 🧬 브리딩 · 혈통 통합 허브 (메이팅 + 혈통 + 유전자 예측)
+// ══════════════════════════════
+function openBreedingHub(initialTab) {
+  const tab = initialTab || 'mating';
+  _populateBreedingSelects();
+  renderBreedingRecords();
+  switchBreedingTab(tab);
+  openSheet('sheet-breeding-hub');
+
+  // DB 최신 동기화 후 재렌더
+  _fetchBreedingRecords().then(() => {
+    renderBreedingRecords();
+    updateBreedingCard();
+  }).catch(() => {});
 }
 
-// 혈통 / 유전자 탭 전환
-function switchLineageTab(tab) {
-  const treeTab  = document.getElementById('lineage-tab-tree');
-  const calcTab  = document.getElementById('lineage-tab-calc');
-  const treeCont = document.getElementById('lineage-tab-content-tree');
-  const calcCont = document.getElementById('lineage-tab-content-calc');
-  if (!treeTab || !calcTab) return;
-
-  const isCalc = tab === 'calc';
-  treeTab.style.background = isCalc ? 'transparent' : 'var(--ac)';
-  treeTab.style.color      = isCalc ? 'var(--tx2)'  : '#fff';
-  treeTab.style.fontWeight = isCalc ? '700' : '800';
-  calcTab.style.background = isCalc ? 'var(--ac)'   : 'transparent';
-  calcTab.style.color      = isCalc ? '#fff'        : 'var(--tx2)';
-  calcTab.style.fontWeight = isCalc ? '800' : '700';
-
-  if (treeCont) treeCont.style.display = isCalc ? 'none' : 'block';
-  if (calcCont) calcCont.style.display = isCalc ? 'block' : 'none';
-
-  if (isCalc) _populateCalcSelects();
-}
-
-function _populateCalcSelects() {
-  const dad = document.getElementById('calc-dad-select');
-  const mom = document.getElementById('calc-mom-select');
-  if (!dad || !mom) return;
-  dad.innerHTML = '<option value="">— 수컷 선택 —</option>';
-  mom.innerHTML = '<option value="">— 암컷 선택 —</option>';
-  state.geckos.forEach(g => {
-    const o = document.createElement('option');
-    o.value = g.id;
-    o.textContent = `${g.name} (${g.morph || '미상'})`;
-    if (g.sex === '수컷') dad.appendChild(o);
-    else if (g.sex === '암컷') mom.appendChild(o);
+function switchBreedingTab(tab) {
+  document.querySelectorAll('.breeding-tab').forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.style.background = isActive ? 'var(--ac)' : 'transparent';
+    btn.style.color      = isActive ? '#fff' : 'var(--tx2)';
+    btn.style.fontWeight = isActive ? '800' : '700';
+    btn.classList.toggle('active', isActive);
   });
+  document.querySelectorAll('.breeding-tab-content').forEach(el => el.style.display = 'none');
+  const target = document.getElementById('tab-' + tab);
+  if (target) target.style.display = 'block';
+
+  if (tab === 'lineage')  _initLineageTab();
+  if (tab === 'genetics') _initGeneticsTab();
 }
 
-// 간이 유전자 예측 — 치사 경고 + 공통 형질 노출
-function runGeneticPrediction() {
-  const dadId = document.getElementById('calc-dad-select').value;
-  const momId = document.getElementById('calc-mom-select').value;
-  const box   = document.getElementById('calc-result');
-  if (!dadId || !momId || !box) { if (box) box.style.display = 'none'; return; }
+function _populateBreedingSelects() {
+  const maleSelect = document.getElementById('breed-male-select');
+  const femaleSelect = document.getElementById('breed-female-select');
+  if (!maleSelect || !femaleSelect) return;
 
-  const dad = state.geckos.find(g => String(g.id) === String(dadId));
-  const mom = state.geckos.find(g => String(g.id) === String(momId));
-  if (!dad || !mom) { box.style.display = 'none'; return; }
+  maleSelect.innerHTML = '<option value="">— 수컷 선택 —</option>';
+  femaleSelect.innerHTML = '<option value="">— 암컷 선택 —</option>';
 
-  const dadMorph = (dad.morph || '').trim();
-  const momMorph = (mom.morph || '').trim();
+  state.geckos.forEach(g => {
+    if (g.sex === '수컷') {
+      const o = document.createElement('option');
+      o.value = g.id; o.textContent = `${g.name} (${g.morph || '미상'})`;
+      maleSelect.appendChild(o);
+    } else if (g.sex === '암컷') {
+      const o = document.createElement('option');
+      o.value = g.id; o.textContent = `${g.name} (${g.morph || '미상'})`;
+      femaleSelect.appendChild(o);
+    }
+  });
 
-  // 치사 유전 조합 체크 (릴리화이트 x 릴리화이트, 카푸치노 x 카푸치노)
-  const lethalPairs = [
-    { needle: '릴리화이트', message: '릴리화이트 × 릴리화이트는 치사 유전으로 알려져 있어요. 자손의 25%가 생존하지 못할 수 있습니다.' },
-    { needle: '카푸치노',   message: '카푸치노 × 카푸치노는 일부 라인에서 치사 가능성이 보고되어 있어요. 권장되지 않습니다.' },
-  ];
-  let lethalWarning = '';
-  for (const pair of lethalPairs) {
-    if (dadMorph.includes(pair.needle) && momMorph.includes(pair.needle)) {
-      lethalWarning = `<div style="background:rgba(255,60,60,.1);border:1.5px solid #ff4444;border-radius:12px;padding:12px 14px;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:800;color:#ff4444;margin-bottom:6px">⚠️ 치사 유전 경고</div>
-        <div style="font-size:12px;color:var(--tx2);line-height:1.6">${pair.message}</div>
+  // 선택 변경 시 치사 유전자 실시간 경고
+  maleSelect.onchange = femaleSelect.onchange = function() {
+    const male = state.geckos.find(g => String(g.id) === String(maleSelect.value));
+    const female = state.geckos.find(g => String(g.id) === String(femaleSelect.value));
+    const warn = _checkLethalCombo(male?.morph || '', female?.morph || '');
+    const warnEl = document.getElementById('mating-lethal-warn');
+    if (!warnEl) return;
+    if (warn) {
+      warnEl.style.display = 'block';
+      warnEl.innerHTML = `<div class="lineage-warn"><div class="lineage-warn-icon">☠️</div><div class="lineage-warn-text">${warn}</div></div>`;
+    } else {
+      warnEl.style.display = 'none';
+    }
+  };
+}
+
+// ── 혈통 탭 초기화 ──
+function _initLineageTab() {
+  const picker = document.getElementById('lineage-gecko-picker');
+  const content = document.getElementById('lineage-tree-content');
+  if (!picker || !content) return;
+
+  if (state.geckos.length === 0) {
+    picker.innerHTML = '';
+    content.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">등록된 개체가 없어요.<br>먼저 개체를 등록해주세요.</div>';
+    return;
+  }
+  if (state.geckos.length === 1) {
+    picker.innerHTML = '';
+    _renderLineageTreeIn(state.geckos[0].id);
+    return;
+  }
+  let html = '<div style="font-size:13px;color:var(--tx2);margin-bottom:10px">혈통을 볼 개체를 선택하세요:</div>';
+  state.geckos.forEach(g => {
+    const mg = MORPH_GRADES[(MORPHS[g.morph]?.grade)] || MORPH_GRADES['C'];
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border:1px solid var(--br);border-radius:10px;margin-bottom:6px;cursor:pointer" onclick="_renderLineageTreeIn('${g.id}')">
+      <span style="font-size:20px">${g.sex === '암컷' ? '♀' : (g.sex === '수컷' ? '♂' : '🦎')}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${g.name}</div>
+        <div style="font-size:11px;color:var(--tx2)">${g.morph || '미상'}</div>
+      </div>
+      <span class="grade-badge" style="background:${mg.bg};color:${mg.color};font-size:9px;padding:2px 6px">${mg.label}</span>
+    </div>`;
+  });
+  picker.innerHTML = html;
+  content.innerHTML = '';
+}
+
+// 혈통 트리 렌더 — 허브 내부에 콘텐츠 채우기만 (시트 오픈 X)
+function _renderLineageTreeIn(geckoId) {
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g) return;
+
+  const picker = document.getElementById('lineage-gecko-picker');
+  if (picker) {
+    picker.innerHTML = `<button onclick="_initLineageTab()" style="background:none;border:none;color:var(--ac);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;padding:4px 0;margin-bottom:8px">← 개체 목록으로</button>`;
+  }
+
+  const dadMorph = g.dad || '';
+  const momMorph = g.mom || '';
+  const dadGecko = g.dadId ? state.geckos.find(x => String(x.id) === String(g.dadId)) : null;
+  const momGecko = g.momId ? state.geckos.find(x => String(x.id) === String(g.momId)) : null;
+  const children = _findChildren(geckoId);
+  const lethalWarn = _checkLethalCombo(dadMorph, momMorph);
+  const predictions = _predictOffspring(dadMorph, momMorph);
+
+  let html = '<div class="lineage-tree">';
+  html += '<div class="lineage-row">';
+  html += `<div class="lineage-node dad">
+    <div class="lineage-node-label">♂ 아버지</div>
+    <div class="lineage-node-name">${dadGecko ? dadGecko.name : (dadMorph || '미입력')}</div>
+    <div class="lineage-node-morph">${dadGecko ? (dadGecko.morph || '—') : dadMorph}</div>
+  </div>`;
+  html += `<div class="lineage-node mom">
+    <div class="lineage-node-label">♀ 어머니</div>
+    <div class="lineage-node-name">${momGecko ? momGecko.name : (momMorph || '미입력')}</div>
+    <div class="lineage-node-morph">${momGecko ? (momGecko.morph || '—') : momMorph}</div>
+  </div>`;
+  html += '</div>';
+
+  if (dadMorph || momMorph) html += '<div class="lineage-branch"></div>';
+  else html += '<div class="lineage-connector"></div>';
+
+  const gGrade = MORPH_GRADES[g.grade || (MORPHS[g.morph]?.grade)] || MORPH_GRADES['C'];
+  html += `<div class="lineage-node self" style="margin:0 auto">
+    <div class="lineage-node-label">🦎 이 개체</div>
+    <div class="lineage-node-name">${g.name}</div>
+    <div class="lineage-node-morph">${g.morph || '미상'} <span class="grade-badge" style="background:${gGrade.bg};color:${gGrade.color};font-size:9px;padding:1px 5px">${gGrade.label}</span></div>
+    ${g.sex ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">${g.sex === '암컷' ? '♀ 암컷' : '♂ 수컷'}${g.dob ? ' · ' + g.dob : ''}</div>` : ''}
+  </div>`;
+
+  if (children.length > 0) {
+    html += '<div class="lineage-connector"></div>';
+    html += `<div style="font-size:11px;font-weight:700;color:var(--tx2);text-align:center;margin-bottom:4px">🥚 자녀 (${children.length}마리)</div>`;
+    html += '<div class="lineage-offspring-row">';
+    children.forEach(c => {
+      html += `<div class="lineage-node offspring" onclick="_renderLineageTreeIn('${c.id}')">
+        <div class="lineage-node-label">${c.sex === '암컷' ? '♀' : (c.sex === '수컷' ? '♂' : '?')}</div>
+        <div class="lineage-node-name">${c.name}</div>
+        <div class="lineage-node-morph">${c.morph || '—'}</div>
       </div>`;
-      break;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  if (lethalWarn) {
+    html += `<div class="lineage-warn">
+      <div class="lineage-warn-icon">☠️</div>
+      <div class="lineage-warn-text">${lethalWarn}</div>
+    </div>`;
+  }
+
+  if (predictions.length > 0) {
+    html += '<div class="lineage-predict">';
+    html += '<div class="lineage-predict-title">🧬 이 조합에서 나올 수 있는 자손 형질 (추정)</div>';
+    predictions.forEach(p => {
+      const barW = p.prob ? p.prob : 30;
+      const probText = p.prob ? `${p.prob}%` : '가능';
+      const mg = MORPH_GRADES[(MORPHS[p.name]?.grade)] || MORPH_GRADES['C'];
+      html += `<div class="lineage-predict-item">
+        <span style="font-size:12px;font-weight:700;min-width:80px">${p.name}</span>
+        <div style="flex:1;background:var(--br);border-radius:3px;height:6px;overflow:hidden">
+          <div class="lineage-predict-bar" style="width:${barW}%;background:${mg.color}"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${mg.color};min-width:35px;text-align:right">${probText}</span>
+      </div>`;
+    });
+    html += '<div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center;line-height:1.5">※ 확률은 참고용 추정이며, 실제 결과는 다를 수 있어요.</div>';
+    html += '</div>';
+  }
+
+  if (!dadMorph && !momMorph) {
+    html += `<div style="text-align:center;padding:24px 16px 16px">
+      <div style="font-size:40px;margin-bottom:12px">🌳</div>
+      <div style="font-size:13px;color:var(--tx);font-weight:700;line-height:1.6;margin-bottom:14px">혈통을 기록하면<br>교배 계획·자손 예측까지 한 번에.</div>
+      <button class="btn-primary" style="max-width:220px;padding:12px 24px" onclick="closeSheetDirect('sheet-breeding-hub');setTimeout(()=>editGecko('${geckoId}'),250)">+ 부모 정보 입력</button>
+    </div>`;
+  }
+
+  const content = document.getElementById('lineage-tree-content');
+  if (content) content.innerHTML = html;
+}
+
+// ── 유전자 계산기 탭 초기화 ──
+function _initGeneticsTab() {
+  const dadSelect = document.getElementById('calc-dad-morph');
+  const momSelect = document.getElementById('calc-mom-morph');
+  if (!dadSelect || !momSelect) return;
+
+  if (!dadSelect.dataset.filled) {
+    const morphNames = Object.keys(MORPHS).sort();
+    const optsHTML = '<option value="">— 모프 선택 —</option>' +
+      morphNames.map(name => {
+        const m = MORPHS[name];
+        const grade = m.grade || 'C';
+        return `<option value="${name}">${name} (${grade}급)</option>`;
+      }).join('');
+    dadSelect.innerHTML = optsHTML;
+    momSelect.innerHTML = optsHTML;
+    dadSelect.dataset.filled = '1';
+  }
+
+  const resultEl = document.getElementById('calc-result');
+  if (!resultEl) return;
+
+  // 내 개체 빠른 선택 UI — 매번 다시 렌더해서 최신 목록 반영
+  let quickHTML = '';
+  const haveMyMorphs = state.geckos.some(g => g.morph);
+  if (haveMyMorphs) {
+    quickHTML = '<div style="margin-bottom:14px"><div style="font-size:11px;color:var(--tx3);margin-bottom:6px">💡 내 개체에서 빠른 선택:</div><div style="display:flex;flex-wrap:wrap;gap:4px">';
+    state.geckos.forEach(g => {
+      if (g.morph) {
+        const icon = g.sex === '수컷' ? '♂' : (g.sex === '암컷' ? '♀' : '🦎');
+        quickHTML += `<button onclick="quickSelectMorph('${g.id}')" style="background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:4px 8px;font-size:11px;font-family:inherit;cursor:pointer;color:var(--tx2)">${icon} ${g.name}</button>`;
+      }
+    });
+    quickHTML += '</div></div>';
+  }
+  const hasSelection = dadSelect.value || momSelect.value;
+  if (!hasSelection) {
+    resultEl.innerHTML = quickHTML + '<div style="text-align:center;padding:20px;color:var(--tx3);font-size:12px">부모 모프를 선택하면 자손 예측이 표시됩니다</div>';
+  }
+}
+
+function quickSelectMorph(geckoId) {
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g || !g.morph) return;
+  const dadSelect = document.getElementById('calc-dad-morph');
+  const momSelect = document.getElementById('calc-mom-morph');
+  if (g.sex === '수컷' && dadSelect) dadSelect.value = g.morph;
+  else if (g.sex === '암컷' && momSelect) momSelect.value = g.morph;
+  else {
+    if (dadSelect && !dadSelect.value) dadSelect.value = g.morph;
+    else if (momSelect && !momSelect.value) momSelect.value = g.morph;
+  }
+  runGeneticCalc();
+}
+
+function runGeneticCalc() {
+  const dadMorph = document.getElementById('calc-dad-morph')?.value || '';
+  const momMorph = document.getElementById('calc-mom-morph')?.value || '';
+
+  const warn = _checkLethalCombo(dadMorph, momMorph);
+  const warnEl = document.getElementById('calc-lethal-warn');
+  if (warnEl) {
+    if (warn) {
+      warnEl.style.display = 'block';
+      warnEl.innerHTML = `<div class="lineage-warn"><div class="lineage-warn-icon">☠️</div><div class="lineage-warn-text">${warn}</div></div>`;
+    } else {
+      warnEl.style.display = 'none';
     }
   }
 
-  // 공통 형질 추출 (단순 교집합)
-  const dadTraits = dadMorph.split(/\s+/).filter(Boolean);
-  const momTraits = momMorph.split(/\s+/).filter(Boolean);
-  const commonTraits = dadTraits.filter(t => momTraits.includes(t));
+  const resultEl = document.getElementById('calc-result');
+  if (!resultEl) return;
 
-  // 예상 자녀 형질 Pool (모든 형질 합집합)
-  const allTraits = Array.from(new Set([...dadTraits, ...momTraits]));
+  if (!dadMorph && !momMorph) {
+    _initGeneticsTab();
+    return;
+  }
 
-  box.innerHTML = `
-    ${lethalWarning}
-    <div style="background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:14px;margin-bottom:10px">
-      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:10px">👨‍👩‍👧 부모</div>
-      <div style="display:flex;gap:10px">
-        <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px;border-left:3px solid var(--blue)">
-          <div style="font-size:10px;color:var(--blue);font-weight:700">♂ 부</div>
-          <div style="font-size:13px;font-weight:700;margin-top:3px">${dad.name}</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">${dadMorph || '모프 미상'}</div>
+  const predictions = _predictOffspring(dadMorph, momMorph);
+  let html = '';
+  if (predictions.length > 0) {
+    html += '<div class="lineage-predict" style="margin-top:0">';
+    html += `<div class="lineage-predict-title">🧬 ${dadMorph || '?'} × ${momMorph || '?'} 자손 예측</div>`;
+    predictions.forEach(p => {
+      const barW = p.prob ? p.prob : 30;
+      const probText = p.prob ? `${p.prob}%` : '가능';
+      const mg = MORPH_GRADES[(MORPHS[p.name]?.grade)] || MORPH_GRADES['C'];
+      html += `<div class="lineage-predict-item">
+        <span style="font-size:12px;font-weight:700;min-width:80px">${p.name}</span>
+        <div style="flex:1;background:var(--br);border-radius:3px;height:6px;overflow:hidden">
+          <div class="lineage-predict-bar" style="width:${barW}%;background:${mg.color}"></div>
         </div>
-        <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px;border-left:3px solid #ff8fb1">
-          <div style="font-size:10px;color:#ff8fb1;font-weight:700">♀ 모</div>
-          <div style="font-size:13px;font-weight:700;margin-top:3px">${mom.name}</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">${momMorph || '모프 미상'}</div>
-        </div>
-      </div>
-    </div>
-    <div style="background:var(--ac2);border:1px solid var(--ac);border-radius:12px;padding:14px">
-      <div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:8px">🧬 예상 자녀 형질</div>
-      ${commonTraits.length > 0 ? `<div style="font-size:11px;color:var(--tx2);line-height:1.6;margin-bottom:6px"><b style="color:var(--ac)">공통 형질</b> (자녀에 강하게 전달): ${commonTraits.join(', ')}</div>` : ''}
-      <div style="font-size:11px;color:var(--tx2);line-height:1.6">
-        <b>가능한 자녀 모프</b>:<br>
-        ${allTraits.length > 0 ? allTraits.map(t => `<span style="display:inline-block;background:var(--bg);border:1px solid var(--br);border-radius:6px;padding:2px 8px;margin:2px;font-size:10px">${t}</span>`).join('') : '<span style="color:var(--tx3)">부모 모프 정보가 부족해요</span>'}
-      </div>
-      <div style="font-size:10px;color:var(--tx3);margin-top:10px;line-height:1.5">
-        ⚠️ 이 예측은 형질 텍스트 교집합 기반 간이 계산이에요. 우성·열성 헤테로(Het) 여부는 반영되지 않으니 실제 결과는 달라질 수 있어요.
+        <span style="font-size:11px;font-weight:700;color:${mg.color};min-width:35px;text-align:right">${probText}</span>
+      </div>`;
+    });
+    html += '<div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center;line-height:1.5">※ MORPHS DB 기반 추정. 실제 결과는 다를 수 있어요.</div>';
+    html += '</div>';
+  } else {
+    html += `<div style="text-align:center;padding:20px">
+      <div style="font-size:13px;color:var(--tx2);line-height:1.7">
+        ${dadMorph && momMorph ? `<b>${dadMorph} × ${momMorph}</b> 조합의<br>DB 데이터가 아직 부족합니다.` : '두 모프를 모두 선택해주세요.'}
       </div>
     </div>`;
-  box.style.display = 'block';
+  }
+  resultEl.innerHTML = html;
+
+  // 모프 상세 정보
+  const infoEl = document.getElementById('calc-morph-info');
+  const detailEl = document.getElementById('calc-morph-detail');
+  if (infoEl && detailEl) {
+    const selectedMorph = dadMorph || momMorph;
+    const morphData = MORPHS[selectedMorph];
+    if (morphData) {
+      infoEl.style.display = 'block';
+      detailEl.innerHTML = `
+        <div style="font-size:13px;font-weight:800;color:var(--tx);margin-bottom:6px">${selectedMorph}</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.7;margin-bottom:8px">${(morphData.desc || '').slice(0, 120)}${morphData.desc && morphData.desc.length > 120 ? '…' : ''}</div>
+        ${morphData.genetics ? `
+        <div style="font-size:10px;color:var(--tx3);line-height:1.6">
+          <b>유전 타입:</b> ${morphData.genetics.type || '—'}<br>
+          ${morphData.genetics.allele ? `<b>대립유전자:</b> ${morphData.genetics.allele}<br>` : ''}
+          ${morphData.breedingCaution ? `<b>번식 주의:</b> ${morphData.breedingCaution}` : ''}
+        </div>` : ''}`;
+    } else {
+      infoEl.style.display = 'none';
+    }
+  }
+}
+
+// 직접 진입점들
+function handleGeneticCalc() { openBreedingHub('genetics'); }
+function openGeneticCalculator() { openBreedingHub('genetics'); }
+// 레거시 switchLineageTab 호환 (이전 2-탭 구조에서 호출되던 경로)
+function switchLineageTab(tab) {
+  switchBreedingTab(tab === 'calc' ? 'genetics' : 'lineage');
 }
 
 function handlePDFExport() {
@@ -8809,45 +9021,9 @@ function _checkWeightMilestone(gecko) {
 }
 
 // ══════════════════════════════
-// 🥚 메이팅 / 브리딩 트래커
+// 🥚 메이팅 / 브리딩 트래커 — 통합 허브의 '메이팅' 탭으로 연결
 // ══════════════════════════════
-async function openBreedingSheet() {
-  const maleSelect = document.getElementById('breed-male-select');
-  const femaleSelect = document.getElementById('breed-female-select');
-  if (!maleSelect || !femaleSelect) return;
-
-  maleSelect.innerHTML = '<option value="">— 수컷 선택 —</option>';
-  femaleSelect.innerHTML = '<option value="">— 암컷 선택 —</option>';
-
-  state.geckos.forEach(g => {
-    const opt = new Option(`${g.name} (${g.morph || '미상'})`, g.id);
-    if (g.sex === '수컷') maleSelect.appendChild(opt);
-    else if (g.sex === '암컷') femaleSelect.appendChild(opt.cloneNode(true));
-  });
-  // 이미 clone을 쓰면 수컷 option도 영향 받을 수 있어 다시 한번 옵션 분리 생성
-  maleSelect.innerHTML = '<option value="">— 수컷 선택 —</option>';
-  femaleSelect.innerHTML = '<option value="">— 암컷 선택 —</option>';
-  state.geckos.forEach(g => {
-    if (g.sex === '수컷') {
-      const o = document.createElement('option');
-      o.value = g.id; o.textContent = `${g.name} (${g.morph || '미상'})`;
-      maleSelect.appendChild(o);
-    } else if (g.sex === '암컷') {
-      const o = document.createElement('option');
-      o.value = g.id; o.textContent = `${g.name} (${g.morph || '미상'})`;
-      femaleSelect.appendChild(o);
-    }
-  });
-
-  // 로컬 캐시 먼저 렌더링 → 즉시 표시
-  renderBreedingRecords();
-  openSheet('sheet-breeding');
-  // DB에서 최신 데이터 fetch 후 다시 렌더
-  _fetchBreedingRecords().then(() => {
-    renderBreedingRecords();
-    updateBreedingCard();
-  });
-}
+function openBreedingSheet() { openBreedingHub('mating'); }
 
 function updateBreedEstimate() {
   const dateStr = document.getElementById('breed-mate-date').value;
@@ -9820,143 +9996,22 @@ function _findChildren(geckoId) {
   });
 }
 
+// 레거시 — 개체 상세 '혈통 트리 보기' 버튼에서 호출됨
+// 통합 허브 열고 특정 개체의 혈통 트리로 바로 진입
 function openLineageTree(geckoId) {
-  const g = state.geckos.find(x => String(x.id) === String(geckoId));
-  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
-
-  const dadMorph = g.dad || '';
-  const momMorph = g.mom || '';
-  const dadGecko = g.dadId ? state.geckos.find(x => String(x.id) === String(g.dadId)) : null;
-  const momGecko = g.momId ? state.geckos.find(x => String(x.id) === String(g.momId)) : null;
-  const children = _findChildren(geckoId);
-
-  // 치사 경고
-  const lethalWarn = _checkLethalCombo(dadMorph, momMorph);
-
-  // 자녀 모프 예측
-  const predictions = _predictOffspring(dadMorph, momMorph);
-
-  const content = document.getElementById('lineage-tree-content');
-  let html = '<div class="lineage-tree">';
-
-  // ── 부모 행 ──
-  html += '<div class="lineage-row">';
-  // 아버지
-  html += `<div class="lineage-node dad">
-    <div class="lineage-node-label">♂ 아버지</div>
-    <div class="lineage-node-name">${dadGecko ? dadGecko.name : (dadMorph || '미입력')}</div>
-    <div class="lineage-node-morph">${dadGecko ? (dadGecko.morph || '—') : dadMorph}</div>
-  </div>`;
-  // 어머니
-  html += `<div class="lineage-node mom">
-    <div class="lineage-node-label">♀ 어머니</div>
-    <div class="lineage-node-name">${momGecko ? momGecko.name : (momMorph || '미입력')}</div>
-    <div class="lineage-node-morph">${momGecko ? (momGecko.morph || '—') : momMorph}</div>
-  </div>`;
-  html += '</div>';
-
-  // ── 연결선 ──
-  if (dadMorph || momMorph) {
-    html += '<div class="lineage-branch"></div>';
+  const hub = document.getElementById('sheet-breeding-hub');
+  const alreadyOpen = hub && hub.classList.contains('show');
+  if (alreadyOpen) {
+    switchBreedingTab('lineage');
+    _renderLineageTreeIn(geckoId);
   } else {
-    html += '<div class="lineage-connector"></div>';
+    openBreedingHub('lineage');
+    setTimeout(() => _renderLineageTreeIn(geckoId), 150);
   }
-
-  // ── 자신 ──
-  const gGrade = MORPH_GRADES[g.grade || (MORPHS[g.morph]?.grade)] || MORPH_GRADES['C'];
-  html += `<div class="lineage-node self" style="margin:0 auto">
-    <div class="lineage-node-label">🦎 이 개체</div>
-    <div class="lineage-node-name">${g.name}</div>
-    <div class="lineage-node-morph">${g.morph || '미상'} <span class="grade-badge" style="background:${gGrade.bg};color:${gGrade.color};font-size:9px;padding:1px 5px">${gGrade.label}</span></div>
-    ${g.sex ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">${g.sex === '암컷' ? '♀ 암컷' : '♂ 수컷'}${g.dob ? ' · ' + g.dob : ''}</div>` : ''}
-  </div>`;
-
-  // ── 자녀 ──
-  if (children.length > 0) {
-    html += '<div class="lineage-connector"></div>';
-    html += '<div style="font-size:11px;font-weight:700;color:var(--tx2);text-align:center;margin-bottom:4px">🥚 자녀 (${0}마리)</div>'.replace('${0}', children.length);
-    html += '<div class="lineage-offspring-row">';
-    children.forEach(c => {
-      html += `<div class="lineage-node offspring" onclick="closeSheetDirect('sheet-lineage');setTimeout(()=>openLineageTree('${c.id}'),300)">
-        <div class="lineage-node-label">${c.sex === '암컷' ? '♀' : (c.sex === '수컷' ? '♂' : '?')}</div>
-        <div class="lineage-node-name">${c.name}</div>
-        <div class="lineage-node-morph">${c.morph || '—'}</div>
-      </div>`;
-    });
-    html += '</div>';
-  }
-
-  html += '</div>'; // .lineage-tree 닫기
-
-  // ── 치사 경고 ──
-  if (lethalWarn) {
-    html += `<div class="lineage-warn">
-      <div class="lineage-warn-icon">☠️</div>
-      <div class="lineage-warn-text">${lethalWarn}</div>
-    </div>`;
-  }
-
-  // ── 유전 예측 ──
-  if (predictions.length > 0) {
-    html += '<div class="lineage-predict">';
-    html += '<div class="lineage-predict-title">🧬 이 조합에서 나올 수 있는 자손 형질 (추정)</div>';
-    predictions.forEach(p => {
-      const barW = p.prob ? p.prob : 30;
-      const probText = p.prob ? `${p.prob}%` : '가능';
-      const mg = MORPH_GRADES[(MORPHS[p.name]?.grade)] || MORPH_GRADES['C'];
-      html += `<div class="lineage-predict-item">
-        <span style="font-size:12px;font-weight:700;min-width:80px">${p.name}</span>
-        <div style="flex:1;background:var(--br);border-radius:3px;height:6px;overflow:hidden">
-          <div class="lineage-predict-bar" style="width:${barW}%;background:${mg.color}"></div>
-        </div>
-        <span style="font-size:11px;font-weight:700;color:${mg.color};min-width:35px;text-align:right">${probText}</span>
-      </div>`;
-    });
-    html += '<div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center;line-height:1.5">※ 확률은 참고용 추정이며, 실제 결과는 다를 수 있어요.</div>';
-    html += '</div>';
-  }
-
-  // 부모 미입력 안내
-  if (!dadMorph && !momMorph) {
-    html += `<div style="text-align:center;padding:24px 16px 16px">
-      <div style="font-size:40px;margin-bottom:12px">🌳</div>
-      <div style="font-size:13px;color:var(--tx);font-weight:700;line-height:1.6;margin-bottom:14px">혈통을 기록하면<br>교배 계획·자손 예측까지 한 번에.</div>
-      <button class="btn-primary" style="max-width:220px;padding:12px 24px" onclick="closeSheetDirect('sheet-lineage');setTimeout(()=>editGecko('${geckoId}'),250)">+ 첫 개체 연결</button>
-    </div>`;
-  }
-
-  content.innerHTML = html;
-  openSheet('sheet-lineage');
 }
 
-function openLineageTreePicker() {
-  if (state.geckos.length === 0) {
-    showToast('등록된 개체가 없어요. 먼저 개체를 등록해주세요.');
-    return;
-  }
-  if (state.geckos.length === 1) {
-    openLineageTree(state.geckos[0].id);
-    return;
-  }
-  // 개체가 2마리 이상이면 선택 목록 표시
-  const content = document.getElementById('lineage-tree-content');
-  let html = '<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">혈통 트리를 볼 개체를 선택하세요:</div>';
-  state.geckos.forEach(g => {
-    const mg = MORPH_GRADES[(MORPHS[g.morph]?.grade)] || MORPH_GRADES['C'];
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border:1px solid var(--br);border-radius:10px;margin-bottom:6px;cursor:pointer" onclick="openLineageTree('${g.id}')">
-      <span style="font-size:20px">${g.sex === '암컷' ? '♀' : (g.sex === '수컷' ? '♂' : '🦎')}</span>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700">${g.name}</div>
-        <div style="font-size:11px;color:var(--tx2)">${g.morph || '미상'}</div>
-      </div>
-      <span class="grade-badge" style="background:${mg.bg};color:${mg.color};font-size:9px;padding:2px 6px">${mg.label}</span>
-    </div>`;
-  });
-  content.innerHTML = html;
-  openSheet('sheet-lineage');
-  // 기본 탭은 혈통 트리
-  setTimeout(() => switchLineageTab('tree'), 10);
-}
+// 레거시 진입점 — 통합 허브의 '혈통' 탭으로
+function openLineageTreePicker() { openBreedingHub('lineage'); }
 
 // 부모 선택 드롭다운 채우기 + 선택 시 텍스트 자동 입력
 function populateParentSelects(editingId) {
