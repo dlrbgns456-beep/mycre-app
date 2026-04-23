@@ -4472,10 +4472,13 @@ function updateGeckoGrade() {
 
 // 몸무게 → 케이지 자동추천 + 번식가능 판정
 function updateEggStyle() {
+  // 레거시 함수 — 폼에서 egg 체크박스 제거된 이후 안전 가드
   const inf = document.getElementById('gecko-egg-infertile');
   const fer = document.getElementById('gecko-egg-fertile');
-  document.getElementById('egg-infertile-label').style.borderColor = inf.checked ? 'var(--am)' : 'var(--br)';
-  document.getElementById('egg-fertile-label').style.borderColor = fer.checked ? 'var(--ac)' : 'var(--br)';
+  const infLabel = document.getElementById('egg-infertile-label');
+  const ferLabel = document.getElementById('egg-fertile-label');
+  if (inf && infLabel) infLabel.style.borderColor = inf.checked ? 'var(--am)' : 'var(--br)';
+  if (fer && ferLabel) ferLabel.style.borderColor = fer.checked ? 'var(--ac)' : 'var(--br)';
 }
 
 // 날짜 입력 자동 포맷 (YYYYMMDD → YYYY-MM-DD)
@@ -7055,10 +7058,13 @@ function printQR() {
           </select>
         </div>
         <div id="record-egg-field" style="display:none;margin-bottom:8px">
-          <select class="form-select" id="record-egg-type">
-            <option value="무정란">무정란</option>
-            <option value="유정란">유정란</option>
-          </select>
+          <div style="display:flex;gap:6px">
+            <select class="form-select" id="record-egg-type" style="flex:1">
+              <option value="무정란">무정란</option>
+              <option value="유정란">유정란</option>
+            </select>
+            <input class="form-input" id="record-egg-count" type="number" min="1" step="1" placeholder="개수" value="2" style="width:80px">
+          </div>
         </div>
         <div id="record-shed-field" style="display:none;margin-bottom:8px">
           <select class="form-select" id="record-shed-status">
@@ -10439,7 +10445,9 @@ async function saveRecord() {
   } else if (_currentRecordType === 'shed') {
     value = document.getElementById('record-shed-status').value;
   } else if (_currentRecordType === 'egg') {
-    value = document.getElementById('record-egg-type').value;
+    const eggType = document.getElementById('record-egg-type').value;
+    const eggCount = Math.max(1, parseInt(document.getElementById('record-egg-count')?.value) || 2);
+    value = `${eggType} ${eggCount}개`;
   }
   const record = { gecko_id: _currentRecordGeckoId, user_id: _currentUser.id, type: _currentRecordType, date, value, note, created_at: new Date().toISOString() };
   try {
@@ -10452,6 +10460,10 @@ async function saveRecord() {
   } else if (_currentRecordType === 'egg') {
     await _appendGeckoMemo(_currentRecordGeckoId, `[${date}] 🥚 ${value} 산란`);
   }
+
+  // 폼 필드 초기화 (다음 기록 입력 편하게)
+  const eggCountEl = document.getElementById('record-egg-count');
+  if (eggCountEl) eggCountEl.value = '2';
   showToast('기록이 저장됐어요!');
   document.getElementById('record-add-form').style.display = 'none';
   loadRecords(_currentRecordGeckoId);
@@ -10505,20 +10517,26 @@ async function quickMarkShed(geckoId) {
   renderHome();
 }
 
-// 빠른 산란 체크 (암컷) — 무정란/유정란을 반복해서 누적 기록
+// 빠른 산란 체크 (암컷) — 무정란/유정란을 반복해서 누적 기록 (개수 입력)
 async function quickMarkEgg(geckoId, kind) {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
   const g = state.geckos.find(x => String(x.id) === String(geckoId));
   if (!g) { showToast('개체를 찾을 수 없어요'); return; }
   if (g.sex !== '암컷') { showToast('암컷 개체만 가능합니다'); return; }
   const label = (kind === '유정란') ? '유정란' : '무정란';
+
+  // 개수 입력 받기 (크레스티드 게코는 보통 1~2개)
+  const countInput = prompt(`🥚 "${g.name}" ${label} 산란 기록\n몇 개 낳았나요? (숫자만, 기본 2)`, '2');
+  if (countInput === null) return; // 취소
+  const count = Math.max(1, parseInt(countInput) || 2);
+
   const today = new Date().toISOString().slice(0, 10);
   const record = {
     gecko_id: geckoId,
     user_id: _currentUser.id,
     type: 'egg',
     date: today,
-    value: label,
+    value: `${label} ${count}개`,
     note: '빠른 체크',
     created_at: new Date().toISOString(),
   };
@@ -10531,10 +10549,10 @@ async function quickMarkEgg(geckoId, kind) {
     logs.push(record);
     localStorage.setItem(key, JSON.stringify(logs));
   }
-  await _appendGeckoMemo(geckoId, `[${today}] 🥚 ${label} 산란`);
+  await _appendGeckoMemo(geckoId, `[${today}] 🥚 ${label} ${count}개 산란`);
   playNotificationSound('celebration');
   vibrateDevice('celebration');
-  showToast(`🥚 ${g.name} ${label} 산란 기록 — ${today}`);
+  showToast(`🥚 ${g.name} ${label} ${count}개 산란 — ${today}`);
   _updateRecordCount();
   renderGeckoList();
   renderHome();
