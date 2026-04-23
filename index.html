@@ -6852,7 +6852,11 @@ function printQR() {
       <div class="footer">볏마루도감 · byetmaru.com</div>
     </div>
     <script>setTimeout(()=>{window.print();window.close()},500)<\/script>
-  
+  </body></html>`);
+  printWin.document.close();
+}
+</script>
+
 <!-- ══════════════════════════════════════
      SHEET: 개체별 기록
 ══════════════════════════════════════ -->
@@ -7110,10 +7114,8 @@ function printQR() {
     </div>
   </div>
 </div>
-</body></html>`);
-  printWin.document.close();
-}
 
+<script>
 // 개체 상세에서 직접 QR 저장/인쇄
 function saveDetailQR(id) {
   const canvas = document.querySelector('#detail-qr-' + id + ' canvas');
