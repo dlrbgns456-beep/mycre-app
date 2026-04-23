@@ -820,25 +820,30 @@ input[type=file]{display:none}
   </div>
 
   <!-- Stats -->
-  <div class="stats-row">
-    <div class="stat-chip">
+  <div class="stats-row" id="home-stats-row" style="grid-template-columns:repeat(4,1fr);gap:6px">
+    <div class="stat-chip" style="cursor:pointer;padding:10px 6px" onclick="showPage('myge')">
       <div class="stat-label">내 개체</div>
-      <div class="stat-value" id="stat-count">0</div>
+      <div class="stat-value" id="stat-count" style="font-size:18px">0</div>
       <div class="stat-sub">마리</div>
     </div>
-    <div class="stat-chip">
+    <div class="stat-chip" style="padding:10px 6px">
       <div class="stat-label">사육 기록</div>
-      <div class="stat-value" id="stat-records">0</div>
+      <div class="stat-value" id="stat-records" style="font-size:18px">0</div>
       <div class="stat-sub">건</div>
     </div>
-    <div class="stat-chip">
+    <div class="stat-chip" style="cursor:pointer;padding:10px 6px" onclick="showPage('scan')">
       <div class="stat-label">AI 판별</div>
-      <div class="stat-value" id="stat-scans">3</div>
+      <div class="stat-value" id="stat-scans" style="font-size:18px">3</div>
       <div class="stat-sub">회 남음</div>
+    </div>
+    <div class="stat-chip" id="stat-chip-misting" style="cursor:pointer;display:none;padding:10px 6px" onclick="toggleMistingExpand()">
+      <div class="stat-label">오늘 분무</div>
+      <div class="stat-value" id="stat-misting-count" style="font-size:18px">0/2</div>
+      <div class="stat-sub" id="stat-misting-sub">☀️ · 🌙</div>
     </div>
   </div>
 
-  <!-- 분무 리마인더 카드 -->
+  <!-- 분무 상세 토글 (stat 클릭 시 expand) -->
   <div id="home-misting-card" style="display:none;margin:0 18px 8px;background:linear-gradient(135deg,rgba(62,140,181,.08),rgba(46,125,87,.08));border:1.5px solid var(--blue);border-radius:14px;padding:13px 15px">
     <div style="font-size:14px;font-weight:800;color:var(--blue);margin-bottom:10px">💦 오늘의 분무</div>
     <div style="display:flex;gap:8px">
@@ -855,31 +860,6 @@ input[type=file]{display:none}
   <div id="home-breeding-card" style="display:none;margin:0 18px 8px;background:rgba(255,143,177,.06);border:1.5px solid #ff8fb1;border-radius:14px;padding:13px 15px;cursor:pointer" onclick="openBreedingSheet()">
     <div style="font-size:14px;font-weight:800;color:#ff8fb1">🥚 산란 예정</div>
     <div id="breeding-upcoming-text" style="font-size:12px;color:var(--tx2);margin-top:3px"></div>
-  </div>
-
-  <!-- Quick Grid -->
-  <div class="sec-head"><span class="sec-title">빠른 기능</span></div>
-  <div class="quick-grid">
-    <div class="quick-card featured" onclick="showPage('myge')">
-      <div class="quick-icon">🦎</div>
-      <div class="quick-title">내 개체 관리</div>
-      <div class="quick-sub">등록·혈통·사육 기록 한 곳에</div>
-    </div>
-    <div class="quick-card" onclick="showPage('scan')">
-      <div class="quick-icon">📸</div>
-      <div class="quick-title">AI 모프 판별</div>
-      <div class="quick-sub">사진 → 모프·유전자 확률 분석</div>
-    </div>
-    <div class="quick-card" onclick="showPage('comm')">
-      <div class="quick-icon">🏘️</div>
-      <div class="quick-title">분양 게시판</div>
-      <div class="quick-sub">키퍼들과 개체 거래 및 정보 공유</div>
-    </div>
-    <div class="quick-card" onclick="showPage('guide')">
-      <div class="quick-icon">📖</div>
-      <div class="quick-title">크레 가이드</div>
-      <div class="quick-sub">기록하면서 배우는 사육 가이드</div>
-    </div>
   </div>
 
   <!-- Recent geckos -->
@@ -1497,8 +1477,17 @@ input[type=file]{display:none}
   <div class="more-section">
     <div class="more-section-label">📚 정보</div>
 
+    <div class="more-item" onclick="showPage('guide')">
+      <div class="more-icon" style="background:var(--ac2)">📖</div>
+      <div class="more-item-info">
+        <div class="more-item-title">크레 가이드</div>
+        <div class="more-item-sub">기록하면서 배우는 사육 가이드</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+
     <div class="more-item" onclick="openMorphGuide()">
-      <div class="more-icon" style="background:var(--am2)">📖</div>
+      <div class="more-icon" style="background:var(--am2)">🧬</div>
       <div class="more-item-info">
         <div class="more-item-title">모프 가이드</div>
         <div class="more-item-sub">릴리화이트부터 아잔틱까지 모든 모프 정보</div>
@@ -8854,17 +8843,39 @@ function _scheduleMistingAlarms() {
   });
 }
 
+function toggleMistingExpand() {
+  const card = document.getElementById('home-misting-card');
+  if (!card) return;
+  card.style.display = card.style.display === 'none' || !card.style.display ? 'block' : 'none';
+}
+
 function updateMistingCard() {
   const card = document.getElementById('home-misting-card');
-  if (!card || !_currentUser) return;
+  const chip = document.getElementById('stat-chip-misting');
+  if (!_currentUser) return;
   const prefs = _loadNotifPrefs();
-  if (!prefs.misting) { card.style.display = 'none'; return; }
+  if (!prefs.misting) {
+    if (card) card.style.display = 'none';
+    if (chip) chip.style.display = 'none';
+    return;
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const amDone = localStorage.getItem(`byetmaru_mist_done_am_${_currentUser.id}`) === today;
   const pmDone = localStorage.getItem(`byetmaru_mist_done_pm_${_currentUser.id}`) === today;
 
-  card.style.display = 'block';
+  // stat-chip (4번째 칸) 갱신
+  if (chip) {
+    chip.style.display = '';
+    const countEl = document.getElementById('stat-misting-count');
+    const subEl   = document.getElementById('stat-misting-sub');
+    const done = (amDone ? 1 : 0) + (pmDone ? 1 : 0);
+    if (countEl) countEl.textContent = `${done}/2`;
+    if (subEl)   subEl.textContent   = `${amDone ? '✅' : '☀️'} · ${pmDone ? '✅' : '🌙'}`;
+  }
+
+  // 카드는 stat 칩 클릭 시 토글되도록 기본 숨김
+  if (!card) return;
 
   const amBtn = document.getElementById('mist-btn-am');
   const pmBtn = document.getElementById('mist-btn-pm');
