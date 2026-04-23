@@ -4296,28 +4296,36 @@ function renderHome() {
   updateCreditDisplays();
 }
 
-// 크레딧 잔량 UI 일괄 갱신 — 홈 상단 배지 + 더보기 카드
+// 크레딧 잔량 UI 일괄 갱신 — 홈 상단 배지 + 더보기 카드 + 홈 'AI 판별' stat 칩
 function updateCreditDisplays() {
   const badge = document.getElementById('home-credit-badge');
   const moreCount = document.getElementById('more-credit-count');
+  const statScans = document.getElementById('stat-scans');
   if (!_currentUser) return;
 
-  if (state._isBetaTester) {
-    if (badge) { badge.textContent = '💚 무제한'; badge.title = '베타 테스터 — AI 판별 무제한'; }
-    if (moreCount) moreCount.textContent = '∞';
-    return;
-  }
+  const renderAll = (creditsVal) => {
+    if (state._isBetaTester) {
+      if (badge) { badge.textContent = '💚 무제한'; badge.title = '베타 테스터 — AI 판별 무제한'; }
+      if (moreCount) moreCount.textContent = '∞';
+      if (statScans) statScans.textContent = '∞';
+      return;
+    }
+    if (badge) { badge.textContent = `🔬 ${creditsVal}`; badge.title = `AI 크레딧 잔량: ${creditsVal}회`; }
+    if (moreCount) moreCount.textContent = creditsVal;
+    // stat-scans = 오늘 남은 무료(free) + 유료 크레딧 합산 — 사용자가 이번 세션에서 쓸 수 있는 전체 횟수
+    if (statScans) {
+      const free = state.freeScansLeft || 0;
+      statScans.textContent = free + creditsVal;
+    }
+  };
 
-  // 캐시 즉시 표시
-  const cached = state.aiCredits || 0;
-  if (badge) { badge.textContent = `🔬 ${cached}`; badge.title = `AI 크레딧 잔량: ${cached}회`; }
-  if (moreCount) moreCount.textContent = cached;
+  // 1) 캐시 즉시 표시
+  renderAll(state.aiCredits || 0);
 
-  // 최신값 fetch
+  // 2) 최신값 fetch 후 다시 렌더
   _getAICredits().then(c => {
     state.aiCredits = c;
-    if (badge) { badge.textContent = `🔬 ${c}`; badge.title = `AI 크레딧 잔량: ${c}회`; }
-    if (moreCount) moreCount.textContent = c;
+    renderAll(c);
   }).catch(() => {});
 }
 
@@ -9969,12 +9977,14 @@ function _loadDailyScanCount() {
 }
 
 function _useDailyScan() {
-  if (state._isBetaTester) return; // 베타 테스터 무제한
+  if (state._isBetaTester) { _updateScanBadge(); updateCreditDisplays(); return; } // 베타 테스터 무제한
 
   // 이번 판별이 유료 크레딧 사용이었으면 startAnalysis에서 이미 차감됨
   if (state._usedPaidCredit) {
     state._usedPaidCredit = false;
+    state.aiCredits = Math.max(0, (state.aiCredits || 0) - 1); // 캐시도 즉시 동기화
     _updateScanBadge();
+    updateCreditDisplays();
     return;
   }
 
@@ -9987,6 +9997,7 @@ function _useDailyScan() {
     localStorage.setItem('_daily_scan_' + _currentUser.id, JSON.stringify({ date: today, count }));
   } catch(e) {}
   _updateScanBadge();
+  updateCreditDisplays(); // 홈 stat-scans 칩도 즉시 동기화
 }
 
 async function _updateScanBadge() {
