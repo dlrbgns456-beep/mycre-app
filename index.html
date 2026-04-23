@@ -786,7 +786,7 @@ input[type=file]{display:none}
     </div>
     <div class="topbar-right">
       <div class="tb-btn" onclick="showToast('알림이 없습니다')">🔔</div>
-      <div class="premium-badge" onclick="openProSheet()">PRO</div>
+      <div class="premium-badge" id="home-credit-badge" onclick="openProSheet()" title="AI 크레딧 잔량">🔬 0</div>
     </div>
   </div>
 
@@ -1461,18 +1461,11 @@ input[type=file]{display:none}
   </div>
   <div class="divider"></div>
 
-  <!-- Premium -->
-  <div class="premium-card" style="margin-top:14px">
-    <div class="premium-title">⭐ 볏마루도감 PRO</div>
-    <div class="premium-desc">무제한 AI 판별, QR 개체 프로필,<br>환경부 신고서 자동생성까지 모두 이용하세요.</div>
-    <div class="premium-features">
-      <div class="premium-feat">AI 모프 판별 무제한</div>
-      <div class="premium-feat">QR 개체 프로필 카드 생성</div>
-      <div class="premium-feat">환경부 신고서 PDF 자동 출력</div>
-      <div class="premium-feat">브리딩 조합 유전자 예측</div>
-      <div class="premium-feat">개체 이력서 PDF 출력</div>
-    </div>
-    <button class="btn-premium" onclick="openProSheet()">월 4,900원으로 시작하기</button>
+  <!-- AI 크레딧 잔량 카드 (PRO 카드 대체) -->
+  <div class="premium-card" style="margin-top:14px;background:linear-gradient(135deg,rgba(46,125,87,.12),rgba(46,125,87,.04));border:1.5px solid var(--ac);cursor:pointer" onclick="openProSheet()">
+    <div class="premium-title" style="color:var(--ac)">🔬 AI 판별 크레딧</div>
+    <div class="premium-desc" style="color:var(--tx2)">매일 무료 3회 · 추가는 크레딧 충전<br><span id="more-credit-count" style="font-size:15px;font-weight:900;color:var(--ac)">—</span> <span style="font-size:12px;color:var(--tx3)">회 남음</span></div>
+    <button class="btn-premium" style="background:linear-gradient(135deg,var(--ac),#3A9968)" onclick="event.stopPropagation();openProSheet()">충전하기</button>
   </div>
 
   <div class="more-section">
@@ -1481,7 +1474,7 @@ input[type=file]{display:none}
     <div class="more-item" onclick="openQRSheet()">
       <div class="more-icon" style="background:var(--ac2)">📱</div>
       <div class="more-item-info">
-        <div class="more-item-title">QR 개체 프로필 <span style="font-size:10px;color:var(--am);font-weight:700">PRO</span></div>
+        <div class="more-item-title">QR 개체 프로필</div>
         <div class="more-item-sub">거래·분양 시 스캔 한 번으로 개체 정보 공유</div>
       </div>
       <div class="more-item-arrow">›</div>
@@ -1499,17 +1492,8 @@ input[type=file]{display:none}
     <div class="more-item" onclick="openLineageTreePicker()">
       <div class="more-icon" style="background:var(--ac2)">🌳</div>
       <div class="more-item-info">
-        <div class="more-item-title">혈통 트리</div>
-        <div class="more-item-sub">부모 → 자손 형질 시각화 · 유전자 궁합 예측</div>
-      </div>
-      <div class="more-item-arrow">›</div>
-    </div>
-
-    <div class="more-item" onclick="handleGeneticCalc()">
-      <div class="more-icon" style="background:var(--pu2)">🧬</div>
-      <div class="more-item-info">
-        <div class="more-item-title">브리딩 유전자 계산기 <span style="font-size:9px;color:var(--am);font-weight:800;background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.3);border-radius:5px;padding:1px 5px;margin-left:4px">Breeder</span></div>
-        <div class="more-item-sub">부모 조합으로 자녀 모프 확률 예측</div>
+        <div class="more-item-title">혈통 트리 + 유전자 예측</div>
+        <div class="more-item-sub">부모 → 자손 형질 시각화 · 자녀 모프 확률 계산</div>
       </div>
       <div class="more-item-arrow">›</div>
     </div>
@@ -3711,6 +3695,7 @@ function showPage(p, pushHistory = true) {
   if (p === 'myge') renderGeckoList();
   if (p === 'comm') renderPosts();
   if (p === 'scan') resetScanPage();
+  if (p === 'more') updateCreditDisplays();
   if (pushHistory) history.pushState({ page: p }, '', '#' + p);
 }
 
@@ -4018,6 +4003,34 @@ function renderHome() {
   // 분무 / 브리딩 카드 갱신
   updateMistingCard();
   updateBreedingCard();
+
+  // 홈 상단 크레딧 배지 + 더보기 크레딧 카드
+  updateCreditDisplays();
+}
+
+// 크레딧 잔량 UI 일괄 갱신 — 홈 상단 배지 + 더보기 카드
+function updateCreditDisplays() {
+  const badge = document.getElementById('home-credit-badge');
+  const moreCount = document.getElementById('more-credit-count');
+  if (!_currentUser) return;
+
+  if (state._isBetaTester) {
+    if (badge) { badge.textContent = '💚 무제한'; badge.title = '베타 테스터 — AI 판별 무제한'; }
+    if (moreCount) moreCount.textContent = '∞';
+    return;
+  }
+
+  // 캐시 즉시 표시
+  const cached = state.aiCredits || 0;
+  if (badge) { badge.textContent = `🔬 ${cached}`; badge.title = `AI 크레딧 잔량: ${cached}회`; }
+  if (moreCount) moreCount.textContent = cached;
+
+  // 최신값 fetch
+  _getAICredits().then(c => {
+    state.aiCredits = c;
+    if (badge) { badge.textContent = `🔬 ${c}`; badge.title = `AI 크레딧 잔량: ${c}회`; }
+    if (moreCount) moreCount.textContent = c;
+  }).catch(() => {});
 }
 
 // ══════════════════════════════
@@ -6658,13 +6671,42 @@ function printQR() {
   </div>
 </div>
 
-<!-- 혈통 트리 시트 -->
+<!-- 혈통 트리 + 유전자 예측 시트 -->
 <div class="sheet-overlay" id="sheet-lineage" onclick="closeSheet('sheet-lineage',event)">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">🌳 혈통 트리</div>
+    <div class="sheet-title">🌳 혈통 · 유전자 예측</div>
     <div class="sheet-body">
-      <div id="lineage-tree-content" style="min-height:200px"></div>
+      <!-- 탭 -->
+      <div style="display:flex;background:var(--sf2);border-radius:10px;padding:3px;margin-bottom:14px">
+        <button id="lineage-tab-tree" onclick="switchLineageTab('tree')" style="flex:1;background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🌳 혈통 트리</button>
+        <button id="lineage-tab-calc" onclick="switchLineageTab('calc')" style="flex:1;background:transparent;color:var(--tx2);border:none;border-radius:8px;padding:8px 0;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧬 유전자 예측</button>
+      </div>
+
+      <!-- 탭 1: 혈통 트리 -->
+      <div id="lineage-tab-content-tree">
+        <div id="lineage-tree-content" style="min-height:200px"></div>
+      </div>
+
+      <!-- 탭 2: 유전자 예측 -->
+      <div id="lineage-tab-content-calc" style="display:none">
+        <div style="font-size:12px;color:var(--tx2);line-height:1.6;background:var(--sf2);border-radius:10px;padding:10px 12px;margin-bottom:14px">
+          ♂ × ♀ 부모 조합으로 자녀 모프 가능성과 치사 유전 위험을 예측합니다.
+        </div>
+        <div class="form-group">
+          <label class="form-label">♂ 부(父) 선택</label>
+          <select class="form-select" id="calc-dad-select" onchange="runGeneticPrediction()">
+            <option value="">— 수컷 선택 —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">♀ 모(母) 선택</label>
+          <select class="form-select" id="calc-mom-select" onchange="runGeneticPrediction()">
+            <option value="">— 암컷 선택 —</option>
+          </select>
+        </div>
+        <div id="calc-result" style="display:none;margin-top:14px"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -7553,8 +7595,115 @@ let _selectedTier = 'breeder';
 
 // ── Breeder 전용 기능 게이트 핸들러 ──
 function handleGeneticCalc() {
-  // PRO 삭제됨 — 모든 유저 접근 가능
-  showToast('유전자 계산기 준비 중입니다 (곧 오픈)');
+  // 혈통 트리 시트의 '유전자 예측' 탭으로 바로 이동
+  openLineageTreePicker();
+  setTimeout(() => switchLineageTab('calc'), 100);
+}
+
+// 혈통 / 유전자 탭 전환
+function switchLineageTab(tab) {
+  const treeTab  = document.getElementById('lineage-tab-tree');
+  const calcTab  = document.getElementById('lineage-tab-calc');
+  const treeCont = document.getElementById('lineage-tab-content-tree');
+  const calcCont = document.getElementById('lineage-tab-content-calc');
+  if (!treeTab || !calcTab) return;
+
+  const isCalc = tab === 'calc';
+  treeTab.style.background = isCalc ? 'transparent' : 'var(--ac)';
+  treeTab.style.color      = isCalc ? 'var(--tx2)'  : '#fff';
+  treeTab.style.fontWeight = isCalc ? '700' : '800';
+  calcTab.style.background = isCalc ? 'var(--ac)'   : 'transparent';
+  calcTab.style.color      = isCalc ? '#fff'        : 'var(--tx2)';
+  calcTab.style.fontWeight = isCalc ? '800' : '700';
+
+  if (treeCont) treeCont.style.display = isCalc ? 'none' : 'block';
+  if (calcCont) calcCont.style.display = isCalc ? 'block' : 'none';
+
+  if (isCalc) _populateCalcSelects();
+}
+
+function _populateCalcSelects() {
+  const dad = document.getElementById('calc-dad-select');
+  const mom = document.getElementById('calc-mom-select');
+  if (!dad || !mom) return;
+  dad.innerHTML = '<option value="">— 수컷 선택 —</option>';
+  mom.innerHTML = '<option value="">— 암컷 선택 —</option>';
+  state.geckos.forEach(g => {
+    const o = document.createElement('option');
+    o.value = g.id;
+    o.textContent = `${g.name} (${g.morph || '미상'})`;
+    if (g.sex === '수컷') dad.appendChild(o);
+    else if (g.sex === '암컷') mom.appendChild(o);
+  });
+}
+
+// 간이 유전자 예측 — 치사 경고 + 공통 형질 노출
+function runGeneticPrediction() {
+  const dadId = document.getElementById('calc-dad-select').value;
+  const momId = document.getElementById('calc-mom-select').value;
+  const box   = document.getElementById('calc-result');
+  if (!dadId || !momId || !box) { if (box) box.style.display = 'none'; return; }
+
+  const dad = state.geckos.find(g => String(g.id) === String(dadId));
+  const mom = state.geckos.find(g => String(g.id) === String(momId));
+  if (!dad || !mom) { box.style.display = 'none'; return; }
+
+  const dadMorph = (dad.morph || '').trim();
+  const momMorph = (mom.morph || '').trim();
+
+  // 치사 유전 조합 체크 (릴리화이트 x 릴리화이트, 카푸치노 x 카푸치노)
+  const lethalPairs = [
+    { needle: '릴리화이트', message: '릴리화이트 × 릴리화이트는 치사 유전으로 알려져 있어요. 자손의 25%가 생존하지 못할 수 있습니다.' },
+    { needle: '카푸치노',   message: '카푸치노 × 카푸치노는 일부 라인에서 치사 가능성이 보고되어 있어요. 권장되지 않습니다.' },
+  ];
+  let lethalWarning = '';
+  for (const pair of lethalPairs) {
+    if (dadMorph.includes(pair.needle) && momMorph.includes(pair.needle)) {
+      lethalWarning = `<div style="background:rgba(255,60,60,.1);border:1.5px solid #ff4444;border-radius:12px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:800;color:#ff4444;margin-bottom:6px">⚠️ 치사 유전 경고</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.6">${pair.message}</div>
+      </div>`;
+      break;
+    }
+  }
+
+  // 공통 형질 추출 (단순 교집합)
+  const dadTraits = dadMorph.split(/\s+/).filter(Boolean);
+  const momTraits = momMorph.split(/\s+/).filter(Boolean);
+  const commonTraits = dadTraits.filter(t => momTraits.includes(t));
+
+  // 예상 자녀 형질 Pool (모든 형질 합집합)
+  const allTraits = Array.from(new Set([...dadTraits, ...momTraits]));
+
+  box.innerHTML = `
+    ${lethalWarning}
+    <div style="background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:10px">👨‍👩‍👧 부모</div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px;border-left:3px solid var(--blue)">
+          <div style="font-size:10px;color:var(--blue);font-weight:700">♂ 부</div>
+          <div style="font-size:13px;font-weight:700;margin-top:3px">${dad.name}</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">${dadMorph || '모프 미상'}</div>
+        </div>
+        <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px;border-left:3px solid #ff8fb1">
+          <div style="font-size:10px;color:#ff8fb1;font-weight:700">♀ 모</div>
+          <div style="font-size:13px;font-weight:700;margin-top:3px">${mom.name}</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">${momMorph || '모프 미상'}</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--ac2);border:1px solid var(--ac);border-radius:12px;padding:14px">
+      <div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:8px">🧬 예상 자녀 형질</div>
+      ${commonTraits.length > 0 ? `<div style="font-size:11px;color:var(--tx2);line-height:1.6;margin-bottom:6px"><b style="color:var(--ac)">공통 형질</b> (자녀에 강하게 전달): ${commonTraits.join(', ')}</div>` : ''}
+      <div style="font-size:11px;color:var(--tx2);line-height:1.6">
+        <b>가능한 자녀 모프</b>:<br>
+        ${allTraits.length > 0 ? allTraits.map(t => `<span style="display:inline-block;background:var(--bg);border:1px solid var(--br);border-radius:6px;padding:2px 8px;margin:2px;font-size:10px">${t}</span>`).join('') : '<span style="color:var(--tx3)">부모 모프 정보가 부족해요</span>'}
+      </div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:10px;line-height:1.5">
+        ⚠️ 이 예측은 형질 텍스트 교집합 기반 간이 계산이에요. 우성·열성 헤테로(Het) 여부는 반영되지 않으니 실제 결과는 달라질 수 있어요.
+      </div>
+    </div>`;
+  box.style.display = 'block';
 }
 
 function handlePDFExport() {
@@ -9805,6 +9954,8 @@ function openLineageTreePicker() {
   });
   content.innerHTML = html;
   openSheet('sheet-lineage');
+  // 기본 탭은 혈통 트리
+  setTimeout(() => switchLineageTab('tree'), 10);
 }
 
 // 부모 선택 드롭다운 채우기 + 선택 시 텍스트 자동 입력
