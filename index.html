@@ -9609,6 +9609,37 @@ function _loadNotifPrefs() {
 
 function _saveNotifPrefs(prefs) {
   try { localStorage.setItem('byetmaru_notif_prefs_' + (_currentUser?.id || 'anon'), JSON.stringify(prefs)); } catch(e) {}
+  // 서버 크론이 읽을 수 있게 Supabase profiles에도 동기화
+  if (_currentUser?.id) {
+    _supabase.from('profiles')
+      .update({
+        notif_prefs: prefs,
+        tz_offset_min: -new Date().getTimezoneOffset(),  // 한국 기준 +540
+      })
+      .eq('id', _currentUser.id)
+      .then(({ error }) => {
+        if (error) console.warn('[notif_prefs DB sync]', error.message);
+      });
+  }
+}
+
+// 로그인 직후 DB에서 알림 설정 복원 (기기 간 동기화 + cron 기반 알림 정상 작동)
+async function _fetchNotifPrefsFromDB() {
+  if (!_currentUser) return;
+  try {
+    const { data } = await _supabase.from('profiles')
+      .select('notif_prefs')
+      .eq('id', _currentUser.id)
+      .maybeSingle();
+    if (data?.notif_prefs && Object.keys(data.notif_prefs).length > 0) {
+      const merged = { ...DEFAULT_NOTIF_PREFS, ...data.notif_prefs };
+      localStorage.setItem('byetmaru_notif_prefs_' + _currentUser.id, JSON.stringify(merged));
+    } else {
+      // DB에 없으면 로컬 → DB로 한 번 업로드 (초기 마이그레이션)
+      const local = _loadNotifPrefs();
+      _saveNotifPrefs(local);
+    }
+  } catch(e) { console.warn('[notif_prefs fetch]', e); }
 }
 
 async function openNotifSettings() {
@@ -10503,6 +10534,9 @@ async function _onSignedIn() {
 
     // DB에서 메이팅 기록 동기화 (홈 카드용)
     try { await _fetchBreedingRecords(); } catch(e) {}
+
+    // 알림 설정을 DB에서 가져오기 (서버 크론 알림 정상 작동 위해 필수)
+    try { await _fetchNotifPrefsFromDB(); } catch(e) {}
 
     renderHome();
     renderGeckoList();
