@@ -47,13 +47,13 @@
 
 /* ─── Reset ─── */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;max-width:480px;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior-y:contain}
+body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;min-height:100dvh;max-width:480px;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior-y:contain}
 html{overscroll-behavior-y:contain}
 img{display:block}
 button{cursor:pointer;border:none;background:none;font-family:inherit}
 
 /* ─── Pages ─── */
-.page{display:none;padding-bottom:80px;min-height:100vh;background:var(--bg)}
+.page{display:none;padding-bottom:80px;min-height:100vh;min-height:100dvh;background:var(--bg)}
 .page.active{display:block;opacity:1}
 /* iOS 안전성: 복잡한 translate/opacity 동시 애니메이션 제거, 순수 fade만 */
 .page.page-exit{display:none !important}
@@ -647,7 +647,7 @@ input[type=file]{display:none}
 <!-- ══════════════════════════════════════
      공유용 개체 프로필 (비로그인 QR 조회)
 ══════════════════════════════════════ -->
-<div id="shared-gecko-page" style="display:none;min-height:100vh;padding:20px;padding-bottom:80px">
+<div id="shared-gecko-page" style="display:none;min-height:100vh;min-height:100dvh;padding:20px;padding-bottom:80px">
   <div style="text-align:center;margin-bottom:20px">
     <img src="/icon-192.png" alt="ByetMaru" style="width:56px;height:56px;border-radius:14px;margin-bottom:6px">
     <div style="font-family:'Nunito',sans-serif;font-size:20px;font-weight:900;color:var(--ac)">볏마루도감</div>
