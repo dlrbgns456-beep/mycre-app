@@ -2258,6 +2258,10 @@ input[type=file]{display:none}
       <b>[탈퇴 회원] 이름으로 익명 보존</b>됩니다.<br>
       <span style="color:var(--tx3);font-size:11px">분양 완료되면 새 소유자가 재등록하세요.</span>
     </div>
+    <div style="background:rgba(255,60,60,.05);border:1px solid rgba(255,60,60,.25);border-radius:12px;padding:10px 12px;margin-bottom:18px;font-size:11px;color:#d44;line-height:1.6">
+      ⛔ <b>진행 중인 거래</b>(예약·발송)가 있으면 <b>탈퇴가 차단</b>됩니다.<br>
+      <span style="color:var(--tx3)">분양 글을 삭제하거나 거래를 완료(수령 확인)한 후 다시 시도해 주세요.</span>
+    </div>
     <div style="background:var(--ac2);border:1px solid var(--ac);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:var(--tx2);line-height:1.7">
       혹시 잠시 쉬고 싶으시면<br>
       <b style="color:var(--ac)">로그아웃</b>만 해 두실 수 있어요.
@@ -9531,6 +9535,7 @@ async function deleteAccount() {
     if (titleEl) titleEl.textContent = '계정 삭제 중...';
 
     // auth.users에서 계정 완전 삭제 (Edge Function)
+    let _activeTradesBlocked = false;
     try {
       const session = (await _supabase.auth.getSession()).data.session;
       if (session) {
@@ -9545,9 +9550,20 @@ async function deleteAccount() {
           new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
         ]);
         const result = await res.json();
+        // ⚠️ 진행 중 거래 있어 탈퇴 차단됨 — 사용자에게 안내하고 중단
+        if (res.status === 409 && result?.error === 'ACTIVE_TRADES') {
+          _activeTradesBlocked = true;
+          // 버튼 상태 복구
+          if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+          if (titleEl) titleEl.textContent = '계정 탈퇴';
+          _deleteConfirmStep = 0;
+          alert('⛔ 진행 중인 거래가 있어 탈퇴할 수 없어요.\n\n' + (result.message || '') + '\n\n📍 [더보기 → 내 거래·평판]에서 해결 후 다시 시도해주세요.');
+          return;
+        }
         if (result.error) console.warn('계정 삭제 오류:', result.error);
       }
     } catch(e) { console.warn('auth 계정 삭제 실패(계속 진행):', e.message); }
+    if (_activeTradesBlocked) return; // 안전망
 
     // Supabase signOut (최대 3초 대기)
     try {
