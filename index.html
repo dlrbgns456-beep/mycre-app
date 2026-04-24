@@ -11455,17 +11455,22 @@ async function openTradesSheet() {
     const statusLabel = { reserved:'🟡 예약', shipped:'🟢 발송', received:'✅ 수령 완료', cancelled:'❌ 취소' };
     tradesList.innerHTML = trades.map(t => {
       const isBuyer = t.buyer_id === _currentUser.id;
+      const isSeller = t.seller_id === _currentUser.id;
       const role = isBuyer ? '구매자' : '판매자';
-      const canConfirm = isBuyer && t.status === 'shipped';
-      const canReview = isBuyer && t.status === 'received';
+      const canShip     = isSeller && t.status === 'reserved';   // 판매자: 예약 → 발송
+      const canConfirm  = isBuyer  && t.status === 'shipped';    // 구매자: 발송 → 수령
+      const canReview   = isBuyer  && t.status === 'received';   // 구매자: 리뷰
+      const canCancel   = (t.status === 'reserved' || t.status === 'shipped'); // 양쪽 모두
       return `<div style="background:var(--bg);border:1px solid var(--br);border-radius:10px;padding:10px 12px;margin-bottom:6px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <span style="font-size:11px;color:var(--tx3)">${role}</span>
           <span style="font-size:11px;font-weight:700">${statusLabel[t.status] || t.status}</span>
         </div>
         <div style="font-size:11px;color:var(--tx2)">게시글 #${t.post_id} · ${new Date(t.created_at).toLocaleDateString('ko-KR')}</div>
+        ${canShip    ? `<button class="btn-sm" style="width:100%;margin-top:6px;padding:6px;font-size:11px;background:var(--bl2);border-color:var(--blue);color:var(--blue)" onclick="markTradeShipped('${t.id}')">🚚 발송 완료 표시</button>` : ''}
         ${canConfirm ? `<button class="btn-sm" style="width:100%;margin-top:6px;padding:6px;font-size:11px;background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="confirmTradeReceived('${t.id}')">✅ 수령 확인</button>` : ''}
-        ${canReview ? `<button class="btn-sm" style="width:100%;margin-top:6px;padding:6px;font-size:11px;background:var(--am2);border-color:var(--am);color:var(--am)" onclick="openReviewDialog('${t.id}','${t.seller_id}','${t.post_id}')">⭐ 리뷰 작성</button>` : ''}
+        ${canReview  ? `<button class="btn-sm" style="width:100%;margin-top:6px;padding:6px;font-size:11px;background:var(--am2);border-color:var(--am);color:var(--am)" onclick="openReviewDialog('${t.id}','${t.seller_id}','${t.post_id}')">⭐ 리뷰 작성</button>` : ''}
+        ${canCancel  ? `<button class="btn-sm" style="width:100%;margin-top:6px;padding:6px;font-size:11px;background:var(--co2);border-color:var(--coral);color:var(--coral)" onclick="cancelTrade('${t.id}')">❌ 거래 취소</button>` : ''}
       </div>`;
     }).join('');
   } catch(e) {}
@@ -11479,6 +11484,38 @@ async function confirmTradeReceived(tradeId) {
     if (error) throw error;
     showToast('✅ 수령 확인됨 · 이제 리뷰를 작성할 수 있어요');
     openTradesSheet(); // 새로고침
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+// 🚚 판매자: 예약 → 발송 완료 표시
+async function markTradeShipped(tradeId) {
+  if (!confirm('🚚 이 거래를 "발송 완료" 상태로 변경할까요?\n\n구매자가 수령 확인하면 리뷰 단계로 넘어갑니다.')) return;
+  try {
+    const { error } = await _supabase.from('trade_confirmations')
+      .update({ status: 'shipped' })
+      .eq('id', tradeId);
+    if (error) throw error;
+    showToast('🚚 발송 완료 · 구매자의 수령 확인을 기다려요');
+    openTradesSheet();
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+// ❌ 거래 취소 — 양쪽 모두 가능 (상호 합의 전제는 대화로 처리)
+async function cancelTrade(tradeId) {
+  if (!confirm('❌ 이 거래를 취소하시겠어요?\n\n· 취소 후에는 되돌릴 수 없어요\n· 상대방에게 취소 사유를 미리 안내해주세요\n· 취소된 거래는 리뷰 작성 불가')) return;
+  try {
+    const { error } = await _supabase.from('trade_confirmations')
+      .update({ status: 'cancelled' })
+      .eq('id', tradeId);
+    if (error) throw error;
+    showToast('❌ 거래가 취소되었어요');
+    // 관리자 알림 (비정상 패턴 모니터링용)
+    try {
+      const { data: t } = await _supabase.from('trade_confirmations').select('*').eq('id', tradeId).maybeSingle();
+      if (t) _notifyAdmin('trade_cancelled', '❌ 거래 취소',
+        `취소자: ${_currentUser.email}\n게시글 ID: ${t.post_id}\n판매자: ${t.seller_id}\n구매자: ${t.buyer_id}`);
+    } catch(e) {}
+    openTradesSheet();
   } catch(e) { showToast('❌ ' + e.message); }
 }
 
