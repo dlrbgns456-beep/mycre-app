@@ -861,6 +861,17 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  <!-- 🐣 유정란 부화 예정 카드 -->
+  <div id="home-hatching-card" style="display:none;margin:0 18px 8px;background:linear-gradient(135deg,rgba(255,215,0,.10),rgba(255,143,177,.06));border:1.5px solid #f5c842;border-radius:14px;padding:13px 15px;cursor:pointer" onclick="openAllRecordsSheet();setTimeout(()=>filterAllRecords('egg'),200)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">🐣</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:#c8860d">유정란 부화 예정</div>
+        <div id="home-hatching-text" style="font-size:11px;color:var(--tx2);margin-top:3px"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="home-breeding-card" style="display:none;margin:0 18px 8px;background:rgba(255,143,177,.06);border:1.5px solid #ff8fb1;border-radius:14px;padding:13px 15px;cursor:pointer" onclick="openBreedingSheet()">
     <div style="font-size:14px;font-weight:800;color:#ff8fb1">🥚 산란 예정</div>
     <div id="breeding-upcoming-text" style="font-size:12px;color:var(--tx2);margin-top:3px"></div>
@@ -4438,10 +4449,11 @@ function renderHome() {
     preview.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:12px;text-align:center">아직 게시글이 없어요</div>';
   }
 
-  // 분무 / 브리딩 / 사육장 카드 갱신
+  // 분무 / 브리딩 / 사육장 / 부화 카드 갱신
   updateMistingCard();
   updateBreedingCard();
   updateCageCard();
+  updateHatchingCard();
 
   // 홈 상단 크레딧 배지 + 더보기 크레딧 카드
   updateCreditDisplays();
@@ -10505,6 +10517,56 @@ function updateCageCard() {
   if (needList.length > 3) txt.innerHTML += `<br><span style="color:var(--tx3)">외 ${needList.length - 3}마리</span>`;
 }
 
+// 🐣 유정란 부화 예정 카드 — gecko_logs에서 유정란 레코드 조회 후 부화 범위 계산
+async function updateHatchingCard() {
+  const card = document.getElementById('home-hatching-card');
+  const txt = document.getElementById('home-hatching-text');
+  if (!card || !txt || !_currentUser) return;
+  try {
+    // 최근 120일 이내 유정란 기록만 가져와서 계산
+    const { data, error } = await _supabase
+      .from('gecko_logs')
+      .select('date, value, gecko_id')
+      .eq('user_id', _currentUser.id)
+      .eq('type', 'egg')
+      .like('value', '유정란%')
+      .order('date', { ascending: false })
+      .limit(20);
+    if (error || !data || data.length === 0) { card.style.display = 'none'; return; }
+
+    const now = new Date();
+    const upcoming = data
+      .map(r => {
+        const hatch = _calcHatchRange(r.date);
+        if (!hatch) return null;
+        const late = new Date(hatch.late);
+        const early = new Date(hatch.early);
+        const avg = new Date(hatch.avg);
+        // 부화 시즌 지나서 일주일 이상이면 제외
+        const daysSinceLate = Math.floor((now - late) / 86400000);
+        if (daysSinceLate > 7) return null;
+        const daysToEarly = Math.ceil((early - now) / 86400000);
+        const daysToAvg   = Math.ceil((avg - now) / 86400000);
+        const gecko = state.geckos.find(g => String(g.id) === String(r.gecko_id));
+        const name = gecko?.name || '(삭제된 개체)';
+        return { name, laidDate: r.date, daysToEarly, daysToAvg, hatchEarly: hatch.early, hatchLate: hatch.late };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.daysToEarly - b.daysToEarly);
+
+    if (upcoming.length === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    txt.innerHTML = upcoming.slice(0, 3).map(u => {
+      let label;
+      if (u.daysToEarly > 0) label = `D-${u.daysToEarly} (${u.hatchEarly} ~ ${u.hatchLate})`;
+      else if (u.daysToAvg > 0) label = `🐣 임박! 평균 D-${u.daysToAvg}`;
+      else label = `🐣 부화 시기! (~ ${u.hatchLate})`;
+      return `<b>${u.name}</b> — ${label}`;
+    }).join('<br>');
+    if (upcoming.length > 3) txt.innerHTML += `<br><span style="color:var(--tx3)">외 ${upcoming.length - 3}건</span>`;
+  } catch(e) { card.style.display = 'none'; }
+}
+
 // ISO Week 계산 (예: 2026-W16)
 function _getISOWeekKey(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -11605,7 +11667,13 @@ async function _renderAllRecordsTimeline() {
     let detail = r.type === 'weight' ? `<b>${r.value}g</b>`
                : r.type === 'feed'   ? r.value
                : r.type === 'shed'   ? r.value
-               : r.type === 'egg'    ? `<b>${r.value}</b>`
+               : r.type === 'egg'    ? (() => {
+                   if (String(r.value).startsWith('유정란')) {
+                     const h = _calcHatchRange(r.date);
+                     return h ? `<b>${r.value}</b><div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ${h.early} ~ ${h.late}</div>` : `<b>${r.value}</b>`;
+                   }
+                   return `<b>${r.value}</b>`;
+                 })()
                : (r.note || '');
     const noteHtml = (r.note && r.type !== 'health' && r.type !== 'memo') ? `<div style="font-size:11px;color:var(--tx3);margin-top:2px">${r.note}</div>` : '';
     return `<div class="record-item type-${r.type}" style="cursor:pointer" onclick="closeSheetDirect('sheet-all-records');setTimeout(()=>openGeckoRecords('${r.gecko_id}'),250)">
@@ -11666,7 +11734,12 @@ async function saveRecord() {
   if (_currentRecordType === 'shed') {
     await _appendGeckoMemo(_currentRecordGeckoId, `[${date}] 🦎 ${value}`);
   } else if (_currentRecordType === 'egg') {
-    await _appendGeckoMemo(_currentRecordGeckoId, `[${date}] 🥚 ${value} 산란`);
+    let line = `[${date}] 🥚 ${value} 산란`;
+    if (String(value).startsWith('유정란')) {
+      const h = _calcHatchRange(date);
+      if (h) line += ` · 🐣 예상 부화: ${h.early} ~ ${h.late}`;
+    }
+    await _appendGeckoMemo(_currentRecordGeckoId, line);
   }
 
   // 폼 필드 초기화 (다음 기록 입력 편하게)
@@ -11726,6 +11799,24 @@ async function quickMarkShed(geckoId) {
 }
 
 // 빠른 산란 체크 (암컷) — 무정란/유정란을 반복해서 누적 기록 (개수 입력)
+// 🐣 크레스티드 게코 유정란 부화 예측 — 실온 기준 60~90일, 평균 75일
+const INCUBATION_DAYS = { early: 60, avg: 75, late: 90 };
+function _calcHatchRange(laidDateStr) {
+  if (!laidDateStr) return null;
+  const laid = new Date(laidDateStr);
+  if (isNaN(laid.getTime())) return null;
+  const add = (days) => {
+    const d = new Date(laid); d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+  return {
+    laidDate: laidDateStr,
+    early: add(INCUBATION_DAYS.early),
+    avg:   add(INCUBATION_DAYS.avg),
+    late:  add(INCUBATION_DAYS.late),
+  };
+}
+
 async function quickMarkEgg(geckoId, kind) {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
   const g = state.geckos.find(x => String(x.id) === String(geckoId));
@@ -11757,10 +11848,20 @@ async function quickMarkEgg(geckoId, kind) {
     logs.push(record);
     localStorage.setItem(key, JSON.stringify(logs));
   }
-  await _appendGeckoMemo(geckoId, `[${today}] 🥚 ${label} ${count}개 산란`);
+  // 유정란이면 예상 부화일 계산해서 메모·토스트에 포함
+  let memoLine = `[${today}] 🥚 ${label} ${count}개 산란`;
+  let toastMsg = `🥚 ${g.name} ${label} ${count}개 산란 — ${today}`;
+  if (label === '유정란') {
+    const hatch = _calcHatchRange(today);
+    if (hatch) {
+      memoLine += ` · 🐣 예상 부화: ${hatch.early} ~ ${hatch.late}`;
+      toastMsg += ` · 🐣 ${hatch.avg} 경 부화 예상`;
+    }
+  }
+  await _appendGeckoMemo(geckoId, memoLine);
   playNotificationSound('celebration');
   vibrateDevice('celebration');
-  showToast(`🥚 ${g.name} ${label} ${count}개 산란 — ${today}`);
+  showToast(toastMsg);
   _updateRecordCount();
   renderGeckoList();
   renderHome();
@@ -11785,7 +11886,18 @@ async function loadRecords(geckoId) {
   const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'}, egg:{emoji:'🥚',label:'산란',color:'#ff8fb1',bg:'rgba(255,143,177,.15)'} };
   timeline.innerHTML = records.map(r => {
     const c = tc[r.type] || tc.memo;
-    let detail = r.type==='weight' ? '<b>'+r.value+'g</b>' : r.type==='feed' ? r.value : r.type==='shed' ? r.value : r.type==='egg' ? '<b>'+r.value+'</b>' : r.note||'';
+    let detail;
+    if (r.type === 'weight') detail = '<b>'+r.value+'g</b>';
+    else if (r.type === 'feed') detail = r.value;
+    else if (r.type === 'shed') detail = r.value;
+    else if (r.type === 'egg') {
+      detail = '<b>'+r.value+'</b>';
+      if (String(r.value).startsWith('유정란')) {
+        const h = _calcHatchRange(r.date);
+        if (h) detail += '<div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ' + h.early + ' ~ ' + h.late + '</div>';
+      }
+    }
+    else detail = r.note || '';
     const noteHtml = (r.note && r.type!=='health' && r.type!=='memo') ? '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+r.note+'</div>' : '';
     return '<div class="record-item type-'+r.type+'"><div class="record-date">'+r.date+'</div><div class="record-content"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
   }).join('');
