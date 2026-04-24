@@ -4020,6 +4020,9 @@ const SAMPLE_POSTS = [
 // ══════════════════════════════
 // NAVIGATION
 // ══════════════════════════════
+// 좌→우 슬라이드 네비 순서
+const _PAGE_ORDER = ['home', 'myge', 'scan', 'comm', 'more'];
+
 function showPage(p, pushHistory = true) {
   const oldPage = document.querySelector('.page.active');
   const newPage = document.getElementById('page-' + p);
@@ -4045,6 +4048,86 @@ function showPage(p, pushHistory = true) {
   if (p === 'more') updateCreditDisplays();
   if (pushHistory) history.pushState({ page: p }, '', '#' + p);
 }
+
+// ══════════════════════════════════════
+// 👆 좌우 스와이프 네비 + 홈 풀투리프레시
+// ══════════════════════════════════════
+(function initGestures(){
+  let _startX = 0, _startY = 0, _moveX = 0, _moveY = 0, _tracking = false;
+  const SWIPE_MIN_X = 70;      // 최소 가로 이동
+  const SWIPE_MAX_Y = 60;      // 수직 이동 허용치
+  const PULL_THRESHOLD = 80;   // 풀투리프레시 임계
+
+  const banner = () => {
+    let el = document.getElementById('pull-refresh-indicator');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'pull-refresh-indicator';
+      el.style.cssText = 'position:fixed;top:-60px;left:50%;transform:translateX(-50%);background:var(--ac);color:#fff;border-radius:0 0 14px 14px;padding:10px 22px;font-size:13px;font-weight:700;z-index:99994;transition:top .15s;box-shadow:0 4px 12px rgba(0,0,0,.2)';
+      document.body.appendChild(el);
+    }
+    return el;
+  };
+
+  document.addEventListener('touchstart', (e) => {
+    // 시트 열려있거나 스캔 결과 화면이면 제스처 무시
+    if (document.querySelector('.sheet-overlay.show')) return;
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    // 인풋/버튼/드롭다운 터치는 스와이프로 해석 안 함
+    if (e.target.closest('input, textarea, select, button, .quick-card, .gecko-row-item, .post-card, .record-item, .fp, .stat-chip, #morph-inline-dropdown')) {
+      _tracking = false; return;
+    }
+    _startX = t.clientX; _startY = t.clientY; _moveX = 0; _moveY = 0;
+    _tracking = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!_tracking) return;
+    const t = e.touches[0];
+    _moveX = t.clientX - _startX;
+    _moveY = t.clientY - _startY;
+    // 홈에서 최상단 스크롤이면 아래로 당기기 표시
+    if (state.currentPage === 'home' && _moveY > 20 && window.scrollY <= 0 && Math.abs(_moveX) < 30) {
+      const b = banner();
+      const shown = Math.min(_moveY * 0.4, 50);
+      b.style.top = (shown - 60) + 'px';
+      b.textContent = _moveY >= PULL_THRESHOLD ? '🔄 놓으면 새로고침' : '⬇️ 당겨서 새로고침';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async () => {
+    if (!_tracking) return;
+    _tracking = false;
+    const b = document.getElementById('pull-refresh-indicator');
+
+    // 풀투리프레시: 홈에서 최상단 상태로 80px 이상 당겼으면
+    if (state.currentPage === 'home' && window.scrollY <= 0 && _moveY >= PULL_THRESHOLD && Math.abs(_moveX) < 60) {
+      if (b) { b.style.top = '0px'; b.textContent = '🔄 새로고침 중...'; }
+      try {
+        await _loadGeckosFromDB();
+        await _fetchBreedingRecords();
+        renderHome();
+        _updateRecordCount();
+        if (typeof updateCreditDisplays === 'function') updateCreditDisplays();
+      } catch(e) {}
+      if (b) setTimeout(() => { b.style.top = '-60px'; }, 500);
+      return;
+    }
+    if (b) b.style.top = '-60px';
+
+    // 좌우 스와이프 네비
+    if (Math.abs(_moveX) >= SWIPE_MIN_X && Math.abs(_moveY) <= SWIPE_MAX_Y) {
+      const idx = _PAGE_ORDER.indexOf(state.currentPage);
+      if (idx < 0) return;
+      if (_moveX < 0 && idx < _PAGE_ORDER.length - 1) {
+        showPage(_PAGE_ORDER[idx + 1]);   // 왼쪽으로 스와이프 → 다음
+      } else if (_moveX > 0 && idx > 0) {
+        showPage(_PAGE_ORDER[idx - 1]);   // 오른쪽으로 스와이프 → 이전
+      }
+    }
+  }, { passive: true });
+})();
 
 // 뒤로가기 버튼 처리 (앱 종료 방지)
 window.addEventListener('popstate', (e) => {
@@ -9381,11 +9464,28 @@ async function confirmDeleteAllGeckos() {
   _deleteAllStep = 0;
   showToast('삭제 중...');
   try {
+    // 개체 삭제 (gecko_logs는 CASCADE로 자동 삭제됨)
     await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
+    // 브리딩 기록도 삭제 (개체 없이는 의미 없음)
+    try { await _supabase.from('breedings').delete().eq('user_id', _currentUser.id); } catch(e) {}
+    // 혹시 남은 로그 정리 (FK 유실 대비)
+    try { await _supabase.from('gecko_logs').delete().eq('user_id', _currentUser.id); } catch(e) {}
+
+    // 로컬 캐시도 전부 정리
     state.geckos = [];
-    try { localStorage.removeItem('byetmaru_geckos_' + _currentUser.id); } catch(e) {}
-    renderHome(); renderGeckoList();
-    showToast('✅ 모든 개체가 삭제되었습니다');
+    try {
+      localStorage.removeItem('byetmaru_geckos_' + _currentUser.id);
+      localStorage.removeItem('byetmaru_breeding_' + _currentUser.id);
+      localStorage.removeItem('gecko_logs_' + _currentUser.id);
+      // 마일스톤 포스팅 플래그도 초기화 (재등록 시 다시 달성 가능)
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('byetmaru_milestone_')) localStorage.removeItem(k);
+      });
+    } catch(e) {}
+
+    // ⚠️ 분양&입양 글(posts)은 유지 — 거래 이력/약속 보호
+    renderHome(); renderGeckoList(); _updateRecordCount();
+    showToast('✅ 개체·사육 기록·브리딩 전부 삭제됨 (분양 글은 유지)');
   } catch(e) {
     showToast('❌ 삭제 실패: ' + e.message);
   }
