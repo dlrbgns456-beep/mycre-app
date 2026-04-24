@@ -41,7 +41,28 @@
       "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__list_edge_functions",
       "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__get_edge_function",
       "Bash(curl -s https://mycre.netlify.app/)",
-      "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__get_logs"
+      "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__get_logs",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('index.html','utf8'\\);const m=html.match\\(/<script[^>]*>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\);let ok=true;m.forEach\\(\\(s,i\\)=>{if\\(s.includes\\('src='\\)\\) return;const body=s.replace\\(/^<script[^>]*>/,''\\).replace\\(/<\\\\/script>$/,''\\);try{new Function\\(body\\);}catch\\(e\\){console.log\\('[script '+i+'] SYNTAX ERROR:',e.message\\);ok=false;}}\\);console.log\\(ok?'ALL SCRIPTS OK':'FAILED'\\);\")",
+      "Bash(npx -y web-push generate-vapid-keys)",
+      "mcp__46f3089b-3d49-423c-be79-e8e3f540e9ee__deploy_edge_function",
+      "Bash(node -e ' *)",
+      "Bash(awk 'NR>=6850 && NR<=6870 {print NR\": \"$0}' index.html)",
+      "Bash(awk 'NR>=6850 && NR<=6900 && /`/ {print NR\": \"$0}' index.html)",
+      "Bash(awk 'NR>=6850 && NR<=6920' index.html)",
+      "Bash(grep -n '\\\\`\\);' index.html)",
+      "Bash(node _debug_check.js)",
+      "Bash(node _debug2.js)",
+      "Bash(awk 'NR>=6822 && NR<=7120 { *)",
+      "Bash(awk 'NR==7113 {print length\\($0\\), $0}' index.html)",
+      "Bash(awk 'NR>=6830 && NR<=7120 && /`/ {print NR\": \"$0}' index.html)",
+      "Bash(grep -v '\\\\$prompt')",
+      "Bash(grep -v '\\\\$confirm')",
+      "Bash(grep -v '\\\\$alert')",
+      "Bash(grep -v '//')",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('index.html','utf8'\\);const scripts=[...html.matchAll\\(/<script\\(?![^>]*src=\\)[^>]*>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)];let err=0;scripts.forEach\\(\\(m,i\\)=>{try{new Function\\(m[1]\\);}catch\\(e\\){console.log\\('Script '+i+':',e.message\\);err++;}}\\);console.log\\(err?'FAIL':'OK'\\);\")",
+      "Bash(node --check-syntax)",
+      "Bash(node -e \"const acorn=require\\('acorn'\\);const fs=require\\('fs'\\);const html=fs.readFileSync\\('index.html','utf8'\\);const scripts=[...html.matchAll\\(/<script\\(?![^>]*src=\\)[^>]*>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)];let err=0;scripts.forEach\\(\\(m,i\\)=>{try{acorn.parse\\(m[1],{ecmaVersion:'latest',sourceType:'module',allowAwaitOutsideFunction:true}\\);}catch\\(e\\){console.log\\('Script '+i+':',e.message\\);err++;}}\\);console.log\\(err?'FAIL':'OK'\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('index.html','utf8'\\);const scripts=[...html.matchAll\\(/<script\\(?![^>]*src=\\)[^>]*>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)];let err=0;scripts.forEach\\(\\(m,i\\)=>{try{new Function\\('return \\(async\\(\\)=>{'+m[1]+'}\\)'\\)\\(\\);}catch\\(e\\){console.log\\('Script '+i+':',e.message\\);err++;}}\\);console.log\\(err?'FAIL':'OK'\\);\")"
     ]
   }
 }

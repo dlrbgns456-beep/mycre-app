@@ -5221,68 +5221,97 @@ async function quickSaveAndClose() {
 
 let _deleteGeckoStep = 0;
 let _deleteGeckoTimer = null;
-async function deleteGecko() {
-  if (!state.editingGeckoId) return;
-  if (_deleteGeckoStep === 0) {
-    _deleteGeckoStep = 1;
-    showToast('⚠️ 정말 삭제하려면 한 번 더 눌러주세요');
-    _deleteGeckoTimer = setTimeout(() => { _deleteGeckoStep = 0; }, 3000);
-    return;
+// 🗑 개체 삭제 선택 다이얼로그 — 기록 유지 / 같이 삭제 / 취소
+async function _askDeleteGeckoMode(geckoName) {
+  return new Promise(resolve => {
+    document.querySelectorAll('[data-custom-dialog]').forEach(el => el.remove());
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-custom-dialog', '1');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:dialogFadeIn .18s ease';
+    const safeName = String(geckoName || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    overlay.innerHTML = `
+      <div style="background:var(--card);border-radius:18px;padding:22px 22px 18px;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);font-family:inherit">
+        <div style="font-size:44px;text-align:center;margin-bottom:10px">🗑️</div>
+        <div style="font-size:17px;font-weight:900;color:var(--tx);margin-bottom:8px;text-align:center">"${safeName}" 삭제</div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:16px;text-align:center">이 개체의 <b>사육 기록</b>(탈피·산란·체중 등)은<br>어떻게 할까요?</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button type="button" data-opt="keep" style="background:var(--ac);color:#fff;border:none;border-radius:12px;padding:13px 14px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;touch-action:manipulation">📋 기록은 남기고 개체만 삭제</button>
+          <button type="button" data-opt="all" style="background:var(--co2);color:var(--coral);border:1.5px solid var(--coral);border-radius:12px;padding:13px 14px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;touch-action:manipulation">🗑️ 기록까지 같이 삭제</button>
+          <button type="button" data-opt="cancel" style="background:var(--sf2);color:var(--tx2);border:1px solid var(--br);border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;margin-top:4px">취소</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const close = (v) => { overlay.remove(); resolve(v); };
+    overlay.querySelectorAll('[data-opt]').forEach(btn => {
+      btn.addEventListener('click', () => close(btn.getAttribute('data-opt')));
+    });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close('cancel'); });
+  });
+}
+
+// 공통: 개체 + (옵션) 사육 기록 삭제 실행
+async function _performGeckoDelete(id, deleteLogs) {
+  // 1) 기록까지 삭제 옵션이면 gecko_logs 먼저 지움
+  if (deleteLogs) {
+    try {
+      await _supabase.from('gecko_logs').delete().eq('gecko_id', String(id)).eq('user_id', _currentUser.id);
+      // 로컬 gecko_logs 캐시도 정리
+      const logKey = 'gecko_logs_' + _currentUser.id;
+      const local = JSON.parse(localStorage.getItem(logKey) || '[]');
+      const filtered = local.filter(r => String(r.gecko_id) !== String(id));
+      localStorage.setItem(logKey, JSON.stringify(filtered));
+    } catch(e) { console.warn('[delete gecko logs]', e); }
   }
-  _deleteGeckoStep = 0;
-  clearTimeout(_deleteGeckoTimer);
-  const id = state.editingGeckoId;
-
-  // 1) DB 먼저 삭제 (await 필수 — 성공 후에만 로컬 반영)
+  // 2) 개체 삭제 (SET NULL FK로 남은 로그는 gecko_id=NULL로 떨어짐)
   const ok = await _deleteGeckoFromDB(id);
-  if (!ok) return; // 실패 시 복구 대상 보존
-
-  // 2) state + localStorage 동기화
+  if (!ok) return false;
+  // 3) state + localStorage 동기화
   state.geckos = state.geckos.filter(g => String(g.id) !== String(id));
   try {
     const localSafe = state.geckos.map(g => ({ ...g, photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null }));
     localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(localSafe));
   } catch(e) {}
+  return true;
+}
+
+async function deleteGecko() {
+  if (!state.editingGeckoId) return;
+  const id = state.editingGeckoId;
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  const name = g ? g.name : '이 개체';
+
+  const opt = await _askDeleteGeckoMode(name);
+  if (!opt || opt === 'cancel') return;
+
+  const ok = await _performGeckoDelete(id, opt === 'all');
+  if (!ok) return;
 
   closeSheetDirect('sheet-add-gecko');
   closeSheetDirect('sheet-gecko-detail');
   renderGeckoList();
   renderHome();
   updateCountBadges();
-  showToast('🗑 개체가 삭제되었어요');
+  _updateRecordCount();
+  showToast(opt === 'all' ? `🗑 "${name}" 개체·기록 전부 삭제` : `🗑 "${name}" 삭제됨 (기록 유지)`);
 }
 
-// 개체 상세에서 바로 삭제 (더블 탭 확인)
-let _deleteFromDetailStep = 0;
-let _deleteFromDetailTimer = null;
+// 개체 상세에서 바로 삭제 — 동일 다이얼로그 공유
 async function confirmDeleteGeckoFromDetail(id) {
   const g = state.geckos.find(x => String(x.id) === String(id));
   if (!g) return;
-  if (_deleteFromDetailStep === 0) {
-    _deleteFromDetailStep = 1;
-    showToast(`⚠️ "${g.name}"을(를) 정말 삭제하려면 한 번 더 눌러주세요`);
-    _deleteFromDetailTimer = setTimeout(() => { _deleteFromDetailStep = 0; }, 4000);
-    return;
-  }
-  _deleteFromDetailStep = 0;
-  clearTimeout(_deleteFromDetailTimer);
 
-  // 1) DB 먼저 삭제 (await 필수)
-  const ok = await _deleteGeckoFromDB(id);
+  const opt = await _askDeleteGeckoMode(g.name);
+  if (!opt || opt === 'cancel') return;
+
+  const ok = await _performGeckoDelete(id, opt === 'all');
   if (!ok) return;
-
-  // 2) state + localStorage 동기화
-  state.geckos = state.geckos.filter(x => String(x.id) !== String(id));
-  try {
-    const localSafe = state.geckos.map(g => ({ ...g, photo: (g.photo && !g.photo.startsWith('data:')) ? g.photo : null }));
-    localStorage.setItem('byetmaru_geckos_' + _currentUser.id, JSON.stringify(localSafe));
-  } catch(e) {}
 
   closeSheetDirect('sheet-gecko-detail');
   renderGeckoList();
   renderHome();
   updateCountBadges();
-  showToast(`🗑 "${g.name}" 삭제됨`);
+  _updateRecordCount();
+  showToast(opt === 'all' ? `🗑 "${g.name}" 개체·기록 전부 삭제` : `🗑 "${g.name}" 삭제됨 (기록 유지)`);
 }
 
 // 💝 내 새끼 자랑하기 — 개체 정보를 자동으로 채워 커뮤니티 글쓰기 시트 오픈
