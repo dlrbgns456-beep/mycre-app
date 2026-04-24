@@ -9464,28 +9464,16 @@ async function confirmDeleteAllGeckos() {
   _deleteAllStep = 0;
   showToast('삭제 중...');
   try {
-    // 개체 삭제 (gecko_logs는 CASCADE로 자동 삭제됨)
+    // ⚠️ 개체만 삭제 — 사육 기록·브리딩·분양 글은 유지 (다시 등록 시 재사용 가능)
     await _supabase.from('geckos').delete().eq('user_id', _currentUser.id);
-    // 브리딩 기록도 삭제 (개체 없이는 의미 없음)
-    try { await _supabase.from('breedings').delete().eq('user_id', _currentUser.id); } catch(e) {}
-    // 혹시 남은 로그 정리 (FK 유실 대비)
-    try { await _supabase.from('gecko_logs').delete().eq('user_id', _currentUser.id); } catch(e) {}
+    // gecko_logs.gecko_id는 SET NULL로 떨어져 로그 자체는 보존됨 (타임라인에서 '삭제된 개체'로 표시)
 
-    // 로컬 캐시도 전부 정리
+    // 로컬 개체 캐시만 정리
     state.geckos = [];
-    try {
-      localStorage.removeItem('byetmaru_geckos_' + _currentUser.id);
-      localStorage.removeItem('byetmaru_breeding_' + _currentUser.id);
-      localStorage.removeItem('gecko_logs_' + _currentUser.id);
-      // 마일스톤 포스팅 플래그도 초기화 (재등록 시 다시 달성 가능)
-      Object.keys(localStorage).forEach(k => {
-        if (k.startsWith('byetmaru_milestone_')) localStorage.removeItem(k);
-      });
-    } catch(e) {}
+    try { localStorage.removeItem('byetmaru_geckos_' + _currentUser.id); } catch(e) {}
 
-    // ⚠️ 분양&입양 글(posts)은 유지 — 거래 이력/약속 보호
     renderHome(); renderGeckoList(); _updateRecordCount();
-    showToast('✅ 개체·사육 기록·브리딩 전부 삭제됨 (분양 글은 유지)');
+    showToast('✅ 모든 개체가 삭제되었어요 (사육 기록은 보존)');
   } catch(e) {
     showToast('❌ 삭제 실패: ' + e.message);
   }
