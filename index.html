@@ -3518,6 +3518,72 @@ async function _detectFace(imgDataUrl) {
   } catch(e) { return false; }
 }
 
+// ══════════════════════════════════════
+// 🛡️ 업로드 사진 유효성 검사 (인물·스크린샷·단색 등 차단)
+// 반환: { ok:bool, reason:string } — ok=false면 reason에 사유
+// ══════════════════════════════════════
+async function _validateGeckoPhoto(imgDataUrl) {
+  if (!imgDataUrl) return { ok: false, reason: '사진을 불러올 수 없어요' };
+  try {
+    const img = new Image();
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = () => rej(new Error('이미지 로드 실패'));
+      img.src = imgDataUrl;
+    });
+
+    // 1) 해상도 너무 작으면 거부
+    if (img.width < 200 || img.height < 200) {
+      return { ok: false, reason: '해상도가 너무 낮아요 (최소 200x200)' };
+    }
+
+    // 2) 인물 얼굴 감지 (가장 강한 차단 조건)
+    if (typeof FaceDetector !== 'undefined') {
+      try {
+        const detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 3 });
+        const faces = await detector.detect(img);
+        if (faces.length > 0) {
+          return { ok: false, reason: '사진에서 사람 얼굴이 감지됐어요. 개체 사진만 업로드해주세요.' };
+        }
+      } catch(e) {}
+    }
+
+    // 3) 단색 / 스크린샷 / 극도로 인공적인 이미지 감지 (색상 다양성 부족)
+    const cvs = document.createElement('canvas');
+    const W = 128, H = Math.round(128 * img.height / img.width);
+    cvs.width = W; cvs.height = H;
+    const ctx = cvs.getContext('2d');
+    ctx.drawImage(img, 0, 0, W, H);
+    const data = ctx.getImageData(0, 0, W, H).data;
+    const hueHist = new Array(12).fill(0); // 30도 단위 12 bins
+    let grayCount = 0, totalCount = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i+1], b = data[i+2];
+      totalCount++;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      if (max - min < 15) { grayCount++; continue; } // 회색/무채색
+      const { h } = _rgbToHsl(r, g, b);
+      const bin = Math.floor((h * 12)) % 12;
+      hueHist[bin]++;
+    }
+    const grayRatio = grayCount / totalCount;
+    // 무채색 비율 95%+ = 스크린샷/문서 등
+    if (grayRatio > 0.95) {
+      return { ok: false, reason: '스크린샷·문서 사진처럼 보여요. 실제 개체 사진을 올려주세요.' };
+    }
+    // 색상 다양성: 비어있지 않은 hue bin 수
+    const nonEmptyBins = hueHist.filter(v => v > totalCount * 0.01).length;
+    if (nonEmptyBins < 2 && grayRatio < 0.3) {
+      return { ok: false, reason: '이미지가 너무 단조로워요. 개체가 잘 보이는 사진으로 바꿔주세요.' };
+    }
+
+    return { ok: true, reason: '' };
+  } catch(e) {
+    console.warn('[validate photo]', e);
+    return { ok: true, reason: '' }; // 검증 오류 시 통과 (기능 망가뜨리지 않기 위해)
+  }
+}
+
 // ── RGB ↔ HSL 변환 유틸 ──
 function _rgbToHsl(r, g, b) {
   r /= 255; g /= 255; b /= 255;
@@ -4545,7 +4611,7 @@ function handleAddPhoto(e) {
   if (!file) return;
   const img = new Image();
   const url = URL.createObjectURL(file);
-  img.onload = () => {
+  img.onload = async () => {
     // ── 더 작게 리사이즈 + 낮은 품질 → 업로드 속도 대폭 향상 ──
     const MAX = 480;
     let w = img.width, h = img.height;
@@ -4556,8 +4622,19 @@ function handleAddPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    // 미리보기용 data URL (낮은 품질)
-    currentPhotoData = canvas.toDataURL('image/jpeg', 0.5);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+
+    // 🛡️ 유효성 검사 (사람 얼굴·스크린샷 등 거부)
+    const check = await _validateGeckoPhoto(dataUrl);
+    if (!check.ok) {
+      URL.revokeObjectURL(url);
+      // 폼 입력창 초기화해서 같은 파일 재선택 가능하게
+      e.target.value = '';
+      showToast(`⚠️ ${check.reason}`);
+      return;
+    }
+
+    currentPhotoData = dataUrl;
     document.getElementById('add-photo-preview').src = currentPhotoData;
     document.getElementById('add-photo-zone').classList.add('has-photo');
     URL.revokeObjectURL(url);
@@ -4921,7 +4998,7 @@ function handleQuickPhoto(e) {
   if (!file) return;
   const img = new Image();
   const url = URL.createObjectURL(file);
-  img.onload = () => {
+  img.onload = async () => {
     const MAX = 480;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
@@ -4931,7 +5008,18 @@ function handleQuickPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    _quickPhotoData = canvas.toDataURL('image/jpeg', 0.5);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+
+    // 🛡️ 유효성 검사
+    const check = await _validateGeckoPhoto(dataUrl);
+    if (!check.ok) {
+      URL.revokeObjectURL(url);
+      e.target.value = '';
+      showToast(`⚠️ ${check.reason}`);
+      return;
+    }
+
+    _quickPhotoData = dataUrl;
     document.getElementById('quick-photo-preview').src = _quickPhotoData;
     document.getElementById('quick-photo-zone').classList.add('has-photo');
     URL.revokeObjectURL(url);
@@ -6936,7 +7024,7 @@ function handlePostPhoto(e) {
   // 리사이즈해서 미리보기 + 업로드용 Blob 준비
   const img = new Image();
   const url = URL.createObjectURL(file);
-  img.onload = () => {
+  img.onload = async () => {
     const MAX = 480;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
@@ -6946,7 +7034,18 @@ function handlePostPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    _postPhotoData = canvas.toDataURL('image/jpeg', 0.5);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+
+    // 🛡️ 유효성 검사 (사람 얼굴·스크린샷·단색 거부)
+    const check = await _validateGeckoPhoto(dataUrl);
+    if (!check.ok) {
+      URL.revokeObjectURL(url);
+      e.target.value = '';
+      showToast(`⚠️ ${check.reason}`);
+      return;
+    }
+
+    _postPhotoData = dataUrl;
     canvas.toBlob(blob => { _postPhotoBlob = blob; }, 'image/jpeg', 0.5);
     document.getElementById('post-photo-preview').src = _postPhotoData;
     document.getElementById('post-photo-preview').style.display = 'block';
