@@ -53,11 +53,10 @@ img{display:block}
 button{cursor:pointer;border:none;background:none;font-family:inherit}
 
 /* ─── Pages ─── */
-.page{display:none;padding-bottom:80px;min-height:100vh}
-.page.active{display:block;animation:pageFadeIn .25s cubic-bezier(.22,1,.36,1)}
-@keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.page.page-exit{display:block;animation:pageFadeOut .15s ease forwards;pointer-events:none}
-@keyframes pageFadeOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-6px)}}
+.page{display:none;padding-bottom:80px;min-height:100vh;background:var(--bg)}
+.page.active{display:block;opacity:1}
+/* iOS 안전성: 복잡한 translate/opacity 동시 애니메이션 제거, 순수 fade만 */
+.page.page-exit{display:none !important}
 
 /* ─── Top Bar ─── */
 .topbar{
@@ -1765,7 +1764,7 @@ input[type=file]{display:none}
           onclick="showMorphInline()"
           oninput="filterMorphInline()"
           style="width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:11px 13px;color:var(--tx);font-family:'Noto Sans KR',sans-serif;font-size:14px;transition:border-color .15s;box-sizing:border-box">
-        <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5)">
+        <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5);touch-action:manipulation">
           <div id="morph-inline-list"></div>
         </div>
       </div>
@@ -4110,29 +4109,37 @@ const SAMPLE_POSTS = [
 const _PAGE_ORDER = ['home', 'myge', 'scan', 'comm', 'more'];
 
 function showPage(p, pushHistory = true) {
-  const oldPage = document.querySelector('.page.active');
   const newPage = document.getElementById('page-' + p);
-  if (oldPage === newPage) return;
+  if (!newPage) { console.warn('[showPage] not found:', p); return; }
 
-  // 나가는 페이지 exit 애니메이션
-  if (oldPage) {
-    oldPage.classList.remove('active');
-    oldPage.classList.add('page-exit');
-    oldPage.addEventListener('animationend', () => oldPage.classList.remove('page-exit'), { once: true });
-  }
-
-  // 들어오는 페이지 활성화
-  document.querySelectorAll('.nb, .nb-scan').forEach(el => el.classList.remove('active'));
+  // iOS 안전: 모든 .page 먼저 숨김 → 새 페이지만 표시 (중간 렌더링 레이어 없음)
+  document.querySelectorAll('.page').forEach(el => {
+    el.classList.remove('active', 'page-exit');
+    if (el !== newPage) el.style.display = 'none';
+  });
+  newPage.style.display = 'block';
   newPage.classList.add('active');
+
+  // 네비게이션 활성 상태
+  document.querySelectorAll('.nb, .nb-scan').forEach(el => el.classList.remove('active'));
   const nav = document.getElementById('nav-' + p);
   if (nav) nav.classList.add('active');
+
   state.currentPage = p;
-  if (p === 'home') renderHome();
-  if (p === 'myge') renderGeckoList();
-  if (p === 'comm') renderPosts();
-  if (p === 'scan') resetScanPage();
-  if (p === 'more') updateCreditDisplays();
+  try {
+    if (p === 'home') renderHome();
+    else if (p === 'myge') renderGeckoList();
+    else if (p === 'comm') renderPosts();
+    else if (p === 'scan') resetScanPage();
+    else if (p === 'more') updateCreditDisplays();
+  } catch(e) {
+    console.error('[showPage] render error:', e);
+    // 렌더 에러 나도 페이지는 보이게 유지 (흰화면 방지)
+  }
+
   if (pushHistory) history.pushState({ page: p }, '', '#' + p);
+  // 스크롤 맨 위로
+  try { window.scrollTo(0, 0); } catch(e) {}
 }
 
 // ══════════════════════════════════════
@@ -4156,12 +4163,13 @@ function showPage(p, pushHistory = true) {
   };
 
   document.addEventListener('touchstart', (e) => {
-    // 시트 열려있거나 스캔 결과 화면이면 제스처 무시
+    // 시트·모달 열려있으면 제스처 무시
     if (document.querySelector('.sheet-overlay.show')) return;
+    if (document.querySelector('[data-ai-credit-popup]')) return;
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
-    // 인풋/버튼/드롭다운 터치는 스와이프로 해석 안 함
-    if (e.target.closest('input, textarea, select, button, .quick-card, .gecko-row-item, .post-card, .record-item, .fp, .stat-chip, #morph-inline-dropdown')) {
+    // 인풋/버튼/리스트/카드/드롭다운 위에서 시작한 터치는 스와이프 네비로 해석 안 함
+    if (e.target.closest('input, textarea, select, button, a, label, .quick-card, .gecko-row-item, .gecko-card, .post-card, .record-item, .fp, .stat-chip, #morph-inline-dropdown, #morph-inline-input, .sheet, .more-item')) {
       _tracking = false; return;
     }
     _startX = t.clientX; _startY = t.clientY; _moveX = 0; _moveY = 0;
@@ -4264,21 +4272,24 @@ function renderMorphInline(q) {
     const matched = group.items.filter(item => !query || item.toLowerCase().includes(query));
     if (!matched.length) return;
     hasResult = true;
-    html += `<div style="font-size:10px;color:var(--tx3);padding:8px 12px 4px;font-family:'DM Mono',monospace;letter-spacing:1px;border-top:1px solid var(--br2)">${group.label}</div>`;
+    html += `<div style="font-size:10px;color:var(--tx3);padding:8px 12px 4px;font-family:'DM Mono',monospace;letter-spacing:1px;border-top:1px solid var(--br2);pointer-events:none">${group.label}</div>`;
     matched.forEach(item => {
       const m = MORPHS[item];
       const g = m ? MORPH_GRADES[m.grade] : null;
-      html += `<div onmousedown="selectMorphInline('${item.replace(/'/g,"\\'")}')" ontouchend="selectMorphInline('${item.replace(/'/g,"\\'")}');event.preventDefault()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;cursor:pointer;transition:background .1s">
-        <span style="font-size:14px;font-weight:600">${item}</span>
-        ${g ? `<span style="font-size:10px;background:${g.bg};color:${g.color};padding:2px 7px;border-radius:6px;font-family:'DM Mono',monospace">${g.label}</span>` : ''}
+      const safe = item.replace(/'/g,"\\'");
+      // iOS 터치 정확도: click 단일 핸들러 + 충분한 패딩 + touch-action:manipulation
+      html += `<div onclick="selectMorphInline('${safe}')" role="button" style="display:flex;align-items:center;justify-content:space-between;padding:14px 14px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(46,125,87,.15);min-height:44px">
+        <span style="font-size:14px;font-weight:600;pointer-events:none">${item}</span>
+        ${g ? `<span style="font-size:10px;background:${g.bg};color:${g.color};padding:2px 7px;border-radius:6px;font-family:'DM Mono',monospace;pointer-events:none">${g.label}</span>` : ''}
       </div>`;
     });
   });
 
   // 직접 입력 옵션
   if (query && !MORPH_LIST_GROUPS.flatMap(g=>g.items).map(i=>i.toLowerCase()).includes(query)) {
-    html += `<div onmousedown="selectMorphInline('${q.replace(/'/g,"\\'").trim()}')" ontouchend="selectMorphInline('${q.replace(/'/g,"\\'").trim()}');event.preventDefault()" style="padding:11px 13px;font-size:13px;cursor:pointer;color:var(--ac);border-top:1px solid var(--br2);display:flex;align-items:center;gap:7px">
-      <span style="font-size:16px">✏️</span> "<b>${q.trim()}</b>" 직접 입력
+    const safeQ = q.replace(/'/g,"\\'").trim();
+    html += `<div onclick="selectMorphInline('${safeQ}')" role="button" style="padding:14px 14px;font-size:13px;cursor:pointer;color:var(--ac);border-top:1px solid var(--br2);display:flex;align-items:center;gap:7px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(46,125,87,.15);min-height:44px">
+      <span style="font-size:16px;pointer-events:none">✏️</span> <span style="pointer-events:none">"<b>${q.trim()}</b>" 직접 입력</span>
     </div>`;
     hasResult = true;
   }
