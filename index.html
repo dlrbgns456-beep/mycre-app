@@ -4426,6 +4426,84 @@ async function saveProfile() {
 // TOAST
 // ══════════════════════════════
 let toastTimer;
+// ══════════════════════════════════════
+// 🧩 null-safe DOM 헬퍼 + 커스텀 다이얼로그 (PWA에서 브라우저 prompt/confirm 대체)
+// ══════════════════════════════════════
+function $id(id) { return document.getElementById(id); }
+function $set(id, prop, value) {
+  const el = document.getElementById(id);
+  if (el) { el[prop] = value; return true; }
+  return false;
+}
+
+// 커스텀 다이얼로그 (Promise 반환)
+// mode: 'alert' | 'confirm' | 'prompt'
+function _showCustomDialog({ mode = 'alert', title = '', message = '', defaultValue = '', okText, cancelText, inputType = 'text', inputPlaceholder = '' } = {}) {
+  return new Promise((resolve) => {
+    // 기존 커스텀 다이얼로그 있으면 제거
+    document.querySelectorAll('[data-custom-dialog]').forEach(el => el.remove());
+
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-custom-dialog', '1');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:dialogFadeIn .18s ease';
+
+    const lines = String(message || '').split('\n').map(l => l === '' ? '<br>' : `<div>${l.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`).join('');
+
+    const inputHtml = mode === 'prompt'
+      ? `<input id="_cd_input" class="form-input" type="${inputType}" placeholder="${(inputPlaceholder||'').replace(/"/g,'&quot;')}" value="${String(defaultValue||'').replace(/"/g,'&quot;')}" style="margin-top:12px;font-size:15px;padding:12px 14px">`
+      : '';
+
+    const btnOk = (okText ?? (mode === 'confirm' ? '확인' : mode === 'prompt' ? '저장' : 'OK'));
+    const btnCancel = (cancelText ?? '취소');
+
+    overlay.innerHTML = `
+      <div style="background:var(--card);border-radius:18px;padding:22px 22px 18px;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);font-family:inherit">
+        ${title ? `<div style="font-size:17px;font-weight:900;color:var(--tx);margin-bottom:8px;line-height:1.4">${title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+        <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:${mode === 'prompt' ? '0' : '14px'}">${lines}</div>
+        ${inputHtml}
+        <div style="display:flex;gap:8px;margin-top:16px">
+          ${mode !== 'alert' ? `<button type="button" id="_cd_cancel" style="flex:1;background:var(--sf2);color:var(--tx2);border:1px solid var(--br);border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">${btnCancel}</button>` : ''}
+          <button type="button" id="_cd_ok" style="flex:${mode === 'alert' ? '1' : '1.2'};background:var(--ac);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;touch-action:manipulation">${btnOk}</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+
+    const close = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+
+    const input = overlay.querySelector('#_cd_input');
+    if (input) {
+      // 모바일 키보드 자동 올리기
+      setTimeout(() => { try { input.focus(); input.select?.(); } catch(e) {} }, 50);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); close(input.value); }
+        if (e.key === 'Escape') { e.preventDefault(); close(null); }
+      });
+    }
+
+    overlay.querySelector('#_cd_ok').addEventListener('click', () => {
+      if (mode === 'prompt') close(input ? input.value : '');
+      else if (mode === 'confirm') close(true);
+      else close();
+    });
+    const cancelBtn = overlay.querySelector('#_cd_cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => close(mode === 'confirm' ? false : null));
+
+    // 바깥 탭으로 닫기 (취소 처리)
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close(mode === 'confirm' ? false : null);
+    });
+  });
+}
+
+// 단축 헬퍼
+const $prompt  = (msg, def = '', title = '') => _showCustomDialog({ mode: 'prompt',  title, message: msg, defaultValue: def });
+const $confirm = (msg, title = '')           => _showCustomDialog({ mode: 'confirm', title, message: msg });
+const $alert   = (msg, title = '')           => _showCustomDialog({ mode: 'alert',   title, message: msg });
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -5531,22 +5609,25 @@ function editGecko(id) {
 }
 
 function updateCountBadges() {
-  document.getElementById('stat-count').textContent = state.geckos.length;
-  document.getElementById('myge-count-badge').textContent = state.geckos.length + '마리';
+  $set('stat-count', 'textContent', state.geckos.length);
+  $set('myge-count-badge', 'textContent', state.geckos.length + '마리');
   _updateRecordCount();
 }
 async function _updateRecordCount() {
   if (!_currentUser) return;
   try {
     const { count, error } = await _supabase.from('gecko_logs').select('*', { count: 'exact', head: true }).eq('user_id', _currentUser.id);
-    if (!error && count != null) document.getElementById('stat-records').textContent = count;
+    if (!error && count != null) $set('stat-records', 'textContent', count);
   } catch(e) {}
   try {
     const key = 'gecko_logs_' + _currentUser.id;
     const local = JSON.parse(localStorage.getItem(key) || '[]');
     if (local.length > 0) {
-      const current = parseInt(document.getElementById('stat-records').textContent) || 0;
-      document.getElementById('stat-records').textContent = current + local.length;
+      const el = $id('stat-records');
+      if (el) {
+        const current = parseInt(el.textContent) || 0;
+        el.textContent = current + local.length;
+      }
     }
   } catch(e) {}
 }
@@ -6879,7 +6960,7 @@ async function _renderSellerReputation(postId, sellerId) {
 async function startTrade(postId, sellerId) {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
   if (!sellerId || sellerId === _currentUser.id) { showToast('⚠️ 본인 글에는 거래 시작할 수 없어요'); return; }
-  if (!confirm('🤝 이 개체에 대한 에스크로 거래를 시작할까요?\n\n· 예약 → 발송 → 수령 확인 3단계로 거래 추적\n· 수령 확인 후 리뷰 작성 가능\n· 외부 안전결제(네이버페이·당근머니 등) 병행 권장')) return;
+  if (!(await $confirm('· 예약 → 발송 → 수령 확인 3단계로 거래 추적\n· 수령 확인 후 리뷰 작성 가능\n· 외부 안전결제(네이버페이·당근머니 등) 병행 권장', '🤝 에스크로 거래를 시작할까요?'))) return;
   try {
     const { error } = await _supabase.from('trade_confirmations').insert({
       post_id: postId,
@@ -9259,7 +9340,7 @@ async function _confirmedDeleteAccount() {
 // 데이터 다운로드 — PDF(인쇄) + JSON(백업) 선택
 async function downloadMyData() {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
-  const choice = confirm('📄 PDF로 인쇄·저장하시겠어요?\n\n확인 = PDF 미리보기 창 열기\n취소 = JSON 백업 파일 다운로드');
+  const choice = await $confirm('확인 = PDF 미리보기 창 열기\n취소 = JSON 백업 파일 다운로드', '📄 PDF로 인쇄·저장하시겠어요?');
   if (choice) {
     await _downloadMyDataPDF();
   } else {
@@ -9679,7 +9760,7 @@ async function deleteAccount() {
           if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
           if (titleEl) titleEl.textContent = '계정 탈퇴';
           _deleteConfirmStep = 0;
-          alert('⛔ 진행 중인 거래가 있어 탈퇴할 수 없어요.\n\n' + (result.message || '') + '\n\n📍 [더보기 → 내 거래·평판]에서 해결 후 다시 시도해주세요.');
+          await $alert((result.message || '진행 중인 거래가 있어 탈퇴할 수 없어요.') + '\n\n📍 [더보기 → 내 거래·평판]에서 해결 후 다시 시도해주세요.', '⛔ 탈퇴 불가');
           return;
         }
         if (result.error) console.warn('계정 삭제 오류:', result.error);
@@ -10516,12 +10597,13 @@ async function markHatching(breedingId) {
   if (!record) { showToast('기록을 찾을 수 없어요'); return; }
   if (record.hatchedAt) { showToast('이미 해칭 완료된 기록입니다'); return; }
 
-  const countStr = prompt(`🐣 "${record.femaleName}"의 해칭을 기록합니다.\n몇 마리 해칭되었나요? (숫자만, 취소 시 빈칸)`);
+  const countStr = await $prompt(`몇 마리 해칭되었나요? (숫자만, 비우면 기록만 저장)`, '', `🐣 ${record.femaleName} 해칭 기록`);
   if (countStr === null) return; // 취소
   const hatchedCount = parseInt(countStr) || null;
 
-  const shareToComm = confirm(
-    `🎉 해칭 축하!\n\n커뮤니티 '🎉 축하' 피드에 자동으로 공유해서 다른 키퍼들의 축하를 받을까요?\n\n확인 = 공유 / 취소 = 비공개 기록만`
+  const shareToComm = await $confirm(
+    `커뮤니티 '🎉 축하' 피드에 공유해 다른 키퍼들의 축하를 받으시겠어요?\n\n확인 = 공유 · 취소 = 비공개 기록만`,
+    '🎉 해칭 축하!'
   );
 
   const today = new Date().toISOString().slice(0, 10);
@@ -10633,11 +10715,11 @@ async function markEggHatched(logId, geckoId, laidDate, eggValue) {
   const g = state.geckos.find(x => String(x.id) === String(geckoId));
   if (!g) { showToast('개체를 찾을 수 없어요'); return; }
 
-  const countStr = prompt(`🐣 "${g.name}"의 유정란(${eggValue}) 해칭 완료!\n실제로 몇 마리가 해칭됐나요? (숫자만, 기본 2)`, '2');
+  const countStr = await $prompt(`${eggValue} → 실제로 몇 마리가 해칭됐나요? (숫자만)`, '2', `🐣 ${g.name} 해칭 완료`);
   if (countStr === null) return;
   const hatchedCount = Math.max(1, parseInt(countStr) || 2);
 
-  const shareToComm = confirm('🎉 해칭 축하!\n\n커뮤니티 \'🎉 축하\' 피드에 공유해서 다른 키퍼들의 축하를 받을까요?\n\n확인 = 공유 / 취소 = 비공개 기록만');
+  const shareToComm = await $confirm('커뮤니티 \'🎉 축하\' 피드에 공유해 다른 키퍼들의 축하를 받으시겠어요?\n\n확인 = 공유 · 취소 = 비공개 기록만', '🎉 해칭 축하!');
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -11735,7 +11817,7 @@ async function confirmTradeReceived(tradeId) {
 
 // 🚚 판매자: 예약 → 발송 완료 표시
 async function markTradeShipped(tradeId) {
-  if (!confirm('🚚 이 거래를 "발송 완료" 상태로 변경할까요?\n\n구매자가 수령 확인하면 리뷰 단계로 넘어갑니다.')) return;
+  if (!(await $confirm('구매자가 수령 확인하면 리뷰 단계로 넘어갑니다.', '🚚 발송 완료로 변경할까요?'))) return;
   try {
     const { error } = await _supabase.from('trade_confirmations')
       .update({ status: 'shipped' })
@@ -11748,7 +11830,7 @@ async function markTradeShipped(tradeId) {
 
 // ❌ 거래 취소 — 양쪽 모두 가능 (상호 합의 전제는 대화로 처리)
 async function cancelTrade(tradeId) {
-  if (!confirm('❌ 이 거래를 취소하시겠어요?\n\n· 취소 후에는 되돌릴 수 없어요\n· 상대방에게 취소 사유를 미리 안내해주세요\n· 취소된 거래는 리뷰 작성 불가')) return;
+  if (!(await $confirm('· 취소 후에는 되돌릴 수 없어요\n· 상대방에게 취소 사유를 미리 안내해주세요\n· 취소된 거래는 리뷰 작성 불가', '❌ 이 거래를 취소하시겠어요?'))) return;
   try {
     const { error } = await _supabase.from('trade_confirmations')
       .update({ status: 'cancelled' })
@@ -11766,10 +11848,10 @@ async function cancelTrade(tradeId) {
 }
 
 async function openReviewDialog(tradeId, sellerId, postId) {
-  const ratingStr = prompt('⭐ 판매자 평점 (1~5)', '5');
+  const ratingStr = await $prompt('1~5 숫자로 입력해주세요', '5', '⭐ 판매자 평점');
   if (ratingStr === null) return;
   const rating = Math.max(1, Math.min(5, parseInt(ratingStr) || 5));
-  const comment = prompt('💬 간단한 후기 (선택)', '') || '';
+  const comment = (await $prompt('판매자에게 전할 한줄 후기 (선택)', '', '💬 리뷰 작성')) || '';
   try {
     const { error } = await _supabase.from('seller_reviews').insert({
       reviewer_id: _currentUser.id,
@@ -12031,16 +12113,16 @@ async function quickMarkEgg(geckoId, kind) {
   const label = (kind === '유정란') ? '유정란' : '무정란';
 
   // 개수 입력 받기 (크레스티드 게코는 보통 1~2개)
-  const countInput = prompt(`🥚 "${g.name}" ${label} 산란 기록\n몇 개 낳았나요? (숫자만, 기본 2)`, '2');
+  const countInput = await $prompt('몇 개 낳았나요? (숫자만)', '2', `🥚 ${g.name} ${label} 산란 기록`);
   if (countInput === null) return; // 취소
   const count = Math.max(1, parseInt(countInput) || 2);
 
   // 유정란이면 인큐베이션 온도도 입력받음 (선택, 기본 24°C)
   let incubTemp = null;
   if (label === '유정란') {
-    const tInput = prompt(`🌡️ 인큐베이션 온도 (°C)\n비워두면 24°C 기준으로 계산해요.\n\n· 22°C → 느림 (약 85일)\n· 24°C → 표준 (75일)\n· 26°C → 빠름 (65일)`, '24');
+    const tInput = await $prompt('비워두면 24°C 기준으로 계산해요.\n\n· 22°C → 느림 (약 85일)\n· 24°C → 표준 (75일)\n· 26°C → 빠름 (65일)', '24', '🌡️ 인큐베이션 온도 (°C)');
     if (tInput === null) return; // 취소
-    if (tInput.trim() !== '') incubTemp = parseFloat(tInput) || 24;
+    if (String(tInput).trim() !== '') incubTemp = parseFloat(tInput) || 24;
   }
 
   const today = new Date().toISOString().slice(0, 10);
