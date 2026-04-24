@@ -10517,6 +10517,78 @@ function updateCageCard() {
   if (needList.length > 3) txt.innerHTML += `<br><span style="color:var(--tx3)">외 ${needList.length - 3}마리</span>`;
 }
 
+// 🐣 유정란 → 해칭 완료 기록 전환
+async function markEggHatched(logId, geckoId, laidDate, eggValue) {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+
+  const countStr = prompt(`🐣 "${g.name}"의 유정란(${eggValue}) 해칭 완료!\n실제로 몇 마리가 해칭됐나요? (숫자만, 기본 2)`, '2');
+  if (countStr === null) return;
+  const hatchedCount = Math.max(1, parseInt(countStr) || 2);
+
+  const shareToComm = confirm('🎉 해칭 축하!\n\n커뮤니티 \'🎉 축하\' 피드에 공유해서 다른 키퍼들의 축하를 받을까요?\n\n확인 = 공유 / 취소 = 비공개 기록만');
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  // 1) 해칭 기록 추가 (type=hatched)
+  const hatchedRec = {
+    gecko_id: geckoId,
+    user_id: _currentUser.id,
+    type: 'hatched',
+    date: today,
+    value: `해칭 ${hatchedCount}마리`,
+    note: `유정란 기록일: ${laidDate}`,
+    created_at: new Date().toISOString(),
+  };
+  try {
+    const { error } = await _supabase.from('gecko_logs').insert(hatchedRec);
+    if (error) throw error;
+  } catch(e) {
+    const key = 'gecko_logs_' + _currentUser.id;
+    const logs = JSON.parse(localStorage.getItem(key) || '[]');
+    logs.push(hatchedRec);
+    localStorage.setItem(key, JSON.stringify(logs));
+  }
+
+  // 2) 원본 유정란 레코드에 'hatched=true' 플래그 표시 (중복 버튼 방지)
+  try {
+    const { data: target } = await _supabase.from('gecko_logs')
+      .select('id, note')
+      .eq('user_id', _currentUser.id).eq('gecko_id', geckoId)
+      .eq('type', 'egg').eq('date', laidDate).eq('value', eggValue)
+      .maybeSingle();
+    if (target) {
+      const newNote = (target.note || '') + ` · hatched=${hatchedCount}`;
+      await _supabase.from('gecko_logs').update({ note: newNote }).eq('id', target.id);
+    }
+  } catch(e) {}
+
+  // 3) 메모에 한 줄
+  await _appendGeckoMemo(geckoId, `[${today}] 🐣 해칭 ${hatchedCount}마리 (${laidDate} 유정란)`);
+
+  playNotificationSound('celebration');
+  vibrateDevice('celebration');
+
+  if (shareToComm) {
+    await autoPostCelebration('hatching', {
+      maleName: '—',
+      femaleName: g.name,
+      mateDate: laidDate,
+      hatchedCount,
+      photo: g.photo || null,
+      morph: g.morph || null,
+      geckoId: g.id,
+    });
+  } else {
+    showToast(`🐣 해칭 ${hatchedCount}마리 기록 완료!`);
+  }
+  _updateRecordCount();
+  renderHome();
+  // 현재 열린 기록 시트 새로고침
+  if (_currentRecordGeckoId) loadRecords(_currentRecordGeckoId);
+}
+
 // 🐣 유정란 부화 예정 카드 — gecko_logs에서 유정란 레코드 조회 후 부화 범위 계산
 async function updateHatchingCard() {
   const card = document.getElementById('home-hatching-card');
@@ -10526,7 +10598,7 @@ async function updateHatchingCard() {
     // 최근 120일 이내 유정란 기록만 가져와서 계산
     const { data, error } = await _supabase
       .from('gecko_logs')
-      .select('date, value, gecko_id')
+      .select('date, value, note, gecko_id')
       .eq('user_id', _currentUser.id)
       .eq('type', 'egg')
       .like('value', '유정란%')
@@ -10536,8 +10608,10 @@ async function updateHatchingCard() {
 
     const now = new Date();
     const upcoming = data
+      .filter(r => !String(r.note || '').includes('hatched=')) // 이미 해칭된 건 제외
       .map(r => {
-        const hatch = _calcHatchRange(r.date);
+        const temp = _extractTempFromNote(r.note);
+        const hatch = _calcHatchRange(r.date, temp);
         if (!hatch) return null;
         const late = new Date(hatch.late);
         const early = new Date(hatch.early);
@@ -11669,8 +11743,11 @@ async function _renderAllRecordsTimeline() {
                : r.type === 'shed'   ? r.value
                : r.type === 'egg'    ? (() => {
                    if (String(r.value).startsWith('유정란')) {
-                     const h = _calcHatchRange(r.date);
-                     return h ? `<b>${r.value}</b><div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ${h.early} ~ ${h.late}</div>` : `<b>${r.value}</b>`;
+                     const t = _extractTempFromNote(r.note);
+                     const h = _calcHatchRange(r.date, t);
+                     if (!h) return `<b>${r.value}</b>`;
+                     const tLabel = t != null ? ` · ${t}°C` : '';
+                     return `<b>${r.value}</b>${tLabel}<div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ${h.early} ~ ${h.late}</div>`;
                    }
                    return `<b>${r.value}</b>`;
                  })()
@@ -11799,22 +11876,41 @@ async function quickMarkShed(geckoId) {
 }
 
 // 빠른 산란 체크 (암컷) — 무정란/유정란을 반복해서 누적 기록 (개수 입력)
-// 🐣 크레스티드 게코 유정란 부화 예측 — 실온 기준 60~90일, 평균 75일
-const INCUBATION_DAYS = { early: 60, avg: 75, late: 90 };
-function _calcHatchRange(laidDateStr) {
+// 🐣 크레스티드 게코 유정란 부화 예측
+// 기준: 24°C 75일 · 온도 1°C 차이당 약 ±5일 (22~28°C 범위)
+const INCUBATION_BASE = { tempC: 24, days: 75 };
+function _calcIncubDaysAt(tempC) {
+  const t = Number(tempC);
+  if (!isFinite(t) || t < 15 || t > 35) return INCUBATION_BASE.days;
+  const diff = INCUBATION_BASE.tempC - t; // 낮을수록 길어짐
+  return Math.round(INCUBATION_BASE.days + diff * 5);
+}
+function _calcHatchRange(laidDateStr, tempC) {
   if (!laidDateStr) return null;
   const laid = new Date(laidDateStr);
   if (isNaN(laid.getTime())) return null;
+  const avgDays  = tempC != null && tempC !== '' ? _calcIncubDaysAt(tempC) : 75;
+  const earlyDays = Math.max(45, avgDays - 15);
+  const lateDays  = avgDays + 15;
   const add = (days) => {
     const d = new Date(laid); d.setDate(d.getDate() + days);
     return d.toISOString().slice(0, 10);
   };
   return {
     laidDate: laidDateStr,
-    early: add(INCUBATION_DAYS.early),
-    avg:   add(INCUBATION_DAYS.avg),
-    late:  add(INCUBATION_DAYS.late),
+    tempC: tempC || null,
+    early: add(earlyDays),
+    avg:   add(avgDays),
+    late:  add(lateDays),
+    avgDays,
   };
+}
+
+// gecko_logs.note에서 온도 추출 (형식: "temp=26" 포함 시)
+function _extractTempFromNote(note) {
+  if (!note) return null;
+  const m = String(note).match(/temp=(\d+(?:\.\d+)?)/i);
+  return m ? parseFloat(m[1]) : null;
 }
 
 async function quickMarkEgg(geckoId, kind) {
@@ -11829,14 +11925,24 @@ async function quickMarkEgg(geckoId, kind) {
   if (countInput === null) return; // 취소
   const count = Math.max(1, parseInt(countInput) || 2);
 
+  // 유정란이면 인큐베이션 온도도 입력받음 (선택, 기본 24°C)
+  let incubTemp = null;
+  if (label === '유정란') {
+    const tInput = prompt(`🌡️ 인큐베이션 온도 (°C)\n비워두면 24°C 기준으로 계산해요.\n\n· 22°C → 느림 (약 85일)\n· 24°C → 표준 (75일)\n· 26°C → 빠름 (65일)`, '24');
+    if (tInput === null) return; // 취소
+    if (tInput.trim() !== '') incubTemp = parseFloat(tInput) || 24;
+  }
+
   const today = new Date().toISOString().slice(0, 10);
+  const noteParts = ['빠른 체크'];
+  if (incubTemp != null) noteParts.push(`temp=${incubTemp}`);
   const record = {
     gecko_id: geckoId,
     user_id: _currentUser.id,
     type: 'egg',
     date: today,
     value: `${label} ${count}개`,
-    note: '빠른 체크',
+    note: noteParts.join(' · '),
     created_at: new Date().toISOString(),
   };
   try {
@@ -11852,9 +11958,10 @@ async function quickMarkEgg(geckoId, kind) {
   let memoLine = `[${today}] 🥚 ${label} ${count}개 산란`;
   let toastMsg = `🥚 ${g.name} ${label} ${count}개 산란 — ${today}`;
   if (label === '유정란') {
-    const hatch = _calcHatchRange(today);
+    const hatch = _calcHatchRange(today, incubTemp);
     if (hatch) {
-      memoLine += ` · 🐣 예상 부화: ${hatch.early} ~ ${hatch.late}`;
+      const tempLabel = incubTemp != null ? ` (${incubTemp}°C)` : '';
+      memoLine += `${tempLabel} · 🐣 예상 부화: ${hatch.early} ~ ${hatch.late}`;
       toastMsg += ` · 🐣 ${hatch.avg} 경 부화 예상`;
     }
   }
@@ -11893,8 +12000,16 @@ async function loadRecords(geckoId) {
     else if (r.type === 'egg') {
       detail = '<b>'+r.value+'</b>';
       if (String(r.value).startsWith('유정란')) {
-        const h = _calcHatchRange(r.date);
-        if (h) detail += '<div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ' + h.early + ' ~ ' + h.late + '</div>';
+        const t = _extractTempFromNote(r.note);
+        const h = _calcHatchRange(r.date, t);
+        if (h) {
+          const tLabel = t != null ? ' · ' + t + '°C' : '';
+          detail += tLabel + '<div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ' + h.early + ' ~ ' + h.late + '</div>';
+        }
+      }
+      // 해칭 완료 버튼 (개체별 기록 시트 안에서만, 유정란 + 아직 해칭 안된 경우)
+      if (String(r.value).startsWith('유정란') && !String(r.note||'').includes('hatched=')) {
+        detail += `<button class="btn-sm" style="margin-top:6px;padding:5px 10px;font-size:11px;background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="event.stopPropagation();markEggHatched('${r.id||r.created_at}','${r.gecko_id}','${r.date}','${r.value}')">🐣 해칭 완료</button>`;
       }
     }
     else detail = r.note || '';
