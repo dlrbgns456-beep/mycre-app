@@ -12102,7 +12102,7 @@ async function _renderAllRecordsTimeline() {
     const styleAttr = `position:relative;${isOrphan?'opacity:.7;':'cursor:pointer;'}`;
     return `<div class="record-item type-${r.type}" ${clickAttr} style="${styleAttr}">
       <button onclick="event.stopPropagation();deleteSingleRecord('${rid}','${rca}','all')" aria-label="기록 삭제" style="position:absolute;top:8px;right:6px;width:28px;height:28px;background:transparent;border:none;color:var(--tx3);font-size:16px;cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,107,107,.15)">×</button>
-      <div class="record-date" onclick="event.stopPropagation();editRecordDate('${rid}','${r.date||''}','all')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="날짜 변경">${r.date || ''} ✎</div>
+      <div class="record-date" onclick="event.stopPropagation();${r.type==='egg' ? `editEggRecord('${rid}','${r.date||''}','${String(r.note||'').replace(/'/g,"\\'").replace(/\n/g,' ')}','all')` : `editRecordDate('${rid}','${r.date||''}','all')`}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="${r.type==='egg'?'날짜·온도 수정':'날짜 변경'}">${r.date || ''} ✎</div>
       <div class="record-content" style="padding-right:24px">
         <span class="record-type-badge" style="background:${c.bg};color:${c.color}">${c.emoji} ${c.label}</span>
         <b style="color:var(--tx);margin-right:6px">🦎 ${geckoName}</b>
@@ -12322,6 +12322,72 @@ async function quickMarkEgg(geckoId, kind) {
   renderHome();
 }
 
+// ── 산란 기록 전용 편집 (날짜 + 온도) — 부화 예측 즉시 갱신 ──
+async function editEggRecord(recordId, currentDate, currentNote, refreshCtx) {
+  if (!recordId) {
+    showToast('동기화 전 기록이라 잠시 후 다시 시도해 주세요');
+    return;
+  }
+  const currentTemp = _extractTempFromNote(currentNote);
+  const result = await new Promise(resolve => {
+    document.querySelectorAll('[data-custom-dialog]').forEach(el => el.remove());
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-custom-dialog', '1');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)';
+    overlay.innerHTML = `
+      <div style="background:var(--card);border-radius:18px;padding:22px 22px 18px;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);font-family:inherit">
+        <div style="font-size:17px;font-weight:900;color:var(--tx);margin-bottom:6px">🥚 산란 기록 수정</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:14px">날짜·온도를 바꾸면 부화 예측이 자동으로 다시 계산됩니다.</div>
+        <label style="font-size:11px;color:var(--tx3);font-weight:700;display:block;margin-bottom:4px">📅 산란일</label>
+        <input id="_egg_date" type="date" class="form-input" value="${currentDate || ''}" style="font-size:15px;padding:12px 14px;margin-bottom:12px">
+        <label style="font-size:11px;color:var(--tx3);font-weight:700;display:block;margin-bottom:4px">🌡️ 인큐베이팅 온도 (°C, 선택)</label>
+        <input id="_egg_temp" type="number" inputmode="decimal" step="0.1" min="20" max="35" class="form-input" placeholder="예: 26 (미입력 시 기본 75일 기준)" value="${currentTemp ?? ''}" style="font-size:15px;padding:12px 14px">
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button type="button" id="_egg_cancel" style="flex:1;background:var(--sf2);color:var(--tx2);border:1px solid var(--br);border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">취소</button>
+          <button type="button" id="_egg_ok" style="flex:1.2;background:var(--ac);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;touch-action:manipulation">저장</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const close = (val) => { overlay.remove(); resolve(val); };
+    overlay.querySelector('#_egg_cancel').addEventListener('click', () => close(null));
+    overlay.querySelector('#_egg_ok').addEventListener('click', () => {
+      const d = overlay.querySelector('#_egg_date').value;
+      const tStr = overlay.querySelector('#_egg_temp').value;
+      const t = tStr === '' ? null : parseFloat(tStr);
+      close({ date: d, temp: t });
+    });
+  });
+  if (!result || !result.date) return;
+
+  // note에서 기존 temp=N 토큰 제거 후 새 온도로 교체
+  let newNote = String(currentNote || '').replace(/\btemp=\d+(?:\.\d+)?/gi, '').replace(/\s{2,}/g, ' ').trim();
+  if (result.temp != null && !isNaN(result.temp)) {
+    newNote = (newNote ? newNote + ' ' : '') + `temp=${result.temp}`;
+  }
+  try {
+    const { error } = await _supabase.from('gecko_logs')
+      .update({ date: result.date, note: newNote }).eq('id', recordId).eq('user_id', _currentUser.id);
+    if (error) throw error;
+  } catch(e) {
+    showToast('변경 실패 — 잠시 후 다시 시도해 주세요');
+    return;
+  }
+  // localStorage 동기화
+  try {
+    const key = 'gecko_logs_' + _currentUser.id;
+    const local = JSON.parse(localStorage.getItem(key) || '[]');
+    const updated = local.map(r => String(r.id) === String(recordId) ? { ...r, date: result.date, note: newNote } : r);
+    localStorage.setItem(key, JSON.stringify(updated));
+  } catch(e) {}
+  showToast('🥚 산란 기록 수정됨' + (result.temp != null ? ` · ${result.temp}°C` : ''));
+  if (refreshCtx === 'all') {
+    if (typeof renderAllRecords === 'function') renderAllRecords();
+  } else if (refreshCtx) {
+    loadRecords(refreshCtx);
+  }
+  if (typeof updateHatchingCard === 'function') updateHatchingCard();
+}
+
 // ── 기록 날짜 변경 — gecko_logs.date 직접 수정 (부화 예측 등 즉시 반영) ──
 async function editRecordDate(recordId, currentDate, refreshCtx) {
   if (!recordId) {
@@ -12444,7 +12510,12 @@ async function loadRecords(geckoId) {
     const rid = r.id ? String(r.id).replace(/'/g,"\\'") : '';
     const rca = r.created_at ? String(r.created_at).replace(/'/g,"\\'") : '';
     const delBtn = '<button onclick="event.stopPropagation();deleteSingleRecord(\''+rid+'\',\''+rca+'\',\''+String(geckoId).replace(/\'/g,"\\'")+'\')" aria-label="기록 삭제" style="position:absolute;top:8px;right:6px;width:28px;height:28px;background:transparent;border:none;color:var(--tx3);font-size:16px;cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,107,107,.15)">×</button>';
-    const dateBtn = '<div class="record-date" onclick="editRecordDate(\''+rid+'\',\''+(r.date||'')+'\',\''+String(geckoId).replace(/\'/g,"\\'")+'\')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="날짜 변경">'+r.date+' ✎</div>';
+    const safeNote = String(r.note || '').replace(/'/g,"\\'").replace(/\n/g,' ');
+    const editFn = r.type === 'egg'
+      ? `editEggRecord('${rid}','${r.date||''}','${safeNote}','${String(geckoId).replace(/'/g,"\\'")}')`
+      : `editRecordDate('${rid}','${r.date||''}','${String(geckoId).replace(/'/g,"\\'")}')`;
+    const editTitle = r.type === 'egg' ? '날짜·온도 수정' : '날짜 변경';
+    const dateBtn = '<div class="record-date" onclick="'+editFn+'" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="'+editTitle+'">'+r.date+' ✎</div>';
     return '<div class="record-item type-'+r.type+'" style="position:relative">'+delBtn+dateBtn+'<div class="record-content" style="padding-right:24px"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
   }).join('');
 }
