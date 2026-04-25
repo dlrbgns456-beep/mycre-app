@@ -1,4 +1,4 @@
-const CACHE_NAME = 'byetmaru-v19';
+const CACHE_NAME = 'byetmaru-v20';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.png',
@@ -80,10 +80,13 @@ self.addEventListener('push', (e) => {
   catch (err) { data = { title: '볏마루도감', body: e.data.text() }; }
 
   const title = data.title || '볏마루도감';
+  // 절대경로(self.registration.scope 기반)로 명시 — Android에서 상대경로가 가끔 누락되는 문제 회피
+  const origin = self.location.origin;
   const options = {
     body: data.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: data.icon || `${origin}/icon-512.png`,    // 큰 아이콘 — 알림 카드에 표시되는 로고
+    badge: data.badge || `${origin}/icon-192.png`,  // 상태바 작은 배지
+    image: data.image || undefined,                  // 큰 배너 이미지 (옵션)
     vibrate: [200, 100, 200],
     tag: data.tag || 'byetmaru',
     renotify: true,
