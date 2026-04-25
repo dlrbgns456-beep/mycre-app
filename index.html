@@ -1567,11 +1567,11 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow">›</div>
     </div>
-    <div class="more-item" onclick="location.href='mailto:egh0208@naver.com?subject=[볏마루도감] 문의'">
+    <div class="more-item" onclick="location.href='mailto:dlrbgns456@gmail.com?subject=[볏마루도감] 문의'">
       <div class="more-icon" style="background:var(--ac2)">📧</div>
       <div class="more-item-info">
         <div class="more-item-title">이메일 문의</div>
-        <div class="more-item-sub">egh0208@naver.com</div>
+        <div class="more-item-sub">dlrbgns456@gmail.com</div>
       </div>
       <div class="more-item-arrow">›</div>
     </div>
@@ -2335,8 +2335,7 @@ let state = {
   commFilter: 'all',
   scanPhotoData: null,
   freeScansLeft: 3,
-  isPro: false,           // legacy alias (PRO 삭제됨, 항상 false)
-  tier: 'free',           // 단일 무료 티어
+  tier: 'free',           // 단일 무료 티어 (lite/breeder는 DB에만 정의, 현재 비활성)
   _isBetaTester: false,   // 베타 테스터는 AI 판별 무제한
   aiCredits: 0,           // 유료 AI 크레딧 잔량 (캐시)
   _usedPaidCredit: false, // 이번 스캔이 유료 크레딧 사용인지 플래그
@@ -5559,7 +5558,7 @@ function openGeckoDetail(id) {
           <div style="font-size:13px;color:var(--tx2);line-height:1.7;white-space:pre-line">${g.memo}</div>
         </div>` : ''}
 
-      ${state.isPro ? `
+      ${`
       <div style="background:var(--sf2);border:1px solid var(--br);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
         <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">📱 QR 프로필 카드</div>
         <div id="detail-qr-${id}" style="display:inline-block;background:white;padding:8px;border-radius:10px;margin-bottom:8px"></div>
@@ -5567,7 +5566,7 @@ function openGeckoDetail(id) {
           <button class="btn-sm" style="flex:1;padding:10px;font-size:11px" onclick="saveDetailQR(${id})">📥 이미지 저장</button>
           <button class="btn-sm" style="flex:1;padding:10px;font-size:11px" onclick="printDetailQR(${id})">🖨️ 인쇄하기</button>
         </div>
-      </div>` : ''}
+      </div>`}
 
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn-outline" style="flex:1" onclick="editGecko(${id})">✏️ 수정</button>
@@ -5616,8 +5615,8 @@ function openGeckoDetail(id) {
   document.getElementById('gecko-detail-body').innerHTML = html;
   openSheet('sheet-gecko-detail');
 
-  // PRO: 상세 페이지 내 QR 자동 생성
-  if (state.isPro && typeof QRCode !== 'undefined') {
+  // 상세 페이지 내 QR 자동 생성 (전체 유저 개방)
+  if (typeof QRCode !== 'undefined') {
     const qrEl = document.getElementById('detail-qr-' + id);
     if (qrEl) {
       const qrData = `https://byetmaru.com/?gecko=${id}&owner=${_currentUser.id}`;
@@ -6822,14 +6821,10 @@ async function renderPosts() {
       if (userIds.length > 0) {
         try {
           const { data: profiles } = await _supabase.from('profiles')
-            .select('id,is_pro,tier,pro_until').in('id', userIds);
+            .select('id,tier').in('id', userIds);
           if (profiles) {
             profiles.forEach(pr => {
-              const active = pr.is_pro && (!pr.pro_until || new Date(pr.pro_until) > new Date());
-              if (!active) return;
-              // tier 컬럼이 있으면 breeder만, 없으면 기존 PRO는 breeder로 폴백
-              const effectiveTier = pr.tier || 'breeder';
-              if (effectiveTier === 'breeder') breederUserSet.add(pr.id);
+              if (pr.tier === 'breeder') breederUserSet.add(pr.id);
             });
           }
         } catch(e) {}
@@ -11074,7 +11069,7 @@ async function _onSignedIn() {
     try {
       // 프로필 체크 + 신규 사용자 처리
       console.log('[Auth] 프로필 동기화 시작...');
-      const { data: existCheck, error: profileError } = await _supabase.from('profiles').select('id,nickname,is_pro,tier,pro_until,is_beta_tester,ai_credits').eq('id', _currentUser.id).maybeSingle();
+      const { data: existCheck, error: profileError } = await _supabase.from('profiles').select('id,nickname,tier,is_beta_tester,ai_credits').eq('id', _currentUser.id).maybeSingle();
       // 베타 테스터 + 크레딧 캐시
       state._isBetaTester = !!(existCheck?.is_beta_tester);
       state.aiCredits = existCheck?.ai_credits || 0;
@@ -11086,7 +11081,6 @@ async function _onSignedIn() {
         await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick, tier: 'free' });
         _profile.name = randomNick;
         state.tier = 'free';
-        state.isPro = false;
         _saveProfileLocal();
         _updateProfileUI();
         _notifyAdmin('new_signup', '새 회원가입',
@@ -11098,18 +11092,7 @@ async function _onSignedIn() {
           _saveProfileLocal();
           _updateProfileUI();
         }
-        const isActive = existCheck.is_pro && (!existCheck.pro_until || new Date(existCheck.pro_until) > new Date());
-        if (isActive) {
-          // tier 컬럼이 있으면 사용, 없으면 is_pro=true → breeder로 폴백(기존 PRO 유저 호환)
-          state.tier = existCheck.tier || 'breeder';
-          state.isPro = true;
-        } else {
-          state.tier = 'free';
-          state.isPro = false;
-          if (existCheck.is_pro && existCheck.pro_until && new Date(existCheck.pro_until) <= new Date()) {
-            _supabase.from('profiles').update({ is_pro: false, tier: 'free' }).eq('id', _currentUser.id);
-          }
-        }
+        state.tier = existCheck.tier || 'free';
         _loadDailyScanCount();
         _updateScanBadge();
       }
@@ -11661,7 +11644,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             proUntil.setMonth(proUntil.getMonth() + 1);
           }
           await _supabase.from('profiles').update({
-            is_pro: true,
             tier: tier,
             pro_until: proUntil.toISOString()
           }).eq('id', _currentUser.id);
