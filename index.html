@@ -10962,9 +10962,10 @@ async function updateHatchingCard() {
         if (daysSinceLate > 7) return null;
         const daysToEarly = Math.ceil((early - now) / 86400000);
         const daysToAvg   = Math.ceil((avg - now) / 86400000);
+        const daysToLate  = Math.ceil((late - now) / 86400000);
         const gecko = state.geckos.find(g => String(g.id) === String(r.gecko_id));
         const name = gecko?.name || '(삭제된 개체)';
-        return { name, laidDate: r.date, daysToEarly, daysToAvg, hatchEarly: hatch.early, hatchLate: hatch.late };
+        return { name, laidDate: r.date, daysToEarly, daysToAvg, daysToLate, hatchEarly: hatch.early, hatchLate: hatch.late };
       })
       .filter(Boolean)
       .sort((a, b) => a.daysToEarly - b.daysToEarly);
@@ -10972,10 +10973,11 @@ async function updateHatchingCard() {
     if (upcoming.length === 0) { card.style.display = 'none'; return; }
     card.style.display = 'block';
     txt.innerHTML = upcoming.slice(0, 3).map(u => {
+      // D-day는 "조기~늦장" 양쪽 표기 (날짜 범위와 일치하게)
       let label;
-      if (u.daysToEarly > 0) label = `D-${u.daysToEarly} (${u.hatchEarly} ~ ${u.hatchLate})`;
-      else if (u.daysToAvg > 0) label = `🐣 임박! 평균 D-${u.daysToAvg}`;
-      else label = `🐣 부화 시기! (~ ${u.hatchLate})`;
+      if (u.daysToEarly > 0) label = `D-${u.daysToEarly} ~ D-${u.daysToLate} (${u.hatchEarly} ~ ${u.hatchLate})`;
+      else if (u.daysToLate > 0) label = `🐣 부화 임박! ~ D-${u.daysToLate} (${u.hatchLate}까지)`;
+      else label = `🐣 부화 시기 도래! (~ ${u.hatchLate})`;
       return `<b>${u.name}</b> — ${label}`;
     }).join('<br>');
     if (upcoming.length > 3) txt.innerHTML += `<br><span style="color:var(--tx3)">외 ${upcoming.length - 3}건</span>`;
@@ -12100,7 +12102,7 @@ async function _renderAllRecordsTimeline() {
     const styleAttr = `position:relative;${isOrphan?'opacity:.7;':'cursor:pointer;'}`;
     return `<div class="record-item type-${r.type}" ${clickAttr} style="${styleAttr}">
       <button onclick="event.stopPropagation();deleteSingleRecord('${rid}','${rca}','all')" aria-label="기록 삭제" style="position:absolute;top:8px;right:6px;width:28px;height:28px;background:transparent;border:none;color:var(--tx3);font-size:16px;cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,107,107,.15)">×</button>
-      <div class="record-date">${r.date || ''}</div>
+      <div class="record-date" onclick="event.stopPropagation();editRecordDate('${rid}','${r.date||''}','all')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="날짜 변경">${r.date || ''} ✎</div>
       <div class="record-content" style="padding-right:24px">
         <span class="record-type-badge" style="background:${c.bg};color:${c.color}">${c.emoji} ${c.label}</span>
         <b style="color:var(--tx);margin-right:6px">🦎 ${geckoName}</b>
@@ -12320,6 +12322,49 @@ async function quickMarkEgg(geckoId, kind) {
   renderHome();
 }
 
+// ── 기록 날짜 변경 — gecko_logs.date 직접 수정 (부화 예측 등 즉시 반영) ──
+async function editRecordDate(recordId, currentDate, refreshCtx) {
+  if (!recordId) {
+    // DB 저장 전 로컬 캐시 기록은 created_at 기준 매칭이 불안정하므로 안내만
+    showToast('동기화 전 기록이라 잠시 후 다시 시도해 주세요');
+    return;
+  }
+  const newDate = await _showCustomDialog({
+    mode: 'prompt',
+    title: '📅 기록 날짜 변경',
+    message: '새 날짜를 선택해 주세요. 부화 예측 등 자동 계산도 함께 갱신됩니다.',
+    inputType: 'date',
+    defaultValue: currentDate || '',
+    okText: '저장'
+  });
+  if (newDate == null) return; // 취소
+  if (!newDate || newDate === currentDate) return;
+  try {
+    const { error } = await _supabase.from('gecko_logs')
+      .update({ date: newDate }).eq('id', recordId).eq('user_id', _currentUser.id);
+    if (error) throw error;
+  } catch(e) {
+    showToast('변경 실패 — 잠시 후 다시 시도해 주세요');
+    return;
+  }
+  // localStorage 동기화
+  try {
+    const key = 'gecko_logs_' + _currentUser.id;
+    const local = JSON.parse(localStorage.getItem(key) || '[]');
+    const updated = local.map(r => String(r.id) === String(recordId) ? { ...r, date: newDate } : r);
+    localStorage.setItem(key, JSON.stringify(updated));
+  } catch(e) {}
+  showToast('📅 날짜가 ' + newDate + ' 로 변경됨');
+  // 화면 갱신
+  if (refreshCtx === 'all') {
+    if (typeof renderAllRecords === 'function') renderAllRecords();
+  } else if (refreshCtx) {
+    loadRecords(refreshCtx);
+  }
+  // 부화 예측 카드도 즉시 갱신
+  if (typeof updateHatchingCard === 'function') updateHatchingCard();
+}
+
 // ── 개별 기록 삭제 (사용자 본인만, 개체 삭제 후 남은 고아 기록도 정리 가능) ──
 async function deleteSingleRecord(recordId, recordCreatedAt, refreshCtx) {
   const ok = await _showCustomDialog({
@@ -12399,7 +12444,8 @@ async function loadRecords(geckoId) {
     const rid = r.id ? String(r.id).replace(/'/g,"\\'") : '';
     const rca = r.created_at ? String(r.created_at).replace(/'/g,"\\'") : '';
     const delBtn = '<button onclick="event.stopPropagation();deleteSingleRecord(\''+rid+'\',\''+rca+'\',\''+String(geckoId).replace(/\'/g,"\\'")+'\')" aria-label="기록 삭제" style="position:absolute;top:8px;right:6px;width:28px;height:28px;background:transparent;border:none;color:var(--tx3);font-size:16px;cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,107,107,.15)">×</button>';
-    return '<div class="record-item type-'+r.type+'" style="position:relative">'+delBtn+'<div class="record-date">'+r.date+'</div><div class="record-content" style="padding-right:24px"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
+    const dateBtn = '<div class="record-date" onclick="editRecordDate(\''+rid+'\',\''+(r.date||'')+'\',\''+String(geckoId).replace(/\'/g,"\\'")+'\')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="날짜 변경">'+r.date+' ✎</div>';
+    return '<div class="record-item type-'+r.type+'" style="position:relative">'+delBtn+dateBtn+'<div class="record-content" style="padding-right:24px"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
   }).join('');
 }
 
