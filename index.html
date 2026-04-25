@@ -1764,7 +1764,7 @@ input[type=file]{display:none}
           onclick="showMorphInline()"
           oninput="filterMorphInline()"
           style="width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:11px 13px;color:var(--tx);font-family:'Noto Sans KR',sans-serif;font-size:14px;transition:border-color .15s;box-sizing:border-box">
-        <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5);touch-action:manipulation">
+        <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5);touch-action:pan-y;overscroll-behavior:contain">
           <div id="morph-inline-list"></div>
         </div>
       </div>
@@ -4313,6 +4313,37 @@ document.addEventListener('touchstart', function(e) {
     hideMorphInline();
   }
 }, { passive: true });
+
+// 스크롤 중 손 떼면 선택되는 문제 방지 — 터치 이동 거리 추적해서 8px 이상 움직였으면 click 무시
+(function setupMorphScrollGuard(){
+  const dd = document.getElementById('morph-inline-dropdown');
+  if (!dd || dd._scrollGuarded) return;
+  dd._scrollGuarded = true;
+  let sy = 0, sx = 0, moved = false, scrolledRecently = 0;
+  dd.addEventListener('touchstart', (e) => {
+    const t = e.touches[0]; if (!t) return;
+    sy = t.clientY; sx = t.clientX; moved = false;
+  }, { passive: true });
+  dd.addEventListener('touchmove', (e) => {
+    const t = e.touches[0]; if (!t) return;
+    if (Math.abs(t.clientY - sy) > 8 || Math.abs(t.clientX - sx) > 8) {
+      moved = true;
+    }
+  }, { passive: true });
+  dd.addEventListener('touchend', () => {
+    if (moved) scrolledRecently = Date.now();
+  }, { passive: true });
+  // 스크롤 발생 시에도 표시 (관성 스크롤 대비)
+  dd.addEventListener('scroll', () => { scrolledRecently = Date.now(); }, { passive: true });
+  // capture 단계에서 차단 — onclick 핸들러보다 먼저 실행
+  dd.addEventListener('click', (e) => {
+    if (moved || (Date.now() - scrolledRecently) < 250) {
+      e.stopPropagation();
+      e.preventDefault();
+      moved = false;
+    }
+  }, true);
+})();
 
 // ══ 프로필 수정 ══
 const _RANDOM_NICKNAMES = [
