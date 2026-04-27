@@ -70,11 +70,11 @@ git push origin master
 - `byetmaru-capacitor-project/`: Android/iOS 네이티브 빌드용 Capacitor 프로젝트
 
 ## 외부 서비스 현황 (2026-04-27 업데이트)
-- 통신판매업: 신고 완료 (수수료 납부 완료)
-- 에스크로(구매안전서비스): 확인증 발급 완료
+- 통신판매업: 신고 완료 (제 2026-인천연수구-1224 호)
+- 에스크로(구매안전서비스): 확인증 발급 완료 (토스페이먼츠, A08-260424-0001)
 - 토스페이먼츠: 연동 준비 완료 (통판+에스크로 충족)
 - Google Play 개발자: 본인인증 대기중
-- 카카오 비즈앱: 반려됨 (사업자 정보 푸터 추가 완료, 재심사 필요)
+- 카카오 비즈앱: 반려됨 → 재심사 준비 중 (사업자 정보+통신판매업 푸터 추가 완료, 서비스 동선 스크린샷 필요)
 - Apple Developer: 보류 (맥북 구매 예정)
 - 인스타그램: @byetmaru (352 팔로워)
 - 베타 오픈채팅: https://open.kakao.com/o/giz3xEqi
@@ -82,3 +82,14 @@ git push origin master
 - Claude: Max 플랜 사용중
 - Cowork MCP 연결: Supabase, Gmail, Google Drive, Google Calendar, Notion, Netlify, Canva, Figma, Gamma
 - 서비스 운영맵: 크롭테스트/볏마루도감_서비스_운영맵.docx 참고
+
+## 인증(OAuth) 연동 현황
+- Supabase 프로젝트: fatjjjwfauujgrvcihwd (ap-northeast-2)
+- OAuth Callback URI: https://fatjjjwfauujgrvcihwd.supabase.co/auth/v1/callback
+- 카카오 개발자 (앱 ID: 1440509)
+  - REST API 키: b6a33392bbb490581e1e99f46f57e6ec
+  - 클라이언트 시크릿: 활성화 ON (값은 카카오 콘솔에서 확인)
+  - 로그인 리다이렉트 URI: 위 Callback URI와 동일하게 설정 완료
+  - Supabase Auth 카카오 제공자: 활성화 + 키 동기화 완료 (2026-04-27)
+- 구글 로그인: Supabase Auth 구글 제공자 활성화 완료
+- Supabase URL 구성: 사이트 URL = https://byetmaru.com, 리디렉션 URL 8개 등록
