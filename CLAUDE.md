@@ -69,12 +69,16 @@ git push origin master
 - `크롭테스트/`: 마스터가이드, 브랜딩 스크립트, 패키징 가이드 등 문서
 - `byetmaru-capacitor-project/`: Android/iOS 네이티브 빌드용 Capacitor 프로젝트
 
-## 외부 서비스 현황 (2026-04-27 기준)
+## 외부 서비스 현황 (2026-04-27 업데이트)
+- 통신판매업: 신고 완료 (수수료 납부 완료)
+- 에스크로(구매안전서비스): 확인증 발급 완료
+- 토스페이먼츠: 연동 준비 완료 (통판+에스크로 충족)
 - Google Play 개발자: 본인인증 대기중
-- 카카오 비즈앱: 반려됨 (사이트 사업자 정보 미표시 + 서비스 화면 부족)
-  → index.html 하단에 사업자 정보 푸터 추가 완료 (배포 필요)
-  → 재심사 시 서비스 이용 동선 스크린샷 필요
-- Apple Developer: 보류 (Mac 필요)
-- 인스타그램: @mycre_mate
+- 카카오 비즈앱: 반려됨 (사업자 정보 푸터 추가 완료, 재심사 필요)
+- Apple Developer: 보류 (맥북 구매 예정)
+- 인스타그램: @byetmaru (352 팔로워)
 - 베타 오픈채팅: https://open.kakao.com/o/giz3xEqi
-- 베타 테스터: 29명 응답 / 27명 고유
+- 베타 테스터: 31명 응답 / 27명 고유
+- Claude: Max 플랜 사용중
+- Cowork MCP 연결: Supabase, Gmail, Google Drive, Google Calendar, Notion, Netlify, Canva, Figma, Gamma
+- 서비스 운영맵: 크롭테스트/볏마루도감_서비스_운영맵.docx 참고

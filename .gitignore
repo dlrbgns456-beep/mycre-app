@@ -10,6 +10,3 @@ package-lock.json
 *.pdf
 크레 수컷/
 크레 암컷/
-
-# Claude Code 로컬 설정 (세션 캐시 등)
-.claude/
