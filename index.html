@@ -12530,4 +12530,23 @@ function renderWeightChart(weightRecords) {
   if (!container || !barsDiv) return;
   if (weightRecords.length < 1) { container.style.display='none'; return; }
   container.style.display = 'block';
-  const sorted = [...weightRecords].sort(
+  const sorted = [...weightRecords].sort((a,b) => a.date.localeCompare(b.date));
+  const maxW = Math.max(...sorted.map(r => parseFloat(r.value)));
+  barsDiv.innerHTML = sorted.slice(-8).map(r => {
+    const w = parseFloat(r.value), pct = maxW>0?(w/maxW*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px"><div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">'+r.date.slice(5)+'</div><div style="flex:1;background:var(--sf2);border-radius:2px;height:4px"><div class="weight-chart-bar" style="width:'+pct+'%"></div></div><div style="font-size:11px;font-weight:700;color:var(--ac);width:35px;flex-shrink:0">'+w+'g</div></div>';
+  }).join('');
+}
+
+</script>
+
+<!-- 사업자 정보 푸터 -->
+<div id="business-info-footer" style="background:#0a1209;border-top:1px solid rgba(93,220,106,0.2);padding:24px 16px;text-align:center;font-size:11px;color:rgba(221,240,222,0.5);line-height:1.8;margin-top:40px">
+<div style="max-width:480px;margin:0 auto">
+<div style="margin-bottom:8px;font-size:12px;color:rgba(221,240,222,0.7)">볏마루도감 (ByetMaru)</div>
+<div>상호: 리비틀 (L.Beetle) | 대표: 이규훈<br>사업자등록번호: 104-16-65460 | 통신판매업: 제 2026-인천연수구-1224 호<br>소재지: 인천광역시 연수구 컨벤시아대로 81, 5층 509-J630호<br>구매안전서비스: 토스페이먼츠(주) (1544-7772)<br>연락처: dlrbgns456@gmail.com</div>
+</div>
+</div>
+
+</body>
+</html>
