@@ -65,7 +65,8 @@
       "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('index.html','utf8'\\);const scripts=[...html.matchAll\\(/<script\\(?![^>]*src=\\)[^>]*>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)];let err=0;scripts.forEach\\(\\(m,i\\)=>{try{new Function\\('return \\(async\\(\\)=>{'+m[1]+'}\\)'\\)\\(\\);}catch\\(e\\){console.log\\('Script '+i+':',e.message\\);err++;}}\\);console.log\\(err?'FAIL':'OK'\\);\")",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(rm -f .git/HEAD.lock .git/index.lock)"
     ]
   }
 }
