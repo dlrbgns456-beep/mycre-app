@@ -618,8 +618,8 @@ input[type=file]{display:none}
 .record-type-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-right:5px}
 .weight-chart-bar{height:4px;border-radius:2px;background:var(--ac);transition:width .3s}
 </style>
-<!-- 포트원(아임포트) SDK -->
-<script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+<!-- 토스페이먼츠 결제위젯 SDK -->
+<script src="https://js.tosspayments.com/v2/standard"></script>
 <!-- QR코드 생성 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <!-- 배경 제거 AI 라이브러리 (esm.sh CDN — lodash 등 Node 의존성 자동 번들링) -->
@@ -11291,50 +11291,52 @@ function _showAICreditPopup() {
 // 레거시 호출부 호환 — PRO 업그레이드 팝업 → AI 크레딧 충전 팝업으로 대체
 function _showProUpgradePopup(_message) { _showAICreditPopup(); }
 
-// 포트원 결제 → 성공 시 add_ai_credits RPC 호출
+// ── 토스페이먼츠 클라이언트 키
+// 테스트 모드: test_gck_xxx / 라이브 전환 시 live_ck_xxx 로 교체
+// 시크릿 키는 Edge Function(confirm-payment)의 환경변수 TOSS_SECRET_KEY 로 별도 관리
+const TOSS_CLIENT_KEY = 'test_gck_ALnQvDd2VJ2PNGeZApLvVMj7X41m';
+
+// 토스페이먼츠 결제위젯 → 성공 시 Edge Function 승인 → add_ai_credits RPC
 async function purchaseAICredit(packId) {
   const pack = AI_CREDIT_PACKS.find(p => p.id === packId);
   if (!pack) return;
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
 
-  const IMP = window.IMP;
-  if (!IMP) { showToast('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return; }
-  IMP.init('imp48623845');
-
   // 팝업 닫기
   document.querySelectorAll('[data-ai-credit-popup]').forEach(el => el.remove());
 
-  const merchantUid = 'ai_credit_' + Date.now();
-  IMP.request_pay({
-    pg: 'html5_inicis',
-    pay_method: 'card',
-    merchant_uid: merchantUid,
-    name: `볏마루도감 AI 판별 ${pack.label}`,
+  const orderId = 'ai_credit_' + Date.now();
+
+  // 모바일 복귀 시 사용할 결제 정보 저장
+  localStorage.setItem('_pending_payment', JSON.stringify({
+    type: 'ai_credit',
+    packId: packId,
+    orderId: orderId,
     amount: pack.price,
-    buyer_email: _currentUser.email || '',
-    m_redirect_url: window.location.href,
-  }, async function(rsp) {
-    if (rsp.success) {
-      try {
-        const { error } = await _supabase.rpc('add_ai_credits', {
-          uid: _currentUser.id,
-          amount: pack.scans,
-          payment_id: rsp.imp_uid,
-        });
-        if (error) throw error;
-        showToast(`✅ ${pack.label} 충전 완료! (${pack.scans}회 추가)`);
-        _updateScanBadge();
-        _notifyAdmin('credit_purchase', `${pack.label} 결제 완료`,
-          `유저: ${_currentUser.email}\n금액: ${pack.priceLabel}\n크레딧: +${pack.scans}회\n결제ID: ${rsp.imp_uid}`);
-      } catch(e) {
-        showToast('❌ 크레딧 반영 실패. 고객센터에 문의해주세요.');
-        console.error('Credit add failed:', e);
-        _debugLog?.('error', 'payment', 'add_ai_credits failed: ' + e.message, { packId, paymentId: rsp.imp_uid });
-      }
-    } else {
+  }));
+
+  try {
+    const tossPayments = TossPayments(TOSS_CLIENT_KEY);
+    const payment = tossPayments.payment({ customerKey: _currentUser.id });
+    await payment.requestPayment({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: pack.price },
+      orderId: orderId,
+      orderName: `볏마루도감 AI 판별 ${pack.label}`,
+      customerEmail: _currentUser.email || '',
+      successUrl: window.location.origin + '/?payment=toss_done',
+      failUrl: window.location.origin + '/?payment=toss_fail',
+    });
+  } catch(e) {
+    // 사용자가 결제창을 닫은 경우
+    localStorage.removeItem('_pending_payment');
+    if (e.code === 'USER_CANCEL' || e.code === 'PAY_PROCESS_CANCELED') {
       showToast('결제가 취소되었어요.');
+    } else {
+      showToast('결제 중 오류가 발생했습니다.');
+      console.error('TossPayments error:', e);
     }
-  });
+  }
 }
 
 // ── 로그인 화면 표시 ──
@@ -11626,16 +11628,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ── 모바일 결제 복귀 처리 (m_redirect_url로 돌아왔을 때)
-  if (window.location.search.includes('payment=done')) {
+  // ── 토스페이먼츠 결제 복귀 처리 (successUrl/failUrl로 돌아왔을 때)
+  if (window.location.search.includes('payment=toss_done') || window.location.search.includes('payment=toss_fail')) {
     const urlParams = new URLSearchParams(window.location.search);
-    const impUid = urlParams.get('imp_uid');
-    const merchantUid = urlParams.get('merchant_uid');
-    const impSuccess = urlParams.get('imp_success');
+    const paymentType = urlParams.get('payment');
+    const paymentKey = urlParams.get('paymentKey');
+    const orderId = urlParams.get('orderId');
+    const amount = urlParams.get('amount');
     // URL 정리 (파라미터 제거)
     history.replaceState(null, '', '/');
 
-    if (impSuccess === 'true' && impUid) {
+    if (paymentType === 'toss_done' && paymentKey && orderId && amount) {
       // localStorage에서 결제 정보 복원
       let pending = {};
       try { pending = JSON.parse(localStorage.getItem('_pending_payment') || '{}'); } catch(e) {}
@@ -11643,62 +11646,91 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 로그인 완료 대기 후 후처리 실행 (최대 10초)
       let _mobilePayRetry = 0;
-      const _handleMobilePayment = async () => {
+      const _handleTossPayment = async () => {
         if (!_currentUser) {
           _mobilePayRetry++;
           if (_mobilePayRetry > 20) {
             showToast('로그인 세션을 확인할 수 없습니다. 다시 로그인해주세요.');
             return;
           }
-          setTimeout(_handleMobilePayment, 500);
+          setTimeout(_handleTossPayment, 500);
           return;
         }
         try {
           showToast('결제 확인 중...');
-          // 중복 방지: 같은 imp_uid가 이미 있는지 확인
-          const { data: existing } = await _supabase.from('payments').select('id').eq('imp_uid', impUid).maybeSingle();
-          if (existing) {
-            showToast('이미 처리된 결제입니다. PRO가 활성화되어 있어요!');
-            setTimeout(() => { location.reload(); }, 1000);
+
+          // Supabase Edge Function으로 결제 승인 요청
+          const confirmRes = await fetch(
+            'https://fatjjjwfauujgrvcihwd.supabase.co/functions/v1/confirm-payment',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) }),
+            }
+          );
+          const confirmData = await confirmRes.json();
+
+          if (!confirmRes.ok) {
+            showToast('결제 승인에 실패했습니다: ' + (confirmData.message || confirmData.error || '알 수 없는 오류'));
+            console.error('Payment confirm failed:', confirmData);
             return;
           }
-          const tier = pending.tier || 'breeder'; // 구버전 pending 호환
-          await _supabase.from('payments').insert({
-            user_id: _currentUser.id,
-            imp_uid: impUid,
-            merchant_uid: merchantUid || pending.merchant_uid || '',
-            amount: pending.amount || 9900,
-            plan: pending.plan || 'monthly',
-            tier: tier,
-            status: 'paid'
-          });
-          const proUntil = new Date();
-          if (pending.plan === 'yearly') {
-            proUntil.setFullYear(proUntil.getFullYear() + 1);
+
+          // AI 크레딧 충전인 경우
+          if (pending.type === 'ai_credit' && pending.packId) {
+            const pack = AI_CREDIT_PACKS.find(p => p.id === pending.packId);
+            if (pack) {
+              const { error } = await _supabase.rpc('add_ai_credits', {
+                uid: _currentUser.id,
+                amount: pack.scans,
+                payment_id: paymentKey,
+              });
+              if (error) throw error;
+              showToast(`✅ ${pack.label} 충전 완료! (${pack.scans}회 추가)`);
+              _updateScanBadge();
+              _notifyAdmin('credit_purchase', `${pack.label} 결제 완료`,
+                `유저: ${_currentUser.email}\n금액: ${pack.priceLabel}\n크레딧: +${pack.scans}회\n결제Key: ${paymentKey}`);
+            }
           } else {
-            proUntil.setMonth(proUntil.getMonth() + 1);
+            // PRO 구독 결제인 경우 (기존 호환)
+            const tier = pending.tier || 'breeder';
+            await _supabase.from('payments').insert({
+              user_id: _currentUser.id,
+              imp_uid: paymentKey,
+              merchant_uid: orderId,
+              amount: Number(amount),
+              plan: pending.plan || 'monthly',
+              tier: tier,
+              status: 'paid'
+            });
+            const proUntil = new Date();
+            if (pending.plan === 'yearly') {
+              proUntil.setFullYear(proUntil.getFullYear() + 1);
+            } else {
+              proUntil.setMonth(proUntil.getMonth() + 1);
+            }
+            await _supabase.from('profiles').update({
+              tier: tier,
+              pro_until: proUntil.toISOString()
+            }).eq('id', _currentUser.id);
+            const tLabel = TIERS[tier]?.label || 'PRO';
+            const tEmoji = TIERS[tier]?.emoji || '⭐';
+            showToast(`${tLabel} 활성화 완료! 환영합니다 ${tEmoji}`);
+            _notifyAdmin('payment_success', `${tLabel} 결제 완료 (모바일)`,
+              `사용자: ${_currentUser.email}\n티어: ${tier}\n플랜: ${pending.plan||'unknown'}\n금액: ${amount}원\npaymentKey: ${paymentKey}`);
+            setTimeout(() => { location.reload(); }, 1200);
           }
-          await _supabase.from('profiles').update({
-            tier: tier,
-            pro_until: proUntil.toISOString()
-          }).eq('id', _currentUser.id);
-          const tLabel = TIERS[tier]?.label || 'PRO';
-          const tEmoji = TIERS[tier]?.emoji || '⭐';
-          showToast(`${tLabel} 활성화 완료! 환영합니다 ${tEmoji}`);
-          _notifyAdmin('payment_success', `${tLabel} 결제 완료 (모바일)`,
-            `사용자: ${_currentUser.email}\n티어: ${tier}\n플랜: ${pending.plan||'unknown'}\n금액: ${pending.amount||'?'}원\nimp_uid: ${impUid}`);
-          setTimeout(() => { location.reload(); }, 1200);
         } catch(err) {
-          console.error('모바일 결제 후처리 오류:', err);
-          _debugLog('error', 'payment', '모바일 결제 후처리 오류: ' + err.message, { stack: err.stack });
-          showToast('결제는 완료되었으나 활성화 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
+          console.error('토스 결제 후처리 오류:', err);
+          _debugLog?.('error', 'payment', '토스 결제 후처리 오류: ' + err.message, { stack: err.stack });
+          showToast('결제는 완료되었으나 처리 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
         }
       };
-      setTimeout(_handleMobilePayment, 1000);
-    } else if (window.location.search.includes('payment=done')) {
-      // imp_success가 false이거나 없는 경우 (결제 실패/취소)
+      setTimeout(_handleTossPayment, 1000);
+    } else if (paymentType === 'toss_fail') {
       localStorage.removeItem('_pending_payment');
-      showToast('결제가 취소되었습니다.');
+      const errorMsg = urlParams.get('message') || '결제가 취소되었습니다.';
+      showToast(errorMsg);
     }
   }
 
@@ -11893,7 +11925,7 @@ async function openVerificationSheet() {
 }
 
 async function startPhoneVerification() {
-  // TODO: PASS 또는 포트원 본인인증 API 연동 (사업자 가입 후 활성화)
+  // TODO: PASS 또는 토스페이먼츠 본인인증 API 연동 (사업자 가입 후 활성화)
   // 현재는 안내만 표시
   showToast('📱 휴대폰 인증 API 연동 준비 중입니다. 출시 후 제공 예정.');
 }
