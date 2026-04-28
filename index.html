@@ -11318,23 +11318,33 @@ async function purchaseAICredit(packId) {
   try {
     const tossPayments = TossPayments(TOSS_CLIENT_KEY);
     const payment = tossPayments.payment({ customerKey: _currentUser.id });
-    await payment.requestPayment({
+    // 카카오 OAuth 사용자는 이메일이 null일 수 있음 — 유효한 이메일만 전달
+    const reqPayload = {
       method: 'CARD',
       amount: { currency: 'KRW', value: pack.price },
       orderId: orderId,
       orderName: `볏마루도감 AI 판별 ${pack.label}`,
-      customerEmail: _currentUser.email || '',
       successUrl: window.location.origin + '/?payment=toss_done',
       failUrl: window.location.origin + '/?payment=toss_fail',
-    });
+    };
+    if (_currentUser.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_currentUser.email)) {
+      reqPayload.customerEmail = _currentUser.email;
+    }
+    if (_profile?.name) {
+      reqPayload.customerName = _profile.name;
+    }
+    await payment.requestPayment(reqPayload);
   } catch(e) {
-    // 사용자가 결제창을 닫은 경우
     localStorage.removeItem('_pending_payment');
-    if (e.code === 'USER_CANCEL' || e.code === 'PAY_PROCESS_CANCELED') {
+    const code = e?.code || '';
+    const msg = e?.message || '';
+    if (code === 'USER_CANCEL' || code === 'PAY_PROCESS_CANCELED') {
       showToast('결제가 취소되었어요.');
     } else {
-      showToast('결제 중 오류가 발생했습니다.');
+      // 진단 가능하도록 코드·메시지 노출
+      showToast('결제 오류 [' + (code || 'UNKNOWN') + '] ' + msg.slice(0, 60));
       console.error('TossPayments error:', e);
+      _debugLog?.('error', 'payment', 'toss requestPayment failed', { code, message: msg, packId });
     }
   }
 }
