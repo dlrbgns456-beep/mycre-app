@@ -7136,6 +7136,35 @@ async function submitComment() {
     input.value = '';
     showToast('댓글이 등록되었어요 ✅');
     loadComments(_currentPostId);
+
+    // ── 글 작성자에게 푸시 알림 (본인 글 제외) ──
+    try {
+      const { data: post } = await _supabase
+        .from('posts')
+        .select('user_id, title')
+        .eq('id', _currentPostId)
+        .maybeSingle();
+      if (post && post.user_id && post.user_id !== _currentUser.id) {
+        const session = (await _supabase.auth.getSession()).data.session;
+        if (session) {
+          const titleSnippet = post.title ? `"${String(post.title).slice(0, 20)}"` : '';
+          fetch(SUPABASE_URL + '/functions/v1/send-push', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + session.access_token,
+            },
+            body: JSON.stringify({
+              user_id: post.user_id,
+              title: `볏마루도감 💬 ${authorName}님이 댓글을 남겼어요`,
+              body:  titleSnippet ? `${titleSnippet} 글에 댓글이 달렸어요` : '커뮤니티에서 확인해 보세요',
+              tag:   'comment',
+              url:   '/',
+            }),
+          }).catch(() => {});
+        }
+      }
+    } catch(e) { console.warn('[comment notify] skip:', e?.message); }
   } catch(e) {
     showToast('댓글 등록 실패: ' + e.message);
   }
@@ -10288,8 +10317,17 @@ async function openNotifSettings() {
   content.innerHTML = permBanner
     + item('feed', '🦴 급이 리마인더', '오늘 급이 여부 체크')
     + item('weight', '📊 주간 체중 측정', '주 1회, 개체별 체중 기록 권장')
-    + item('shed', '✨ 탈피 주기 알림', '평균 탈피 주기 기반 예측 알림')
-    + item('community', '💬 커뮤니티 알림', '내 글에 댓글·좋아요가 달릴 때')
+    + `<label style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--br);opacity:.55">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">
+            ✨ 탈피 주기 알림
+            <span style="font-size:9px;background:var(--am2);color:var(--am);border:1px solid var(--am);border-radius:4px;padding:1px 5px;font-weight:800;letter-spacing:.3px">준비중</span>
+          </div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">탈피 기록이 충분히 쌓이면 자동으로 켜집니다</div>
+        </div>
+        <input type="checkbox" disabled style="width:40px;height:22px;accent-color:var(--ac);cursor:not-allowed">
+      </label>`
+    + item('community', '💬 커뮤니티 알림', '내 글에 댓글이 달릴 때')
     + item('marketing', '🎁 마케팅 · 이벤트 소식', '신규 기능·쿠폰 등 (선택)')
     + `<div style="border-top:2px solid var(--br);margin-top:12px;padding-top:12px">
         <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:8px">💦 분무 알람</div>
