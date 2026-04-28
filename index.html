@@ -1827,6 +1827,16 @@ input[type=file]{display:none}
           <div id="weight-guide-hint" style="font-size:11px;color:var(--tx3);margin-top:4px;display:none"></div>
         </div>
         <div class="form-group">
+          <label class="form-label">성장 단계 <span style="color:var(--tx3);font-size:10px;font-weight:400">무게 입력 시 자동</span></label>
+          <select class="form-select" id="gecko-stage">
+            <option value="베이비">🐣 베이비 (~10g)</option>
+            <option value="아성체">🌱 아성체 (10~39g)</option>
+            <option value="성체">🦎 성체 (40g+)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
           <label class="form-label">상태</label>
           <select class="form-select" id="gecko-status">
             <option value="정상">정상</option>
@@ -1835,6 +1845,7 @@ input[type=file]{display:none}
             <option value="분양예정">분양 예정</option>
           </select>
         </div>
+        <div class="form-group"></div>
       </div>
 
       <!-- Egg tracking 안내 (암컷 전용) — 실제 산란 기록은 개체 상세에서 누적 -->
@@ -4707,6 +4718,7 @@ function openAddGecko() {
   document.getElementById('gecko-price').value = '';
   document.getElementById('gecko-status').value = '정상';
   document.getElementById('gecko-weight').value = '';
+  document.getElementById('gecko-stage').value = '베이비';
   document.getElementById('gecko-cage').value = '소형 (30cm 이하)';
   document.getElementById('gecko-dad').value = '';
   document.getElementById('gecko-mom').value = '';
@@ -4899,6 +4911,14 @@ function updateCageAndBreeding() {
   const subEl   = document.getElementById('cage-rec-sub');
   const cageSel = document.getElementById('gecko-cage');
 
+  // ── 성장 단계 자동 분류 ──
+  const stageEl = document.getElementById('gecko-stage');
+  if (!isNaN(weight) && weight > 0 && stageEl) {
+    if (weight < 10) stageEl.value = '베이비';
+    else if (weight < 40) stageEl.value = '아성체';
+    else stageEl.value = '성체';
+  }
+
   if (!isNaN(weight) && weight > 0) {
     let cageKey, cageLabel, cageSub, badgeBg, badgeColor;
     if (weight < 10) {
@@ -4994,6 +5014,7 @@ async function saveGecko() {
       dob: document.getElementById('gecko-dob').value,
       price: document.getElementById('gecko-price').value,
       weight: document.getElementById('gecko-weight').value,
+      stage: document.getElementById('gecko-stage').value,
       status: document.getElementById('gecko-status').value,
       cage: document.getElementById('gecko-cage').value,
       dad: document.getElementById('gecko-dad').value,
@@ -5673,6 +5694,7 @@ function editGecko(id) {
     document.getElementById('gecko-price').value = g.price || '';
     document.getElementById('gecko-status').value = g.status || '정상';
     document.getElementById('gecko-weight').value = g.weight || '';
+    document.getElementById('gecko-stage').value = g.stage || '베이비';
     document.getElementById('gecko-cage').value = g.cage || '소형 (30cm 이하)';
     document.getElementById('gecko-dad').value = g.dad || '';
     document.getElementById('gecko-mom').value = g.mom || '';
@@ -7272,6 +7294,10 @@ async function submitPost() {
     let isVerified = false;
     let linkedGeckoIdForRow = null;
     let aiPrefix = '';
+    // 관리자 계정은 자동 인증 처리
+    if (_isAdmin()) {
+      isVerified = true;
+    }
     if (cat !== 'notice') {
       const geckoId = document.getElementById('post-gecko-link')?.value;
       const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
@@ -10353,7 +10379,7 @@ function _scheduleMistingAlarms() {
     const timer = setTimeout(async () => {
       // 1) 로컬 알림 (앱 포그라운드)
       sendLocalNotification(
-        `💦 ${label} 분무 시간이에요!`,
+        `볏마루도감 💦 ${label} 분무 시간이에요!`,
         `크레스티드 게코의 습도를 맞춰주세요. (${timeStr})`,
         '/icon-192.png',
         'misting'
@@ -10370,7 +10396,7 @@ function _scheduleMistingAlarms() {
             },
             body: JSON.stringify({
               user_id: _currentUser.id,
-              title: `💦 ${label} 분무 시간이에요!`,
+              title: `볏마루도감 💦 ${label} 분무 시간이에요!`,
               body:  `크레스티드 게코의 습도를 맞춰주세요. (${timeStr})`,
               tag:   'misting',
             }),
