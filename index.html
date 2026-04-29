@@ -729,6 +729,9 @@ input[type=file]{display:none}
 
         <div class="auth-err" id="auth-err"></div>
         <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">로그인</button>
+        <div id="auth-forgot-link" style="text-align:center;margin-top:10px;font-size:12px;color:var(--tx3)">
+          <span onclick="handlePasswordReset()" style="cursor:pointer;text-decoration:underline">비밀번호 잊으셨나요?</span>
+        </div>
       </div>
 
       <div class="auth-divider-line"><span>간편 로그인</span></div>
@@ -1289,7 +1292,6 @@ input[type=file]{display:none}
 
   <div class="filter-row" style="margin-top:12px" id="comm-filter-row">
     <div class="fp active" onclick="setCommFilter('all')">전체</div>
-    <div class="fp" onclick="setCommFilter('notice')">📢 공지</div>
     <div class="fp" onclick="setCommFilter('sale')">🏷️ 분양&입양</div>
     <div class="fp" onclick="setCommFilter('qna')">❓ QnA</div>
     <div class="fp" onclick="setCommFilter('info')">✍️ 끄적끄적</div>
@@ -1564,6 +1566,14 @@ input[type=file]{display:none}
   <!-- 앱 정보 / 문의 -->
   <div class="more-section">
     <div class="more-section-label">앱 정보</div>
+    <div class="more-item" onclick="openNoticeSheet()">
+      <div class="more-icon" style="background:var(--am2)">📢</div>
+      <div class="more-item-info">
+        <div class="more-item-title">공지사항</div>
+        <div class="more-item-sub">앱 업데이트 · 점검 · 이벤트 소식</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
     <div class="more-item" onclick="window.open('https://open.kakao.com/o/sDa987oi','_blank')">
       <div class="more-icon" style="background:#FEE500">💬</div>
       <div class="more-item-info">
@@ -1659,6 +1669,23 @@ input[type=file]{display:none}
   <div style="text-align:center;font-size:10px;color:var(--tx3);padding-bottom:12px">© 2026 리비틀(L.Beetle) · 볏마루도감. All rights reserved.</div>
 
   <div style="height:20px"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 공지사항
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-notice" onclick="closeSheet('sheet-notice',event)">
+  <div class="sheet" style="max-height:85vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body" style="padding-top:0">
+      <div style="text-align:center;padding:16px 0 12px">
+        <div style="font-size:18px;font-weight:900;color:var(--tx)">📢 공지사항</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px">앱 업데이트 · 점검 · 이벤트 소식</div>
+      </div>
+      <div id="notice-list" style="max-height:65vh;overflow-y:auto;padding:0 4px"></div>
+      <button onclick="closeSheetDirect('sheet-notice')" style="width:100%;margin-top:16px;padding:14px;border-radius:12px;background:var(--ac);border:none;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">확인</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -6834,7 +6861,8 @@ function _isAdmin() {
 function setCommFilter(f) {
   state.commFilter = f;
   document.querySelectorAll('#comm-filter-row .fp').forEach(el => el.classList.remove('active'));
-  const fMap = {all:0,notice:1,sale:2,qna:3,info:4,celebrate:5};
+  // 공지는 더보기 > 공지사항에서 별도 노출. 커뮤니티 필터에서 제외.
+  const fMap = {all:0,sale:1,qna:2,info:3,celebrate:4};
   document.querySelectorAll('#comm-filter-row .fp')[fMap[f]]?.classList.add('active');
   renderPosts();
 }
@@ -6902,15 +6930,9 @@ async function renderPosts() {
     return;
   }
 
-  // 전체 탭일 때: 공지를 맨 위에 고정, 나머지는 시간순
-  if (state.commFilter === 'all') {
-    const notices = all.filter(p => p.cat === 'notice');
-    const others = all.filter(p => p.cat !== 'notice');
-    notices.forEach(p => list.appendChild(buildPostCard(p, false)));
-    others.forEach(p => list.appendChild(buildPostCard(p, false)));
-  } else {
-    all.forEach(p => list.appendChild(buildPostCard(p, false)));
-  }
+  // 공지는 커뮤니티 목록에서 제외 (더보기 > 공지사항에서 별도 노출)
+  const filtered = all.filter(p => p.cat !== 'notice');
+  filtered.forEach(p => list.appendChild(buildPostCard(p, false)));
 }
 
 function _timeAgo(dateStr) {
@@ -6997,6 +7019,112 @@ function buildPostCard(p, compact) {
 }
 
 let _currentPostId = null;
+
+// ── 비밀번호 재설정 (이메일 가입자) ──
+async function handlePasswordReset() {
+  const emailField = document.getElementById('auth-email');
+  const prefilled = emailField?.value?.trim() || '';
+  const email = await _showCustomDialog({
+    mode: 'prompt',
+    title: '🔐 비밀번호 재설정',
+    message: '가입 이메일을 입력하시면 재설정 링크를 보내드립니다.\n(소셜 로그인 가입자는 해당 서비스로 로그인해 주세요)',
+    inputType: 'email',
+    inputPlaceholder: 'your@email.com',
+    defaultValue: prefilled,
+    okText: '재설정 메일 보내기',
+  });
+  if (email == null) return; // 취소
+  const trimmed = String(email).trim().toLowerCase();
+  if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    showToast('올바른 이메일 형식이 아닙니다');
+    return;
+  }
+  try {
+    const { error } = await _supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: 'https://byetmaru.com/?password_reset=1',
+    });
+    // 보안: 가입 여부와 무관하게 동일 안내 (account enumeration 방지)
+    if (error) {
+      console.warn('[reset]', error.message);
+    }
+    await _showCustomDialog({
+      mode: 'alert',
+      title: '📧 메일 발송됨',
+      message: `${trimmed} 로 재설정 안내를 보냈어요.\n\n· 가입한 이메일이면 링크가 도착해요\n· 메일이 안 오면 스팸함도 확인해 주세요\n· 소셜 로그인(구글·카카오) 가입자는 메일이 오지 않아요`,
+      okText: '확인',
+    });
+  } catch(e) {
+    showToast('메일 발송 실패: ' + (e.message || ''));
+  }
+}
+
+// ── 비밀번호 재설정 메일 링크 클릭 후 새 비밀번호 입력 ──
+async function _checkPasswordResetCallback() {
+  // URL hash나 query에서 type=recovery 감지 시 자동 호출
+  const hash = window.location.hash || '';
+  const search = window.location.search || '';
+  if (!hash.includes('type=recovery') && !search.includes('password_reset=1')) return;
+  // 사용자가 인증된 상태(임시 세션)에서만 진행
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (!session) return;
+
+  const newPw = await _showCustomDialog({
+    mode: 'prompt',
+    title: '🔐 새 비밀번호 입력',
+    message: '비밀번호 재설정 링크로 입장하셨어요.\n6자 이상의 새 비밀번호를 입력해 주세요.',
+    inputType: 'password',
+    inputPlaceholder: '새 비밀번호',
+    okText: '저장',
+  });
+  if (!newPw) return;
+  if (String(newPw).length < 6) {
+    showToast('비밀번호는 6자 이상이어야 합니다');
+    return;
+  }
+  try {
+    const { error } = await _supabase.auth.updateUser({ password: newPw });
+    if (error) throw error;
+    showToast('✅ 비밀번호가 변경되었어요');
+    // URL 청소
+    history.replaceState(null, '', '/');
+  } catch(e) {
+    showToast('변경 실패: ' + (e.message || ''));
+  }
+}
+
+// ── 공지사항 시트 (관리자가 cat='notice'로 작성한 글 모음) ──
+async function openNoticeSheet() {
+  const list = document.getElementById('notice-list');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3);font-size:13px">불러오는 중...</div>';
+  openSheet('sheet-notice');
+  try {
+    const { data, error } = await _supabase.from('posts')
+      .select('id,title,body,created_at')
+      .eq('cat', 'notice')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--tx3);font-size:13px">📭 등록된 공지사항이 없어요</div>';
+      return;
+    }
+    list.innerHTML = data.map(n => {
+      const time = _timeAgo(n.created_at);
+      const bodyHtml = String(n.body || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])).replace(/\n/g, '<br>');
+      return `<div style="background:var(--sf2);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span style="font-size:10px;background:var(--am2);color:var(--am);border:1px solid var(--am);border-radius:6px;padding:2px 7px;font-weight:800">📢 공지</span>
+          <span style="font-size:11px;color:var(--tx3);margin-left:auto">${time}</span>
+        </div>
+        <div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:6px;line-height:1.4">${String(n.title||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.7;white-space:pre-wrap">${bodyHtml}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--coral);font-size:12px">❌ 공지 불러오기 실패: ' + (e.message||'') + '</div>';
+  }
+}
 
 // ── 글쓰기 폼 카테고리별 가이드 갱신 ──
 function _updateWriteFormForCategory() {
@@ -11901,6 +12029,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 세션 있음 → 앱 진입 (Google OAuth, 이메일 로그인, 기존 세션 모두 포함)
       clearTimeout(authTimeout);
       _currentUser = session.user;
+      // 비밀번호 재설정 링크로 들어온 경우 — 새 비밀번호 다이얼로그 자동 호출
+      if (event === 'PASSWORD_RECOVERY' || window.location.hash.includes('type=recovery') || window.location.search.includes('password_reset=1')) {
+        try { await _checkPasswordResetCallback(); } catch(e) { console.warn('[reset cb]', e); }
+      }
       // PKCE 콜백 후 URL 정리 (?code= 파라미터 제거)
       if (window.location.search.includes('code=')) {
         history.replaceState(null, '', window.location.pathname + '#home');
