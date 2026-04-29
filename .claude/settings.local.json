@@ -66,7 +66,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(rm -f .git/HEAD.lock .git/index.lock)"
+      "Bash(rm -f .git/HEAD.lock .git/index.lock)",
+      "Bash(git restore *)",
+      "Bash(rm -f .git/index.lock .git/HEAD.lock)"
     ]
   }
 }
