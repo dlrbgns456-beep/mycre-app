@@ -673,9 +673,8 @@ input[type=file]{display:none}
   </div>
   <!-- 로그인 폼 (세션 없을 때만 표시) -->
   <div id="auth-form" style="display:none;flex-direction:column;align-items:center;width:100%;gap:0">
-    <div class="auth-logo"><img src="/icon-192.png" alt="ByetMaru" style="width:52px;height:52px;border-radius:14px"></div>
-    <div class="auth-title">볏마루도감 시작하기</div>
-    <div class="auth-sub">크레스티드 게코 사육자를 위한 기록 앱.<br>개체 정보·사진·혈통까지 한 곳에서 관리하세요.</div>
+    <div class="auth-title" style="margin-top:4px">볏마루도감</div>
+    <div class="auth-sub" style="margin-bottom:18px">크레스티드 게코 사육자를 위한 기록 앱</div>
 
     <!-- WebView 감지 배너 -->
     <div id="webview-banner" style="display:none;width:100%;max-width:360px;background:linear-gradient(135deg,#2a1500,#1a0e00);border:1.5px solid var(--am);border-radius:16px;padding:16px 18px;margin-bottom:16px;text-align:center">
@@ -745,9 +744,9 @@ input[type=file]{display:none}
         카카오로 계속하기
       </button>
 
-      <div style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.3);border-radius:10px;padding:9px 11px;margin-top:12px;font-size:11px;color:var(--tx3);line-height:1.6">
-        💡 <b style="color:var(--am)">처음 가입하신 방법으로만 로그인해주세요</b><br>
-        예) 처음에 카카오로 가입했다면 다음에도 카카오로만 입장 가능해요. 같은 이메일이라도 다른 방식으로 가입하면 별도 계정이 생성돼 데이터가 분리됩니다.
+      <div style="text-align:center;margin-top:10px;font-size:10.5px;color:var(--tx3);line-height:1.5">
+        💡 처음 가입하신 방법으로만 로그인해 주세요
+        <span onclick="_showLoginInfoDialog()" style="color:var(--ac);cursor:pointer;text-decoration:underline;margin-left:4px">자세히</span>
       </div>
     </div>
 
@@ -7020,6 +7019,16 @@ function buildPostCard(p, compact) {
 
 let _currentPostId = null;
 
+// ── 로그인 안내 자세히 보기 ──
+function _showLoginInfoDialog() {
+  _showCustomDialog({
+    mode: 'alert',
+    title: '💡 로그인 방식 안내',
+    message: '처음 가입한 로그인 방식으로만 입장할 수 있어요.\n\n예) 처음에 카카오로 가입했다면 다음에도 카카오로만 로그인 가능합니다.\n\n같은 이메일이라도 다른 방식으로 가입하면 별도 계정이 생성되어 데이터가 분리됩니다.',
+    okText: '확인',
+  });
+}
+
 // ── 비밀번호 재설정 (이메일 가입자) ──
 async function handlePasswordReset() {
   const emailField = document.getElementById('auth-email');
@@ -8106,6 +8115,11 @@ function printQR() {
       <div id="record-weight-chart" style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px;display:none">
         <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">⚖️ 체중 변화</div>
         <div id="weight-chart-bars" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div id="record-shed-chart" style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px;display:none">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">🦎 탈피 주기</div>
+        <div id="shed-chart-summary" style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px"></div>
+        <div id="shed-chart-bars" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn-sm" style="background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="openAddRecord('weight')">⚖️ 체중</button>
@@ -12971,6 +12985,7 @@ async function loadRecords(geckoId) {
   } catch(e) {}
   records.sort((a, b) => b.date.localeCompare(a.date));
   renderWeightChart(records.filter(r => r.type === 'weight'));
+  renderShedChart(records.filter(r => r.type === 'shed'), geckoId);
   const timeline = document.getElementById('record-timeline');
   if (records.length === 0) { timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요. 위 버튼으로 첫 기록을 추가해보세요!</div>'; return; }
   const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'}, egg:{emoji:'🥚',label:'산란',color:'#ff8fb1',bg:'rgba(255,143,177,.15)'} };
@@ -13008,6 +13023,97 @@ async function loadRecords(geckoId) {
     const dateBtn = '<div class="record-date" onclick="'+editFn+'" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="'+editTitle+'">'+r.date+' ✎</div>';
     return '<div class="record-item type-'+r.type+'" style="position:relative">'+delBtn+dateBtn+'<div class="record-content" style="padding-right:24px"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
   }).join('');
+}
+
+function renderShedChart(shedRecords, geckoId) {
+  const container = document.getElementById('record-shed-chart');
+  const barsDiv = document.getElementById('shed-chart-bars');
+  const summaryDiv = document.getElementById('shed-chart-summary');
+  if (!container || !barsDiv) return;
+  if (!shedRecords || shedRecords.length < 1) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+
+  // 시간 오름차순 정렬
+  const sorted = [...shedRecords].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  // 탈피 간 간격(일수) 계산
+  const gaps = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1].date);
+    const cur = new Date(sorted[i].date);
+    const days = Math.floor((cur - prev) / 86400000);
+    if (days > 0 && days < 365) gaps.push({ date: sorted[i].date, days });
+  }
+
+  // 평균 탈피 주기
+  const avgCycle = gaps.length > 0
+    ? Math.round(gaps.reduce((s, g) => s + g.days, 0) / gaps.length)
+    : null;
+
+  // 마지막 탈피 후 경과일
+  const lastShed = sorted[sorted.length - 1].date;
+  const daysSinceLast = lastShed
+    ? Math.floor((Date.now() - new Date(lastShed).getTime()) / 86400000)
+    : null;
+
+  if (summaryDiv) {
+    if (avgCycle != null) {
+      let nextHint = '';
+      if (daysSinceLast != null && avgCycle > 0) {
+        const dDay = avgCycle - daysSinceLast;
+        if (dDay > 0) {
+          nextHint = ` · 다음 예상 D-${dDay}`;
+        } else if (dDay >= -7) {
+          nextHint = ` · 🔔 곧 탈피 시기예요!`;
+        } else {
+          nextHint = ` · 마지막 탈피 ${daysSinceLast}일 전`;
+        }
+      }
+      summaryDiv.textContent = `📊 평균 ${avgCycle}일 주기 (${gaps.length}회 측정)${nextHint}`;
+    } else {
+      summaryDiv.textContent = '탈피 기록을 2회 이상 쌓으면 평균 주기가 계산돼요';
+      summaryDiv.style.color = 'var(--tx3)';
+    }
+  }
+
+  // 차트 막대 (최근 8회)
+  const maxGap = gaps.length > 0 ? Math.max(...gaps.map(g => g.days), 1) : 1;
+  const recent = sorted.slice(-8);
+  let html = '';
+  recent.forEach((r, idx) => {
+    const dateLabel = (r.date || '').slice(5);
+    if (idx === 0) {
+      html += `<div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">${dateLabel}</div>
+        <div style="flex:1;font-size:10px;color:var(--tx3)">첫 기록</div>
+        <div style="width:50px"></div>
+      </div>`;
+    } else {
+      const prev = new Date(recent[idx - 1].date);
+      const cur = new Date(r.date);
+      const days = Math.max(1, Math.floor((cur - prev) / 86400000));
+      const pct = (days / maxGap) * 100;
+      html += `<div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">${dateLabel}</div>
+        <div style="flex:1;background:var(--sf2);border-radius:2px;height:4px">
+          <div style="height:4px;width:${pct}%;background:var(--blue);border-radius:2px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--blue);width:50px;flex-shrink:0">+${days}일</div>
+      </div>`;
+    }
+  });
+  barsDiv.innerHTML = html;
+
+  // 부수효과: gecko 행에 shedCycle/lastShedAt 캐시 (탈피 알림 활성화용)
+  if (geckoId && avgCycle != null && avgCycle > 0) {
+    try {
+      const g = state.geckos.find(x => String(x.id) === String(geckoId));
+      if (g) {
+        g.shedCycle = avgCycle;
+        g.lastShedAt = lastShed;
+      }
+    } catch(e) {}
+  }
 }
 
 function renderWeightChart(weightRecords) {
