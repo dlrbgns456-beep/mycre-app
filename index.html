@@ -4481,22 +4481,22 @@ async function saveProfile() {
     try {
       const { data, error } = await _supabase
         .from('profiles')
-        .upsert({ id: _currentUser.id, nickname: newName }, { onConflict: 'id' })
+        .upsert({ id: _currentUser.id, nickname: newName, bio: newBio }, { onConflict: 'id' })
         .select();
       if (error) {
-        showToast('❌ 닉네임 저장 실패: ' + (error.message || '권한 없음'));
-        _debugLog('error', 'profile', 'nickname upsert failed: ' + error.message, { user_id: _currentUser.id });
+        showToast('❌ 프로필 저장 실패: ' + (error.message || '권한 없음'));
+        _debugLog('error', 'profile', 'profile upsert failed: ' + error.message, { user_id: _currentUser.id });
         return;
       }
       // RLS가 select를 차단하거나 row가 0개 반환되면 실제 반영 안 된 것
       if (!data || data.length === 0) {
-        showToast('❌ 닉네임 저장 실패: 권한 없음 (RLS 정책 확인 필요)');
-        _debugLog('error', 'profile', 'nickname upsert returned 0 rows', { user_id: _currentUser.id });
+        showToast('❌ 프로필 저장 실패: 권한 없음 (RLS 정책 확인 필요)');
+        _debugLog('error', 'profile', 'profile upsert returned 0 rows', { user_id: _currentUser.id });
         return;
       }
     } catch(e) {
-      showToast('❌ 닉네임 저장 실패: ' + (e.message || '네트워크 오류'));
-      _debugLog('error', 'profile', 'nickname upsert exception: ' + e.message, { user_id: _currentUser.id });
+      showToast('❌ 프로필 저장 실패: ' + (e.message || '네트워크 오류'));
+      _debugLog('error', 'profile', 'profile upsert exception: ' + e.message, { user_id: _currentUser.id });
       return;
     }
   }
@@ -11529,7 +11529,7 @@ async function _onSignedIn() {
     try {
       // 프로필 체크 + 신규 사용자 처리
       console.log('[Auth] 프로필 동기화 시작...');
-      const { data: existCheck, error: profileError } = await _supabase.from('profiles').select('id,nickname,tier,is_beta_tester,ai_credits').eq('id', _currentUser.id).maybeSingle();
+      const { data: existCheck, error: profileError } = await _supabase.from('profiles').select('id,nickname,bio,tier,is_beta_tester,ai_credits').eq('id', _currentUser.id).maybeSingle();
       // 베타 테스터 + 크레딧 캐시
       state._isBetaTester = !!(existCheck?.is_beta_tester);
       state.aiCredits = existCheck?.ai_credits || 0;
@@ -11546,12 +11546,15 @@ async function _onSignedIn() {
         _notifyAdmin('new_signup', '새 회원가입',
           `이메일: ${_currentUser.email}\nProvider: ${_currentUser.app_metadata?.provider || 'unknown'}\n시간: ${new Date().toLocaleString('ko-KR')}`);
       } else {
-        // 기존 사용자 — 닉네임, 티어 상태 반영
+        // 기존 사용자 — 닉네임, 한줄 소개, 티어 상태 반영
         if (existCheck.nickname) {
           _profile.name = existCheck.nickname;
-          _saveProfileLocal();
-          _updateProfileUI();
         }
+        if (typeof existCheck.bio === 'string') {
+          _profile.bio = existCheck.bio;
+        }
+        _saveProfileLocal();
+        _updateProfileUI();
         state.tier = existCheck.tier || 'free';
         _loadDailyScanCount();
         _updateScanBadge();
