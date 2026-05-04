@@ -1923,16 +1923,16 @@ input[type=file]{display:none}
           <div>
             <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--blue);margin-bottom:4px">♂ 아버지</div>
             <select class="form-select" id="gecko-dad-select" onchange="onParentSelect('dad')" style="font-size:12px;margin-bottom:4px">
-              <option value="">— 내 개체에서 선택 —</option>
+              <option value="">— 내 개체에서 선택 (선택사항) —</option>
             </select>
-            <input class="form-input" id="gecko-dad" type="text" placeholder="또는 직접 입력 (모프명)" style="font-size:12px">
+            <input class="form-input" id="gecko-dad" type="text" placeholder="외부 개체는 직접 입력 (모프/이름)" style="font-size:12px">
           </div>
           <div>
             <div style="font-size:10px;font-family:'DM Mono',monospace;color:#ff8fb1;margin-bottom:4px">♀ 어머니</div>
             <select class="form-select" id="gecko-mom-select" onchange="onParentSelect('mom')" style="font-size:12px;margin-bottom:4px">
-              <option value="">— 내 개체에서 선택 —</option>
+              <option value="">— 내 개체에서 선택 (선택사항) —</option>
             </select>
-            <input class="form-input" id="gecko-mom" type="text" placeholder="또는 직접 입력 (모프명)" style="font-size:12px">
+            <input class="form-input" id="gecko-mom" type="text" placeholder="외부 개체는 직접 입력 (모프/이름)" style="font-size:12px">
           </div>
         </div>
         <div id="lineage-breed-warn" style="display:none;margin-top:8px"></div>
@@ -3623,14 +3623,12 @@ async function _validateGeckoPhoto(imgDataUrl) {
       hueHist[bin]++;
     }
     const grayRatio = grayCount / totalCount;
-    // 무채색 비율 95%+ = 스크린샷/문서 등
-    if (grayRatio > 0.95) {
-      return { ok: false, reason: '스크린샷·문서 사진처럼 보여요. 실제 개체 사진을 올려주세요.' };
-    }
     // 색상 다양성: 비어있지 않은 hue bin 수
     const nonEmptyBins = hueHist.filter(v => v > totalCount * 0.01).length;
-    if (nonEmptyBins < 2 && grayRatio < 0.3) {
-      return { ok: false, reason: '이미지가 너무 단조로워요. 개체가 잘 보이는 사진으로 바꿔주세요.' };
+    // 완전 단색(무채색 99%+ AND 색상 0개) = 스크린샷/빈 이미지
+    // 라이트박스·흰배경 촬영도 개체 부분에 약간의 색이 있으므로 통과
+    if (grayRatio > 0.99 && nonEmptyBins === 0) {
+      return { ok: false, reason: '스크린샷·문서 사진처럼 보여요. 실제 개체 사진을 올려주세요.' };
     }
 
     return { ok: true, reason: '' };
@@ -4676,7 +4674,7 @@ function renderHome() {
       <div class="gecko-row-info">
         <div class="gecko-row-name">${g.name}</div>
         <div class="gecko-row-morph">${g.morph || '미상'}</div>
-        ${g.dob ? `<div style="font-size:9px;color:var(--blue);font-weight:700;margin-top:1px">${getAge(g.dob)}</div>` : ''}
+        ${g.dob ? `<div style="font-size:9px;color:var(--blue);font-weight:700;margin-top:1px">${getAge(g.dob)} <span style="color:var(--tx3);font-weight:400">${g.dob.slice(2).replace(/-/g,'.')}</span></div>` : ''}
       </div>`;
     row.appendChild(el);
   });
@@ -4787,11 +4785,17 @@ let _pendingPhotoFile = null; // Storage 업로드용 File/Blob
 function handleAddPhoto(e) {
   const file = e.target.files[0];
   if (!file) return;
+  if (file.size > 20 * 1024 * 1024) {
+    showToast('⚠️ 파일이 너무 커요 (최대 20MB). JPEG로 변환 후 다시 시도해주세요.');
+    e.target.value = '';
+    return;
+  }
+  showToast('📷 사진 처리 중...');
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = async () => {
-    // ── 더 작게 리사이즈 + 낮은 품질 → 업로드 속도 대폭 향상 ──
-    const MAX = 480;
+    // ── 리사이즈 (720px) + 적절한 품질 → 빠른 업로드 + 선명한 사진 ──
+    const MAX = 720;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -4800,7 +4804,7 @@ function handleAddPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
 
     // 🛡️ 유효성 검사 (사람 얼굴·스크린샷 등 거부)
     const check = await _validateGeckoPhoto(dataUrl);
@@ -4821,7 +4825,7 @@ function handleAddPhoto(e) {
       _pendingPhotoFile = blob;
       const kb = blob ? Math.round(blob.size / 1024) : 0;
       showToast(`📷 사진 준비 완료 (${kb}KB)`);
-    }, 'image/jpeg', 0.5);
+    }, 'image/jpeg', 0.6);
   };
   img.src = url;
 }
@@ -5183,10 +5187,16 @@ function _resetQuickAddForm() {
 function handleQuickPhoto(e) {
   const file = e.target.files[0];
   if (!file) return;
+  if (file.size > 20 * 1024 * 1024) {
+    showToast('⚠️ 파일이 너무 커요 (최대 20MB). JPEG로 변환 후 다시 시도해주세요.');
+    e.target.value = '';
+    return;
+  }
+  showToast('📷 사진 처리 중...');
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = async () => {
-    const MAX = 480;
+    const MAX = 720;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -5195,7 +5205,7 @@ function handleQuickPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
 
     // 🛡️ 유효성 검사
     const check = await _validateGeckoPhoto(dataUrl);
@@ -5212,7 +5222,7 @@ function handleQuickPhoto(e) {
     URL.revokeObjectURL(url);
     canvas.toBlob(blob => {
       _quickPendingBlob = blob;
-    }, 'image/jpeg', 0.5);
+    }, 'image/jpeg', 0.6);
   };
   img.src = url;
 }
@@ -7504,11 +7514,16 @@ let _postPhotoBlob = null; // 리사이즈된 Blob (업로드용)
 function handlePostPhoto(e) {
   const file = e.target.files[0];
   if (!file) return;
-  // 리사이즈해서 미리보기 + 업로드용 Blob 준비
+  if (file.size > 20 * 1024 * 1024) {
+    showToast('⚠️ 파일이 너무 커요 (최대 20MB). JPEG로 변환 후 다시 시도해주세요.');
+    e.target.value = '';
+    return;
+  }
+  showToast('📷 사진 처리 중...');
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = async () => {
-    const MAX = 480;
+    const MAX = 720;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -7517,7 +7532,7 @@ function handlePostPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
 
     // 🛡️ 유효성 검사 (사람 얼굴·스크린샷·단색 거부)
     const check = await _validateGeckoPhoto(dataUrl);
@@ -7529,7 +7544,7 @@ function handlePostPhoto(e) {
     }
 
     _postPhotoData = dataUrl;
-    canvas.toBlob(blob => { _postPhotoBlob = blob; }, 'image/jpeg', 0.5);
+    canvas.toBlob(blob => { _postPhotoBlob = blob; }, 'image/jpeg', 0.6);
     document.getElementById('post-photo-preview').src = _postPhotoData;
     document.getElementById('post-photo-preview').style.display = 'block';
     document.getElementById('post-photo-placeholder').style.display = 'none';
@@ -7622,7 +7637,7 @@ async function submitPost() {
     // ── 사진이 있으면 먼저 업로드 (리사이즈 되어있으므로 빠름) ──
     if (pendingPostBlob && cat !== 'notice') {
       try {
-        const fileName = `posts/${_currentUser.id}/${Date.now()}.jpg`;
+        const fileName = `${_currentUser.id}/post_${Date.now()}.jpg`;
         const { error: upErr } = await _supabase.storage
           .from('gecko-photos')
           .upload(fileName, pendingPostBlob, { contentType: 'image/jpeg', upsert: true });
@@ -9684,6 +9699,8 @@ function toggleEmailLogin() {
 
 // ── WebView 감지 ──
 function _isWebView() {
+  // Capacitor 앱(자체 앱)이면 인앱 브라우저가 아님
+  if (window.Capacitor || navigator.userAgent.includes('com.lbeetle.byetmaru')) return false;
   const ua = navigator.userAgent || '';
   // 카카오톡, 네이버, 인스타그램, 페이스북 등 인앱 브라우저 감지
   return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|wv|WebView/i.test(ua)
@@ -12293,7 +12310,7 @@ function populateParentSelects(editingId) {
   const dadSelect = document.getElementById('gecko-dad-select');
   const momSelect = document.getElementById('gecko-mom-select');
   if (!dadSelect || !momSelect) return;
-  const opts = '<option value="">— 내 개체에서 선택 —</option>' +
+  const opts = '<option value="">— 내 개체에서 선택 (선택사항) —</option>' +
     state.geckos.filter(g => String(g.id) !== String(editingId || ''))
       .map(g => `<option value="${g.id}">${g.sex === '암컷' ? '♀' : '♂'} ${g.name} (${g.morph || '미상'})</option>`).join('');
   dadSelect.innerHTML = opts;
