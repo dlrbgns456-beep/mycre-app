@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="볏마루도감">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#FFF9EF">
+<meta name="color-scheme" content="light only">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="icon" type="image/png" href="/icon-192.png">
@@ -43,6 +44,27 @@
   --rs:    12px;
   --rx:    24px;
   --shadow: 0 4px 24px rgba(26,43,34,.12);
+}
+
+/* ─── Force Light Mode (Android WebView dark mode 방어) ─── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light only;
+    --bg:    #FFF9EF;
+    --sf:    #F2EDE3;
+    --sf2:   #E8E2D6;
+    --card:  #FFFFFF;
+    --br:    #D4CBB8;
+    --br2:   #E0D8C9;
+    --tx:    #1A2B22;
+    --tx2:   #4A6B52;
+    --tx3:   #8A9E8D;
+  }
+  html, body {
+    background-color: #FFF9EF !important;
+    color: #1A2B22 !important;
+  }
+  img, svg { filter: none !important; }
 }
 
 /* ─── Reset ─── */
