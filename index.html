@@ -3442,7 +3442,7 @@ function calcMultiLayerScores(selections) {
     if (patSel.includes('하위') && sp.some(s => s.includes('할리퀸40') || s.includes('하위레터럴'))) scores[name] += 15;
     if (patSel.includes('횡단') || patSel.includes('타이거') || patSel.includes('브린들')) { if (sp.some(s => s.includes('횡단줄무늬') || s.includes('타이거밴드') || s.includes('두꺼운밴드') || s.includes('불규칙줄무늬'))) scores[name] += 18; }
     if (patSel.includes('밝은 등') || patSel.includes('플레임')) { if (sp.some(s => s.includes('밝은도살') || s.includes('플레임패턴') || s.includes('할리퀸30'))) scores[name] += 16; }
-    if (patSel.includes('투톤') && patSel.includes('바이컬러')) { if (sp.some(s => s.includes('투톤') || s.includes('2색구분'))) scores[name] += 14; }
+    if (patSel.includes('투톤') && patSel.includes('바이컬러')) { if (sp.some(s => s.includes('투톤') || s.includes('2색구분'))) scores[name] += 8; }
     if (patSel.includes('모자이크') && sp.some(s => s.includes('모자이크'))) scores[name] += 25;
     if (patSel.includes('엠티백') || patSel.includes('등 무늬 소거')) { if (sp.some(s => s.includes('빈등'))) scores[name] += 20; }
     if (patSel.includes('단색') || patSel.includes('팬텀')) { if (sp.some(s => s.includes('패턴소거') || s.includes('모노컬러'))) scores[name] += 18; }
@@ -3612,20 +3612,36 @@ function _applyCAHardRules(scores, colorAnalyses) {
   const bump = (name, n) => { if (scores[name] !== undefined) scores[name] += n; };
   const cut  = (name, n) => { if (scores[name] !== undefined) scores[name] = Math.max(0, scores[name] - n); };
 
-  if (udonCount >= 2) {
-    ['릴리화이트','슈퍼릴리','프라푸치노','릴잔틱'].forEach(n => bump(n, 20));
+  // v3: 사진 1장이라도 보너스 적용 (기존 >= 2 → >= 1), 단 1장일 때 보너스 축소
+  const photoN = colorAnalyses.length;
+  if (udonCount >= 1) {
+    const udonBonus = udonCount >= 2 ? 20 : (photoN === 1 ? 14 : 10);
+    ['릴리화이트','슈퍼릴리','프라푸치노','릴잔틱'].forEach(n => bump(n, udonBonus));
   }
-  if (yMarkCount >= 2) {
-    ['카푸치노','카푸치노+','카푸할리','카푸트리'].forEach(n => bump(n, 25));
-    ['사이블','노멀','팬텀'].forEach(n => cut(n, 15));
+  if (yMarkCount >= 1) {
+    const yBonus = yMarkCount >= 2 ? 25 : (photoN === 1 ? 18 : 12);
+    ['카푸치노','카푸치노+','카푸할리','카푸트리'].forEach(n => bump(n, yBonus));
+    ['사이블','노멀','팬텀'].forEach(n => cut(n, yMarkCount >= 2 ? 15 : 8));
   }
   const allLowSat = colorAnalyses.every(ca => ca.avgSaturation < 0.13 && ca.brownRatio < 0.05);
   if (allLowSat && spotCount === 0) {
     ['아잔틱','릴잔틱'].forEach(n => bump(n, 20));
   }
-  if (darkTailCount >= Math.ceil(colorAnalyses.length / 2) && yMarkCount === 0) {
+  if (darkTailCount >= Math.ceil(photoN / 2) && yMarkCount === 0) {
     ['사이블','사이블할리','사이블트리'].forEach(n => bump(n, 15));
   }
+
+  // v3: 트익할 하드룰 — 3색 분리 패턴 감지 시 트리컬러 계열 보너스
+  const tricolorCount = colorAnalyses.filter(ca =>
+    ca.contrast > 30 && (ca.lateral?.whiteRatio || 0) > 0.10 && ca.darkRatio > 0.15
+  ).length;
+  if (tricolorCount >= 1) {
+    const triBonus = tricolorCount >= 2 ? 18 : 10;
+    ['트리컬러','트익할','카푸트리','사이블트리'].forEach(n => bump(n, triBonus));
+    // 바이컬러가 트익할을 먹는 현상 방지
+    bump('바이컬러', -5);
+  }
+
   return scores;
 }
 
@@ -4136,10 +4152,17 @@ function _colorAnalysisToTraits(ca) {
   const hasHighContrast = ca.contrast > 38; // 기존 50→38: 크림/주황 할리퀸도 감지
   const hasChromaticSpots = ca.orangeRatio > 0.03 || ca.yellowRatio > 0.03 || ca.redRatio > 0.03;
 
-  if (lateralWhite > 0.18 && ca.contrast > 35 && lateralCoverage > 0.35
-      && ca.regions.center.avgB < ca.regions.left.avgB - 15 && hasChromaticSpots) {
+  // v3 트익할 감지: 등/옆/배 3영역 색상 차이 OR 기존 조건 (완화)
+  const leftRightDiff = Math.abs((ca.regions.left.avgB||0) - (ca.regions.right.avgB||0));
+  const dorsalLateralDiff = Math.abs(ca.dorsal.avgBright - (ca.lateral.avgBright||ca.avgBright));
+  const has3ZoneColor = (dorsalLateralDiff > 12 && leftRightDiff < 20 && ca.contrast > 30);
+  const tricolorByZone = has3ZoneColor && lateralCoverage > 0.20 && (lateralWhite > 0.10 || hasChromaticSpots);
+
+  if ((lateralWhite > 0.14 && ca.contrast > 30 && lateralCoverage > 0.25
+      && (hasChromaticSpots || ca.regions.center.avgB < (ca.regions.left.avgB||0) - 10))
+      || tricolorByZone) {
     traits.pattern = '3색 완전 분리(트익할)';
-    reasons.push({icon:'🌈',text:`3색 분리: 레터럴 ${(lateralWhite*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)}, 유채색 잔존 → Tricolor`});
+    reasons.push({icon:'🌈',text:`3색 분리: 레터럴 ${(lateralWhite*100).toFixed(0)}%, 커버리지 ${(lateralCoverage*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)} → Tricolor`});
   } else if (lateralWhite > 0.18 && hasHighContrast && lateralCoverage > 0.30) {
     traits.pattern = '상위 레터럴까지 무늬(익스트림)';
     reasons.push({icon:'📊',text:`레터럴 커버리지 ${(lateralCoverage*100).toFixed(0)}%, 대비 ${ca.contrast.toFixed(0)} → Extreme Harlequin`});
@@ -4152,9 +4175,10 @@ function _colorAnalysisToTraits(ca) {
   } else if (ca.vStripeScore > 0.12 && ca.dorsal.avgBright > ca.avgBright + 15) {
     traits.pattern = '밝은 등 스트라이프(플레임)';
     reasons.push({icon:'🔥',text:`등 밝기 ${ca.dorsal.avgBright.toFixed(0)} vs 몸 ${ca.avgBright} → Flame/Dorsal`});
-  } else if (topBottomDiff > 25 || (ca.lightRatio > 0.2 && ca.darkRatio > 0.2)) {
+  } else if (topBottomDiff > 30 && ca.lightRatio > 0.2 && ca.darkRatio > 0.2 && ca.contrast > 35) {
+    // v3: 바이컬러 폴백 조건 강화 — 단순 밝기차만으로는 바이컬러 아님
     traits.pattern = '상하 투톤(바이컬러)';
-    reasons.push({icon:'◐',text:`상하 밝기차 ${topBottomDiff.toFixed(0)} → Bicolor`});
+    reasons.push({icon:'◐',text:`상하 밝기차 ${topBottomDiff.toFixed(0)}, 대비 ${ca.contrast.toFixed(0)} → Bicolor`});
   } else if (ca.colorUniformity > 0.7 && ca.contrast < 30) {
     traits.pattern = '단색/투톤(팬텀)';
     flags.phantomLike = true;
