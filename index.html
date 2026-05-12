@@ -4937,28 +4937,35 @@ function resetAddPhoto() {
 let _pendingPhotoFile = null; // Storage 업로드용 File/Blob
 
 // ── 고화질 사진 모드 (전역 설정) ──
-// 기본: 빠른 업로드 720px/0.6 (50~100KB)
-// 고화질: 1440px/0.85 (300~700KB, 4~5배 크지만 디테일 풍부)
+// 표준: 1080px/0.82 (150~350KB) — 모바일 풀해상도, 빠른 업로드
+// 고화질: 2048px/0.92 (700KB~1.5MB) — 원본 디테일 보존
 function _isHdPhotoMode() {
   try { return localStorage.getItem('byetmaru_hd_photo') === '1'; } catch(e) { return false; }
 }
 function _togglePhotoHdMode() {
   const next = !_isHdPhotoMode();
   try { localStorage.setItem('byetmaru_hd_photo', next ? '1' : '0'); } catch(e) {}
-  // 화면의 모든 토글 버튼 라벨 갱신
   document.querySelectorAll('[data-hd-toggle]').forEach(btn => _updatePhotoHdToggleLabel(btn));
-  showToast(next ? '🎨 고화질 모드 ON — 사진이 더 선명해져요' : '⚡ 빠른 업로드 모드 ON');
+  showToast(next ? '🎨 고화질 ON (2048px) — 모프 디테일 풍부' : '📷 표준 (1080px) — 빠른 업로드');
 }
 function _updatePhotoHdToggleLabel(btn) {
   if (!btn) return;
   const hd = _isHdPhotoMode();
-  btn.innerHTML = hd ? '🎨 고화질 ON' : '⚡ 빠른 업로드';
+  btn.innerHTML = hd ? '🎨 고화질 ON' : '📷 표준';
   btn.style.background = hd ? 'var(--ac2)' : 'var(--sf2)';
   btn.style.borderColor = hd ? 'var(--ac)' : 'var(--br)';
   btn.style.color = hd ? 'var(--ac)' : 'var(--tx2)';
 }
 function _photoLimits() {
-  return _isHdPhotoMode() ? { max: 1440, quality: 0.85 } : { max: 720, quality: 0.6 };
+  return _isHdPhotoMode() ? { max: 2048, quality: 0.92 } : { max: 1080, quality: 0.82 };
+}
+
+// ── 고품질 캔버스 다운스케일 (기본 보간 품질 낮음 → 고화질 활성화) ──
+function _hqDrawImage(canvas, img, w, h) {
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, w, h);
 }
 
 function handleAddPhoto(e) {
@@ -4982,7 +4989,7 @@ function handleAddPhoto(e) {
     }
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    _hqDrawImage(canvas, img, w, h);
     const dataUrl = canvas.toDataURL('image/jpeg', _lim.quality);
 
     // 🛡️ 유효성 검사 (사람 얼굴·스크린샷 등 거부)
@@ -5383,7 +5390,7 @@ function handleQuickPhoto(e) {
     }
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    _hqDrawImage(canvas, img, w, h);
     const dataUrl = canvas.toDataURL('image/jpeg', _lim.quality);
 
     // 🛡️ 유효성 검사
@@ -7816,6 +7823,27 @@ function filterPosts() {
 }
 
 function openWritePost() {
+  // 🛡️ 이전 상태 완전 초기화 (사진 재업로드 버그 방지)
+  _postPhotoData = null;
+  _postPhotoBlob = null;
+  const _preview = document.getElementById('post-photo-preview');
+  if (_preview) { _preview.src = ''; _preview.style.display = 'none'; }
+  const _placeholder = document.getElementById('post-photo-placeholder');
+  if (_placeholder) _placeholder.style.display = 'block';
+  const _removeBtn = document.getElementById('post-photo-remove-btn');
+  if (_removeBtn) _removeBtn.style.display = 'none';
+  const _fileInput = document.getElementById('post-photo-input');
+  if (_fileInput) _fileInput.value = '';
+  // 폼 필드도 리셋 (혹시 submit 실패 후 다시 열 때 대비)
+  const _titleEl = document.getElementById('post-title-input');
+  if (_titleEl) _titleEl.value = '';
+  const _bodyEl = document.getElementById('post-body-input');
+  if (_bodyEl) _bodyEl.value = '';
+  const _priceEl = document.getElementById('post-price-input');
+  if (_priceEl) _priceEl.value = '';
+  const _linkEl = document.getElementById('post-gecko-link');
+  if (_linkEl) _linkEl.value = '';
+
   // 고화질 토글 라벨 동기화
   setTimeout(() => document.querySelectorAll('[data-hd-toggle]').forEach(b => _updatePhotoHdToggleLabel(b)), 0);
   populateGeckoSelects();
@@ -7860,7 +7888,7 @@ function handlePostPhoto(e) {
     }
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    _hqDrawImage(canvas, img, w, h);
     const dataUrl = canvas.toDataURL('image/jpeg', _lim.quality);
 
     // 🛡️ 유효성 검사 (사람 얼굴·스크린샷·단색 거부)
@@ -7873,12 +7901,16 @@ function handlePostPhoto(e) {
     }
 
     _postPhotoData = dataUrl;
-    canvas.toBlob(blob => { _postPhotoBlob = blob; }, 'image/jpeg', _lim.quality);
+    // ⏳ toBlob 완료까지 await — race condition 방지 (submit 직전 클릭 대비)
+    _postPhotoBlob = await new Promise(resolve => {
+      canvas.toBlob(blob => resolve(blob), 'image/jpeg', _lim.quality);
+    });
     document.getElementById('post-photo-preview').src = _postPhotoData;
     document.getElementById('post-photo-preview').style.display = 'block';
     document.getElementById('post-photo-placeholder').style.display = 'none';
     document.getElementById('post-photo-remove-btn').style.display = 'inline-block';
     URL.revokeObjectURL(url);
+    showToast('📷 사진 준비 완료 (' + (_postPhotoBlob ? Math.round(_postPhotoBlob.size/1024) + 'KB' : '?') + ')');
   };
   img.src = url;
 }
@@ -7927,13 +7959,21 @@ async function submitPost() {
     if (cat !== 'notice') {
       const geckoId = document.getElementById('post-gecko-link')?.value;
       const linkedGecko = geckoId ? state.geckos.find(g => String(g.id) === String(geckoId)) : null;
-      photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+      // 🛡️ 사진 우선순위: 새 업로드 ▶ 개체 사진(폴백)
+      // 새 업로드가 있으면 photo는 일단 null (line 7975에서 업로드 URL로 채워짐)
+      // 새 업로드 없으면 개체 사진을 폴백으로 사용
+      const hasNewUpload = !!(pendingPostBlob || _postPhotoData);
+      if (hasNewUpload) {
+        photo = null; // line 7975에서 새 사진 URL로 갱신
+      } else {
+        photo = (linkedGecko && linkedGecko.photo && !linkedGecko.photo.startsWith('data:')) ? linkedGecko.photo : null;
+      }
       morph = linkedGecko ? linkedGecko.morph : null;
       if (linkedGecko) {
         if (linkedGecko.morph) tags.push(linkedGecko.morph);
         if (linkedGecko.name) tags.push(linkedGecko.name);
-        // 연결된 개체 + 실제 업로드 사진 URL(+ 모프 정보) 모두 있을 때만 인증
-        if (photo && morph) {
+        // 연결된 개체 + 모프 모두 있을 때 인증 (사진은 새 업로드든 폴백이든 둘 중 하나 있으면 OK)
+        if (morph && (hasNewUpload || photo)) {
           isVerified = true;
           linkedGeckoIdForRow = linkedGecko.id;
         }
@@ -12538,9 +12578,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!_currentUser) _showAuthScreen();
   }, hasAuthCode ? 10000 : 6000);
 
+  // ── 앱 포그라운드 복귀 시 세션 자동 갱신 (Google 로그인 풀림 방지) ──
+  // 모바일에서 앱 백그라운드 → 포그라운드 전환 시 token이 만료되어 있으면
+  // 강제로 refresh를 시도해서 세션 유실을 막음
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || !_currentUser) return;
+    try {
+      const { data: { session }, error } = await _supabase.auth.getSession();
+      if (!session && !error) {
+        // 세션이 없으면 refresh 시도
+        const { error: refreshErr } = await _supabase.auth.refreshSession();
+        if (refreshErr) console.warn('[Auth] refresh on resume 실패:', refreshErr.message);
+      }
+    } catch(e) { console.warn('[Auth] visibility check 실패:', e?.message); }
+  });
+
   // ── onAuthStateChange: 모든 세션 변화 감지
   _supabase.auth.onAuthStateChange(async (event, session) => {
     console.log('[Auth]', event, !!session);
+    // TOKEN_REFRESHED: 토큰만 갱신된 경우 — 화면 그대로 유지
+    if (event === 'TOKEN_REFRESHED' && session) {
+      _currentUser = session.user;
+      return;
+    }
     if (session && !_currentUser) {
       // 세션 있음 → 앱 진입 (Google OAuth, 이메일 로그인, 기존 세션 모두 포함)
       clearTimeout(authTimeout);
