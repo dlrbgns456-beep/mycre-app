@@ -7152,7 +7152,7 @@ function buildPostCard(p, compact) {
     // 일반 게시글 카드
     div.onclick = () => openPostDetail(p);
     div.innerHTML = `
-      ${!compact ? `<div class="post-card-img">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:14px 0 0 14px">` : (p.emoji || '🦎')}</div>` : ''}
+      ${!compact ? `<div class="post-card-img" ${p.photo ? `style="cursor:zoom-in" onclick="event.stopPropagation();_openImageLightbox('${String(p.photo).replace(/'/g,"\\'")}')"` : ''}>${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:14px 0 0 14px">` : (p.emoji || '🦎')}</div>` : ''}
       <div class="post-card-body">
         <div class="post-author-row">
           <div class="post-avatar">${p.avatar}</div>
@@ -7439,6 +7439,28 @@ function _updateWriteFormForCategory() {
   }
 }
 
+// ── 이미지 라이트박스 (원본 크게 보기) ──
+function _openImageLightbox(imgUrl) {
+  if (!imgUrl) return;
+  document.querySelectorAll('[data-lightbox]').forEach(el => el.remove());
+  const overlay = document.createElement('div');
+  overlay.setAttribute('data-lightbox', '1');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100001;display:flex;align-items:center;justify-content:center;padding:20px;animation:lightboxFade .2s ease;touch-action:manipulation;cursor:pointer';
+  overlay.innerHTML = `
+    <button aria-label="닫기" style="position:absolute;top:max(env(safe-area-inset-top,0),16px);right:16px;width:44px;height:44px;border-radius:22px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;font-weight:300;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:2">×</button>
+    <img src="${imgUrl}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5)" onclick="event.stopPropagation()">
+    <div style="position:absolute;bottom:max(env(safe-area-inset-bottom,0),20px);left:50%;transform:translateX(-50%);color:rgba(255,255,255,.6);font-size:11px;letter-spacing:.5px;font-family:'DM Mono',monospace;pointer-events:none">탭해서 닫기</div>
+  `;
+  overlay.addEventListener('click', () => overlay.remove());
+  if (!document.getElementById('_lightbox_anim_style')) {
+    const s = document.createElement('style');
+    s.id = '_lightbox_anim_style';
+    s.textContent = '@keyframes lightboxFade { from { opacity: 0 } to { opacity: 1 } }';
+    document.head.appendChild(s);
+  }
+  document.body.appendChild(overlay);
+}
+
 // ── 좋아요 토글 (RPC: toggle_post_like) ──
 async function togglePostLike(postId) {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
@@ -7507,7 +7529,7 @@ async function openPostDetail(p) {
   </div>` : '';
 
   document.getElementById('post-detail-body').innerHTML = `
-    ${isNotice ? '' : `<div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : (p.emoji||'🦎')}</div>`}
+    ${isNotice ? '' : `<div style="width:100%;height:200px;background:var(--sf2);border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:center;font-size:60px;overflow:hidden;position:relative;${p.photo ? 'cursor:pointer' : ''}" ${p.photo ? `onclick="_openImageLightbox('${String(p.photo).replace(/'/g,"\\'")}')"` : ''}>${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:4px 8px;border-radius:12px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none">🔍 원본 보기</div>` : (p.emoji||'🦎')}</div>`}
     <div style="padding:${isNotice ? '20px' : '16px'} 18px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
         <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
