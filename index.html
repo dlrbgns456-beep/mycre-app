@@ -10968,10 +10968,12 @@ function vibrateDevice(type = 'default') {
   try { navigator.vibrate(patterns[type] || patterns.default); } catch(e) {}
 }
 
-function sendLocalNotification(title, body, icon = '/icon-192.png', soundType = 'default') {
+function sendLocalNotification(title, body, icon = '/icon-512.png', soundType = 'default') {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
   try {
-    new Notification(title, { body, icon });
+    // icon: 알림 카드 큰 아이콘 (컬러 게코)
+    // badge: 안드로이드 상태바 작은 아이콘 (모노크롬 'B' 마크 필수)
+    new Notification(title, { body, icon, badge: '/icon-badge.svg' });
     const prefs = _loadNotifPrefs();
     if (prefs.sound !== false) playNotificationSound(soundType);
     vibrateDevice(soundType);

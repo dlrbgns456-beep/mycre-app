@@ -1,8 +1,9 @@
-const CACHE_NAME = 'byetmaru-v20';
+const CACHE_NAME = 'byetmaru-v21';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-badge.svg',
 ];
 // index.html은 캐시하지 않음 — 항상 최신 버전을 네트워크에서 가져옴
 
@@ -84,8 +85,8 @@ self.addEventListener('push', (e) => {
   const origin = self.location.origin;
   const options = {
     body: data.body || '',
-    icon: data.icon || `${origin}/icon-512.png`,    // 큰 아이콘 — 알림 카드에 표시되는 로고
-    badge: data.badge || `${origin}/icon-192.png`,  // 상태바 작은 배지
+    icon: data.icon || `${origin}/icon-512.png`,    // 큰 아이콘 — 알림 카드에 표시되는 컬러 로고
+    badge: data.badge || `${origin}/icon-badge.svg`, // 상태바 작은 배지 — 모노크롬 'B' (Android 흰 실루엣 렌더링)
     image: data.image || undefined,                  // 큰 배너 이미지 (옵션)
     vibrate: [200, 100, 200],
     tag: data.tag || 'byetmaru',
