@@ -1863,6 +1863,10 @@ input[type=file]{display:none}
             📷 카메라
           </button>
         </div>
+        <div style="text-align:center;margin-top:6px">
+          <button type="button" data-hd-toggle onclick="_togglePhotoHdMode()" style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx2);cursor:pointer;font-family:inherit;touch-action:manipulation">⚡ 빠른 업로드</button>
+          <div style="font-size:10px;color:var(--tx3);margin-top:3px">탭해서 고화질로 전환</div>
+        </div>
         <input type="file" id="add-photo-gallery" accept="image/*" onchange="handleAddPhoto(event)" style="display:none">
         <input type="file" id="add-photo-camera" accept="image/*" capture="camera" onchange="handleAddPhoto(event)" style="display:none">
         <!-- 기존 호환용 -->
@@ -2078,6 +2082,9 @@ input[type=file]{display:none}
         </div>
         <input type="file" id="quick-photo-gallery" accept="image/*" onchange="handleQuickPhoto(event)" style="display:none">
         <input type="file" id="quick-photo-camera" accept="image/*" capture="camera" onchange="handleQuickPhoto(event)" style="display:none">
+        <div style="text-align:center;margin-top:6px">
+          <button type="button" data-hd-toggle onclick="_togglePhotoHdMode()" style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx2);cursor:pointer;font-family:inherit;touch-action:manipulation">⚡ 빠른 업로드</button>
+        </div>
       </div>
 
       <!-- 이름 -->
@@ -2349,7 +2356,10 @@ input[type=file]{display:none}
       </div>
       <div class="form-group">
         <label class="form-label">📷 사진 첨부 (선택)</label>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:6px;text-align:center">🦎 게코/파충류 관련 사진만 올려주세요 · 인물/부적절한 사진은 삭제됩니다</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+          <div style="font-size:11px;color:var(--tx3);flex:1">🦎 게코/파충류 사진만 · 인물 사진은 삭제됩니다</div>
+          <button type="button" data-hd-toggle onclick="_togglePhotoHdMode()" style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx2);cursor:pointer;font-family:inherit;white-space:nowrap;touch-action:manipulation">⚡ 빠른 업로드</button>
+        </div>
         <div id="post-photo-zone" style="border:2px dashed var(--br);border-radius:14px;padding:18px;text-align:center;cursor:pointer;position:relative;overflow:hidden" onclick="document.getElementById('post-photo-input').click()">
           <input type="file" id="post-photo-input" accept="image/*" style="display:none" onchange="handlePostPhoto(event)">
           <img id="post-photo-preview" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:10px">
@@ -4881,6 +4891,8 @@ function updateCreditDisplays() {
 let currentPhotoData = null;
 
 function openAddGecko() {
+  // 고화질 토글 라벨 동기화
+  setTimeout(() => document.querySelectorAll('[data-hd-toggle]').forEach(b => _updatePhotoHdToggleLabel(b)), 0);
   state.editingGeckoId = null;
   currentPhotoData = null;
   document.getElementById('add-gecko-title').textContent = '새 크레 등록';
@@ -4924,6 +4936,31 @@ function resetAddPhoto() {
 
 let _pendingPhotoFile = null; // Storage 업로드용 File/Blob
 
+// ── 고화질 사진 모드 (전역 설정) ──
+// 기본: 빠른 업로드 720px/0.6 (50~100KB)
+// 고화질: 1440px/0.85 (300~700KB, 4~5배 크지만 디테일 풍부)
+function _isHdPhotoMode() {
+  try { return localStorage.getItem('byetmaru_hd_photo') === '1'; } catch(e) { return false; }
+}
+function _togglePhotoHdMode() {
+  const next = !_isHdPhotoMode();
+  try { localStorage.setItem('byetmaru_hd_photo', next ? '1' : '0'); } catch(e) {}
+  // 화면의 모든 토글 버튼 라벨 갱신
+  document.querySelectorAll('[data-hd-toggle]').forEach(btn => _updatePhotoHdToggleLabel(btn));
+  showToast(next ? '🎨 고화질 모드 ON — 사진이 더 선명해져요' : '⚡ 빠른 업로드 모드 ON');
+}
+function _updatePhotoHdToggleLabel(btn) {
+  if (!btn) return;
+  const hd = _isHdPhotoMode();
+  btn.innerHTML = hd ? '🎨 고화질 ON' : '⚡ 빠른 업로드';
+  btn.style.background = hd ? 'var(--ac2)' : 'var(--sf2)';
+  btn.style.borderColor = hd ? 'var(--ac)' : 'var(--br)';
+  btn.style.color = hd ? 'var(--ac)' : 'var(--tx2)';
+}
+function _photoLimits() {
+  return _isHdPhotoMode() ? { max: 1440, quality: 0.85 } : { max: 720, quality: 0.6 };
+}
+
 function handleAddPhoto(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -4937,7 +4974,7 @@ function handleAddPhoto(e) {
   const url = URL.createObjectURL(file);
   img.onload = async () => {
     // ── 리사이즈 (720px) + 적절한 품질 → 빠른 업로드 + 선명한 사진 ──
-    const MAX = 720;
+    const _lim = _photoLimits(); const MAX = _lim.max;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -4946,7 +4983,7 @@ function handleAddPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    const dataUrl = canvas.toDataURL('image/jpeg', _lim.quality);
 
     // 🛡️ 유효성 검사 (사람 얼굴·스크린샷 등 거부)
     const check = await _validateGeckoPhoto(dataUrl);
@@ -4967,7 +5004,7 @@ function handleAddPhoto(e) {
       _pendingPhotoFile = blob;
       const kb = blob ? Math.round(blob.size / 1024) : 0;
       showToast(`📷 사진 준비 완료 (${kb}KB)`);
-    }, 'image/jpeg', 0.6);
+    }, 'image/jpeg', _lim.quality);
   };
   img.src = url;
 }
@@ -5338,7 +5375,7 @@ function handleQuickPhoto(e) {
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = async () => {
-    const MAX = 720;
+    const _lim = _photoLimits(); const MAX = _lim.max;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -5347,7 +5384,7 @@ function handleQuickPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    const dataUrl = canvas.toDataURL('image/jpeg', _lim.quality);
 
     // 🛡️ 유효성 검사
     const check = await _validateGeckoPhoto(dataUrl);
@@ -5364,7 +5401,7 @@ function handleQuickPhoto(e) {
     URL.revokeObjectURL(url);
     canvas.toBlob(blob => {
       _quickPendingBlob = blob;
-    }, 'image/jpeg', 0.6);
+    }, 'image/jpeg', _lim.quality);
   };
   img.src = url;
 }
@@ -7779,6 +7816,8 @@ function filterPosts() {
 }
 
 function openWritePost() {
+  // 고화질 토글 라벨 동기화
+  setTimeout(() => document.querySelectorAll('[data-hd-toggle]').forEach(b => _updatePhotoHdToggleLabel(b)), 0);
   populateGeckoSelects();
   // 관리자만 공지사항 카테고리 추가
   const catSelect = document.getElementById('post-category');
@@ -7813,7 +7852,7 @@ function handlePostPhoto(e) {
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = async () => {
-    const MAX = 720;
+    const _lim = _photoLimits(); const MAX = _lim.max;
     let w = img.width, h = img.height;
     if (w > MAX || h > MAX) {
       if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -7822,7 +7861,7 @@ function handlePostPhoto(e) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    const dataUrl = canvas.toDataURL('image/jpeg', _lim.quality);
 
     // 🛡️ 유효성 검사 (사람 얼굴·스크린샷·단색 거부)
     const check = await _validateGeckoPhoto(dataUrl);
@@ -7834,7 +7873,7 @@ function handlePostPhoto(e) {
     }
 
     _postPhotoData = dataUrl;
-    canvas.toBlob(blob => { _postPhotoBlob = blob; }, 'image/jpeg', 0.6);
+    canvas.toBlob(blob => { _postPhotoBlob = blob; }, 'image/jpeg', _lim.quality);
     document.getElementById('post-photo-preview').src = _postPhotoData;
     document.getElementById('post-photo-preview').style.display = 'block';
     document.getElementById('post-photo-placeholder').style.display = 'none';
