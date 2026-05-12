@@ -1619,6 +1619,14 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow">›</div>
     </div>
+    <div class="more-item" id="more-admin-debug" style="display:none" onclick="openAdminDebug()">
+      <div class="more-icon" style="background:var(--pu2)">🛠️</div>
+      <div class="more-item-info">
+        <div class="more-item-title">🔒 운영자 디버그</div>
+        <div class="more-item-sub">알림 발송 이력 · 사용자 통계</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
   </div>
 
   <!-- AI 크레딧 잔량 카드 -->
@@ -1690,6 +1698,52 @@ input[type=file]{display:none}
   <div style="text-align:center;font-size:10px;color:var(--tx3);padding-bottom:12px">© 2026 리비틀(L.Beetle) · 볏마루도감. All rights reserved.</div>
 
   <div style="height:20px"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SHEET: 운영자 디버그 (관리자 전용)
+══════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet-admin-debug" onclick="closeSheet('sheet-admin-debug',event)">
+  <div class="sheet" style="max-height:88vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body" style="padding-top:8px">
+      <div style="text-align:center;padding:8px 0 14px">
+        <div style="font-size:18px;font-weight:900;color:var(--tx)">🛠️ 운영자 디버그</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px">관리자(<span id="dbg-admin-email">—</span>) 전용</div>
+      </div>
+
+      <!-- 사용자 통계 -->
+      <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;letter-spacing:1px">👥 USERS</div>
+        <div id="dbg-user-stats" style="font-size:12px;color:var(--tx2);line-height:1.9">불러오는 중...</div>
+      </div>
+
+      <!-- 알림 발송 이력 -->
+      <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px">🔔 RECENT NOTIFICATIONS</div>
+          <button class="btn-sm" style="padding:4px 9px;font-size:10px" onclick="_loadAdminDebugData()">↻ 새로고침</button>
+        </div>
+        <div id="dbg-notif-list" style="font-size:11px;color:var(--tx2);max-height:280px;overflow-y:auto">불러오는 중...</div>
+      </div>
+
+      <!-- 테스트 푸시 발송 -->
+      <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;letter-spacing:1px">📤 TEST PUSH</div>
+        <input class="form-input" id="dbg-push-title" type="text" placeholder="제목" value="볏마루도감 🧪 테스트" style="margin-bottom:6px;font-size:12px">
+        <input class="form-input" id="dbg-push-body" type="text" placeholder="내용" value="알림이 잘 도착하는지 확인" style="margin-bottom:8px;font-size:12px">
+        <button class="btn-outline" style="width:100%;padding:9px;font-size:12px" onclick="_sendDebugTestPush()">내 기기로 테스트 발송</button>
+      </div>
+
+      <!-- 최근 가입자 -->
+      <div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;letter-spacing:1px">🆕 RECENT SIGNUPS</div>
+        <div id="dbg-recent-signups" style="font-size:11px;color:var(--tx2);max-height:200px;overflow-y:auto">불러오는 중...</div>
+      </div>
+
+      <button onclick="closeSheetDirect('sheet-admin-debug')" style="width:100%;margin-top:6px;padding:13px;border-radius:12px;background:var(--sf2);border:1px solid var(--br);color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -2252,6 +2306,22 @@ input[type=file]{display:none}
         ✍️ <b style="color:var(--ac)">끄적끄적은 자유로운 일기장이에요</b><br>
         오늘 내 게코랑 있었던 일, 사육 일상, 짧은 메모까지 — 부담 없이 남겨보세요.
         <div style="margin-top:6px;font-size:11px;color:var(--tx3)">⚠️ 욕설·비방·개인정보·불법 거래 관련 글은 자동 신고 대상이 될 수 있어요.</div>
+      </div>
+      <div id="sale-guide" style="display:none;background:linear-gradient(135deg,rgba(74,222,128,.08),rgba(34,197,94,.04));border:1px solid rgba(74,222,128,.3);border-radius:12px;padding:11px 13px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.75">
+        <div style="font-size:12px;font-weight:800;color:#16a34a;margin-bottom:6px">🛡️ 안전 분양 체크리스트</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.8">
+          ✓ <b style="color:var(--tx)">내 개체 연결</b> 시 자동으로 <b style="color:#16a34a">✅ 볏마루도감 인증</b> 배지<br>
+          ✓ <b style="color:var(--tx)">실제 개체 사진</b> 첨부 — 인터넷 사진 도용 금지<br>
+          ✓ <b style="color:var(--tx)">CB 연도·성별·체중</b> 정확히 명시<br>
+          ✓ <b style="color:var(--tx)">선입금 거절 가능</b> — 직거래 또는 안전결제 권장<br>
+        </div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(74,222,128,.3);font-size:10.5px;color:var(--tx3)">
+          ⚠️ 허위·과장 정보, 도용 사진은 즉시 삭제 + 신고 누적 시 영구 정지
+        </div>
+      </div>
+      <div id="qna-guide" style="display:none;background:rgba(74,158,255,.06);border:1px solid rgba(74,158,255,.25);border-radius:12px;padding:11px 13px;margin-bottom:14px;font-size:12px;color:var(--tx2);line-height:1.7">
+        ❓ <b style="color:var(--blue)">사육 질문은 구체적일수록 좋아요</b><br>
+        개체 정보(나이·체중·환경 온습도·증상 시작 시점)를 함께 적어주시면 다른 사육자가 정확히 답해줄 수 있어요.
       </div>
       <div class="form-group">
         <label class="form-label">제목</label>
@@ -4477,6 +4547,9 @@ function _updateProfileUI() {
   }
   const avatarEl = document.getElementById('more-profile-avatar');
   if (avatarEl && _profile.avatar) avatarEl.textContent = _profile.avatar;
+  // 운영자 디버그 메뉴 가시성 (관리자만)
+  const dbgItem = document.getElementById('more-admin-debug');
+  if (dbgItem) dbgItem.style.display = (typeof _isAdmin === 'function' && _isAdmin()) ? '' : 'none';
 }
 
 function _saveProfileLocal() {
@@ -4709,7 +4782,12 @@ function renderHome() {
       preview.appendChild(buildPostCard(p, true));
     });
   } else {
-    preview.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:12px;text-align:center">아직 게시글이 없어요</div>';
+    preview.innerHTML = `<div style="padding:24px 16px;text-align:center;background:var(--sf2);border-radius:14px;border:1.5px dashed var(--br)">
+      <div style="font-size:30px;margin-bottom:6px">💬</div>
+      <div style="font-size:13px;color:var(--tx);font-weight:700;margin-bottom:4px">커뮤니티가 조용하네요</div>
+      <div style="font-size:11px;color:var(--tx3);line-height:1.6;margin-bottom:10px">우리 크레의 첫 자랑글을 남겨보세요 🦎</div>
+      <button class="btn-sm" style="padding:7px 16px;font-size:11px" onclick="showPage('comm');setTimeout(openWritePost,300)">+ 글쓰기</button>
+    </div>`;
   }
 
   // 분무 / 브리딩 / 사육장 / 부화 카드 갱신
@@ -5509,6 +5587,16 @@ function renderGeckoList() {
     return matchSearch && matchFilter;
   });
 
+  // 출생일(dob) 기준 나이 많은 순 — 입력 안 한 개체는 맨 아래
+  geckos.sort((a, b) => {
+    const da = a.dob || '';
+    const db = b.dob || '';
+    if (!da && !db) return 0;
+    if (!da) return 1;  // dob 없으면 뒤로
+    if (!db) return -1;
+    return da.localeCompare(db); // 빠른 날짜(나이 많은) 위로
+  });
+
   const cntAll = state.geckos.length;
   const cntF = state.geckos.filter(g=>g.sex==='암컷').length;
   const cntM = state.geckos.filter(g=>g.sex==='수컷').length;
@@ -5555,7 +5643,7 @@ function renderGeckoList() {
           <span style="font-size:12px;color:${sexColor};font-weight:700">${sexEmoji}</span>
         </div>
         <div class="gecko-morph">${g.morph || '📷 모프 미판별'}</div>
-        ${g.dob ? `<div style="font-size:10px;color:var(--blue);background:var(--bl2);border-radius:6px;padding:2px 7px;display:inline-block;margin-top:3px;font-weight:700">${getAge(g.dob)}</div>` : ''}
+        ${g.dob ? `<div style="font-size:10px;color:var(--blue);background:var(--bl2);border-radius:6px;padding:2px 7px;display:inline-block;margin-top:3px;font-weight:700">${getAge(g.dob)} <span style="color:var(--tx3);font-weight:500;margin-left:3px">${g.dob.slice(2).replace(/-/g,'.')}</span></div>` : ''}
         <div class="gecko-tags">${incompleteTag}${statusTag}${cageTag}</div>
       </div>
       <div class="gecko-right">
@@ -7051,14 +7139,119 @@ function buildPostCard(p, compact) {
 
 let _currentPostId = null;
 
-// ── 로그인 안내 자세히 보기 ──
+// ── 로그인 안내 자세히 보기 + 가입 방식 찾기 ──
 function _showLoginInfoDialog() {
   _showCustomDialog({
     mode: 'alert',
     title: '💡 로그인 방식 안내',
-    message: '처음 가입한 로그인 방식으로만 입장할 수 있어요.\n\n예) 처음에 카카오로 가입했다면 다음에도 카카오로만 로그인 가능합니다.\n\n같은 이메일이라도 다른 방식으로 가입하면 별도 계정이 생성되어 데이터가 분리됩니다.',
+    message: '처음 가입한 로그인 방식으로만 입장할 수 있어요.\n\n예) 처음에 카카오로 가입했다면 다음에도 카카오로만 로그인 가능합니다.\n\n같은 이메일이라도 다른 방식으로 가입하면 별도 계정이 생성되어 데이터가 분리됩니다.\n\n어느 방식으로 가입했는지 모르시겠다면:\n① 구글로 계속하기 → 안 되면\n② 카카오로 계속하기 → 안 되면\n③ 이메일/비밀번호로 시도\n\n3가지 모두 안 되면 "비밀번호 잊으셨나요?"로 재설정 메일을 받아보세요.',
     okText: '확인',
   });
+}
+
+// ══════════════════════════════
+// 🛠️ 운영자 디버그 (관리자 전용)
+// ══════════════════════════════
+async function openAdminDebug() {
+  if (!_isAdmin()) { showToast('⚠️ 운영자만 접근 가능'); return; }
+  document.getElementById('dbg-admin-email').textContent = ADMIN_EMAIL;
+  openSheet('sheet-admin-debug');
+  _loadAdminDebugData();
+}
+
+async function _loadAdminDebugData() {
+  if (!_isAdmin()) return;
+  // 사용자 통계
+  try {
+    const { count: totalProfiles } = await _supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: betaCount } = await _supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_beta_tester', true);
+    const { count: geckoCount } = await _supabase.from('geckos').select('*', { count: 'exact', head: true });
+    const { count: postCount } = await _supabase.from('posts').select('*', { count: 'exact', head: true });
+    const { count: subCount } = await _supabase.from('push_subscriptions').select('*', { count: 'exact', head: true });
+    const stats = document.getElementById('dbg-user-stats');
+    if (stats) {
+      stats.innerHTML = `
+        <div>· 전체 가입자: <b style="color:var(--tx)">${totalProfiles ?? '?'}</b>명</div>
+        <div>· 베타테스터: <b style="color:var(--ac)">${betaCount ?? '?'}</b>명 (AI 무제한)</div>
+        <div>· 등록 개체: <b style="color:var(--tx)">${geckoCount ?? '?'}</b>마리</div>
+        <div>· 게시글: <b style="color:var(--tx)">${postCount ?? '?'}</b>개</div>
+        <div>· 푸시 구독: <b style="color:var(--blue)">${subCount ?? '?'}</b>개 기기</div>
+      `;
+    }
+  } catch(e) {
+    const stats = document.getElementById('dbg-user-stats');
+    if (stats) stats.innerHTML = '<span style="color:var(--coral)">통계 로드 실패: ' + (e.message||'') + '</span>';
+  }
+
+  // 알림 발송 이력 (최근 30건)
+  try {
+    const { data: notifs } = await _supabase.from('notification_log')
+      .select('user_id, type, fired_for_date, fired_at')
+      .order('fired_at', { ascending: false })
+      .limit(30);
+    const list = document.getElementById('dbg-notif-list');
+    if (list) {
+      if (!notifs || notifs.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">발송 이력 없음</div>';
+      } else {
+        list.innerHTML = notifs.map(n => {
+          const time = new Date(n.fired_at).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+          const typeColor = n.type === 'misting' ? 'var(--blue)' : n.type === 'hatching' ? '#ff8fb1' : 'var(--tx2)';
+          const uid = (n.user_id || '').slice(0, 8);
+          return `<div style="padding:6px 0;border-bottom:1px solid var(--br2);display:flex;align-items:center;gap:8px;font-size:11px">
+            <span style="color:${typeColor};font-weight:700;width:55px;flex-shrink:0">${n.type}</span>
+            <span style="color:var(--tx3);font-family:'DM Mono',monospace;flex-shrink:0">${uid}</span>
+            <span style="color:var(--tx3);margin-left:auto;flex-shrink:0">${time}</span>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) {
+    const list = document.getElementById('dbg-notif-list');
+    if (list) list.innerHTML = '<span style="color:var(--coral)">로그 조회 실패: ' + (e.message||'') + '</span>';
+  }
+
+  // 최근 가입자 (5명)
+  try {
+    const { data: recent } = await _supabase.from('profiles')
+      .select('nickname, created_at, tier, is_beta_tester')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    const list = document.getElementById('dbg-recent-signups');
+    if (list) {
+      if (!recent || recent.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:10px;color:var(--tx3)">데이터 없음</div>';
+      } else {
+        list.innerHTML = recent.map(r => {
+          const time = new Date(r.created_at).toLocaleDateString('ko-KR', {month:'2-digit',day:'2-digit'});
+          const badge = r.is_beta_tester ? '<span style="background:var(--ac2);color:var(--ac);font-size:9px;padding:1px 5px;border-radius:4px;margin-left:4px">베타</span>' : '';
+          return `<div style="padding:5px 0;border-bottom:1px solid var(--br2);display:flex;align-items:center;gap:6px">
+            <span style="color:var(--tx);font-weight:600">${String(r.nickname||'(이름없음)').slice(0,20)}</span>${badge}
+            <span style="color:var(--tx3);margin-left:auto;font-size:10px">${time}</span>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) {}
+}
+
+async function _sendDebugTestPush() {
+  if (!_isAdmin()) return;
+  const title = document.getElementById('dbg-push-title').value.trim() || '볏마루도감 🧪 테스트';
+  const body = document.getElementById('dbg-push-body').value.trim() || '알림 테스트';
+  try {
+    const session = (await _supabase.auth.getSession()).data.session;
+    if (!session) { showToast('세션 없음'); return; }
+    const res = await fetch(SUPABASE_URL + '/functions/v1/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ user_id: _currentUser.id, title, body, tag: 'debug-test' }),
+    });
+    if (res.ok) showToast('✅ 푸시 발송됨 — 알림 확인');
+    else showToast('❌ 발송 실패: ' + res.status);
+  } catch(e) {
+    showToast('❌ ' + (e.message||''));
+  }
 }
 
 // ── 비밀번호 재설정 (이메일 가입자) ──
@@ -7174,6 +7367,12 @@ function _updateWriteFormForCategory() {
   const bodyEl = document.getElementById('post-body-input');
   const priceGroup = document.getElementById('post-price-group');
   const diaryGuide = document.getElementById('diary-guide');
+  const saleGuide = document.getElementById('sale-guide');
+  const qnaGuide = document.getElementById('qna-guide');
+  // 가이드 일괄 숨김 후 해당 카테고리만 표시
+  if (diaryGuide) diaryGuide.style.display = 'none';
+  if (saleGuide)  saleGuide.style.display = 'none';
+  if (qnaGuide)   qnaGuide.style.display = 'none';
 
   if (cat === 'info') {
     if (titleEl) titleEl.placeholder = '예: 오늘 코코랑 있었던 일';
@@ -7184,17 +7383,17 @@ function _updateWriteFormForCategory() {
     if (titleEl) titleEl.placeholder = '예: 우리 코코 첫 산란!';
     if (bodyEl) bodyEl.placeholder = '함께 축하하고 싶은 순간을 공유해주세요. 🎉';
     if (priceGroup) priceGroup.style.display = 'none';
-    if (diaryGuide) diaryGuide.style.display = 'none';
   } else if (cat === 'qna') {
     if (titleEl) titleEl.placeholder = '예: 베이비 식욕 부진, 어떻게 해야 할까요?';
-    if (bodyEl) bodyEl.placeholder = '상황을 자세히 적어주시면 다른 사육자분들이 답해주실 거예요.';
+    if (bodyEl) bodyEl.placeholder = '상황을 자세히 적어주시면 다른 사육자분들이 답해주실 거예요. 개체 정보(나이·체중·환경)도 함께 적어주시면 좋아요.';
     if (priceGroup) priceGroup.style.display = 'none';
-    if (diaryGuide) diaryGuide.style.display = 'none';
+    if (qnaGuide) qnaGuide.style.display = 'block';
   } else {
-    if (titleEl) titleEl.placeholder = '예: 릴리화이트 암컷 분양합니다';
-    if (bodyEl) bodyEl.placeholder = '개체 정보, 특징, 거래 방법 등을 자세히 적어주세요.';
+    // sale
+    if (titleEl) titleEl.placeholder = '예: 릴리화이트 암컷 CB25 분양합니다';
+    if (bodyEl) bodyEl.placeholder = '[필수] 모프 · 성별 · 출생연도(CB) · 체중\n[권장] 혈통 · 식성 · 거래 방법(직거래/안전결제)\n\n예시)\n• 모프: 릴리화이트 달마시안\n• 성별: ♀ 암컷\n• 출생: 2025 CB\n• 체중: 35g\n• 식성: 양호 (슈푸/곤충 골고루)\n• 직거래 가능 지역: 인천/서울';
     if (priceGroup) priceGroup.style.display = '';
-    if (diaryGuide) diaryGuide.style.display = 'none';
+    if (saleGuide) saleGuide.style.display = 'block';
   }
 }
 
@@ -8549,17 +8748,17 @@ function openMorphGuide() {
     if (m.grade !== lastGrade) {
       lastGrade = m.grade;
       const gradeLabels = {S:'S급 — 최고 희귀 모프', A:'A급 — 하이엔드 모프', B:'B급 — 인기 기본 모프', C:'C급 — 기본형'};
-      gradeHeader = `<div style="font-size:12px;font-weight:800;color:${gInfo.color};padding:4px 2px;letter-spacing:.5px;font-family:'DM Mono',monospace">${gradeLabels[m.grade]||m.grade}</div>`;
+      gradeHeader = `<div style="margin:18px 0 4px;padding:10px 14px;background:${gInfo.bg};border-left:4px solid ${gInfo.color};border-radius:10px;font-size:14px;font-weight:900;color:${gInfo.color};letter-spacing:.3px">${gradeLabels[m.grade]||m.grade}</div>`;
     }
-    return gradeHeader + `<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:15px;font-weight:800">${name}</div>
+    return gradeHeader + `<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:17px;font-weight:900;color:var(--tx)">${name}</div>
         <span class="grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${gInfo.label}</span>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px">
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px">
         ${m.traits.map(t=>`<span class="tag tag-green">${t}</span>`).join('')}
       </div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.65;margin-bottom:9px">${m.desc}</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.75;margin-bottom:11px">${m.desc}</div>
       <div style="background:var(--sf2);border-radius:10px;padding:9px 11px;margin-bottom:8px">
         <div style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;margin-bottom:4px">🧬 유전 방식</div>
         <div style="font-size:12px;font-weight:600;color:var(--tx)">${m.genetics.type}</div>
