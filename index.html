@@ -13382,4 +13382,202 @@ async function deleteSingleRecord(recordId, recordCreatedAt, refreshCtx) {
     message: '삭제 후에는 되돌릴 수 없어요.',
     okText: '삭제', cancelText: '취소'
   });
-  if (!ok) retur
+  if (!ok) return;
+  try {
+    if (recordId) {
+      await _supabase.from('gecko_logs').delete().eq('id', recordId).eq('user_id', _currentUser.id);
+    } else if (recordCreatedAt) {
+      await _supabase.from('gecko_logs').delete().eq('created_at', recordCreatedAt).eq('user_id', _currentUser.id);
+    }
+  } catch(e) {}
+  // localStorage 정리
+  try {
+    const key = 'gecko_logs_' + _currentUser.id;
+    const local = JSON.parse(localStorage.getItem(key) || '[]');
+    const filtered = local.filter(r => {
+      if (recordId && r.id) return String(r.id) !== String(recordId);
+      if (recordCreatedAt) return r.created_at !== recordCreatedAt;
+      return true;
+    });
+    localStorage.setItem(key, JSON.stringify(filtered));
+  } catch(e) {}
+  showToast('🗑 기록 삭제됨');
+  // 화면 새로고침
+  if (refreshCtx === 'all') {
+    if (typeof renderAllRecords === 'function') renderAllRecords();
+  } else if (refreshCtx) {
+    loadRecords(refreshCtx);
+  }
+}
+
+async function loadRecords(geckoId) {
+  let records = [];
+  try {
+    const { data, error } = await _supabase.from('gecko_logs').select('*').eq('gecko_id', geckoId).eq('user_id', _currentUser.id).order('date', { ascending: false });
+    if (!error && data) records = data;
+  } catch(e) {}
+  try {
+    const key='gecko_logs_'+_currentUser.id; const local=JSON.parse(localStorage.getItem(key)||'[]');
+    const localForGecko = local.filter(r => String(r.gecko_id) === String(geckoId));
+    const existingDates = new Set(records.map(r => r.created_at));
+    localForGecko.forEach(r => { if (!existingDates.has(r.created_at)) records.push(r); });
+  } catch(e) {}
+  records.sort((a, b) => b.date.localeCompare(a.date));
+  renderWeightChart(records.filter(r => r.type === 'weight'));
+  renderShedChart(records.filter(r => r.type === 'shed'), geckoId);
+  const timeline = document.getElementById('record-timeline');
+  if (records.length === 0) { timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요. 위 버튼으로 첫 기록을 추가해보세요!</div>'; return; }
+  const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'}, egg:{emoji:'🥚',label:'산란',color:'#ff8fb1',bg:'rgba(255,143,177,.15)'} };
+  timeline.innerHTML = records.map(r => {
+    const c = tc[r.type] || tc.memo;
+    let detail;
+    if (r.type === 'weight') detail = '<b>'+r.value+'g</b>';
+    else if (r.type === 'feed') detail = r.value;
+    else if (r.type === 'shed') detail = r.value;
+    else if (r.type === 'egg') {
+      detail = '<b>'+r.value+'</b>';
+      if (String(r.value).startsWith('유정란')) {
+        const t = _extractTempFromNote(r.note);
+        const h = _calcHatchRange(r.date, t);
+        if (h) {
+          const tLabel = t != null ? ' · ' + t + '°C' : '';
+          detail += tLabel + '<div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ' + h.early + ' ~ ' + h.late + '</div>';
+        }
+      }
+      // 해칭 완료 버튼 (개체별 기록 시트 안에서만, 유정란 + 아직 해칭 안된 경우)
+      if (String(r.value).startsWith('유정란') && !String(r.note||'').includes('hatched=')) {
+        detail += `<button class="btn-sm" style="margin-top:6px;padding:5px 10px;font-size:11px;background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="event.stopPropagation();markEggHatched('${r.id||r.created_at}','${r.gecko_id}','${r.date}','${r.value}')">🐣 해칭 완료</button>`;
+      }
+    }
+    else detail = r.note || '';
+    const noteHtml = (r.note && r.type!=='health' && r.type!=='memo') ? '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+r.note+'</div>' : '';
+    const rid = r.id ? String(r.id).replace(/'/g,"\\'") : '';
+    const rca = r.created_at ? String(r.created_at).replace(/'/g,"\\'") : '';
+    const delBtn = '<button onclick="event.stopPropagation();deleteSingleRecord(\''+rid+'\',\''+rca+'\',\''+String(geckoId).replace(/\'/g,"\\'")+'\')" aria-label="기록 삭제" style="position:absolute;top:8px;right:6px;width:28px;height:28px;background:transparent;border:none;color:var(--tx3);font-size:16px;cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,107,107,.15)">×</button>';
+    const safeNote = String(r.note || '').replace(/'/g,"\\'").replace(/\n/g,' ');
+    const editFn = r.type === 'egg'
+      ? `editEggRecord('${rid}','${r.date||''}','${safeNote}','${String(geckoId).replace(/'/g,"\\'")}')`
+      : `editRecordDate('${rid}','${r.date||''}','${String(geckoId).replace(/'/g,"\\'")}')`;
+    const editTitle = r.type === 'egg' ? '날짜·온도 수정' : '날짜 변경';
+    const dateBtn = '<div class="record-date" onclick="'+editFn+'" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="'+editTitle+'">'+r.date+' ✎</div>';
+    return '<div class="record-item type-'+r.type+'" style="position:relative">'+delBtn+dateBtn+'<div class="record-content" style="padding-right:24px"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
+  }).join('');
+}
+
+function renderShedChart(shedRecords, geckoId) {
+  const container = document.getElementById('record-shed-chart');
+  const barsDiv = document.getElementById('shed-chart-bars');
+  const summaryDiv = document.getElementById('shed-chart-summary');
+  if (!container || !barsDiv) return;
+  if (!shedRecords || shedRecords.length < 1) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+
+  // 시간 오름차순 정렬
+  const sorted = [...shedRecords].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  // 탈피 간 간격(일수) 계산
+  const gaps = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1].date);
+    const cur = new Date(sorted[i].date);
+    const days = Math.floor((cur - prev) / 86400000);
+    if (days > 0 && days < 365) gaps.push({ date: sorted[i].date, days });
+  }
+
+  // 평균 탈피 주기
+  const avgCycle = gaps.length > 0
+    ? Math.round(gaps.reduce((s, g) => s + g.days, 0) / gaps.length)
+    : null;
+
+  // 마지막 탈피 후 경과일
+  const lastShed = sorted[sorted.length - 1].date;
+  const daysSinceLast = lastShed
+    ? Math.floor((Date.now() - new Date(lastShed).getTime()) / 86400000)
+    : null;
+
+  if (summaryDiv) {
+    if (avgCycle != null) {
+      let nextHint = '';
+      if (daysSinceLast != null && avgCycle > 0) {
+        const dDay = avgCycle - daysSinceLast;
+        if (dDay > 0) {
+          nextHint = ` · 다음 예상 D-${dDay}`;
+        } else if (dDay >= -7) {
+          nextHint = ` · 🔔 곧 탈피 시기예요!`;
+        } else {
+          nextHint = ` · 마지막 탈피 ${daysSinceLast}일 전`;
+        }
+      }
+      summaryDiv.textContent = `📊 평균 ${avgCycle}일 주기 (${gaps.length}회 측정)${nextHint}`;
+    } else {
+      summaryDiv.textContent = '탈피 기록을 2회 이상 쌓으면 평균 주기가 계산돼요';
+      summaryDiv.style.color = 'var(--tx3)';
+    }
+  }
+
+  // 차트 막대 (최근 8회)
+  const maxGap = gaps.length > 0 ? Math.max(...gaps.map(g => g.days), 1) : 1;
+  const recent = sorted.slice(-8);
+  let html = '';
+  recent.forEach((r, idx) => {
+    const dateLabel = (r.date || '').slice(5);
+    if (idx === 0) {
+      html += `<div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">${dateLabel}</div>
+        <div style="flex:1;font-size:10px;color:var(--tx3)">첫 기록</div>
+        <div style="width:50px"></div>
+      </div>`;
+    } else {
+      const prev = new Date(recent[idx - 1].date);
+      const cur = new Date(r.date);
+      const days = Math.max(1, Math.floor((cur - prev) / 86400000));
+      const pct = (days / maxGap) * 100;
+      html += `<div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">${dateLabel}</div>
+        <div style="flex:1;background:var(--sf2);border-radius:2px;height:4px">
+          <div style="height:4px;width:${pct}%;background:var(--blue);border-radius:2px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--blue);width:50px;flex-shrink:0">+${days}일</div>
+      </div>`;
+    }
+  });
+  barsDiv.innerHTML = html;
+
+  // 부수효과: gecko 행에 shedCycle/lastShedAt 캐시 (탈피 알림 활성화용)
+  if (geckoId && avgCycle != null && avgCycle > 0) {
+    try {
+      const g = state.geckos.find(x => String(x.id) === String(geckoId));
+      if (g) {
+        g.shedCycle = avgCycle;
+        g.lastShedAt = lastShed;
+      }
+    } catch(e) {}
+  }
+}
+
+function renderWeightChart(weightRecords) {
+  const container = document.getElementById('record-weight-chart');
+  const barsDiv = document.getElementById('weight-chart-bars');
+  if (!container || !barsDiv) return;
+  if (weightRecords.length < 1) { container.style.display='none'; return; }
+  container.style.display = 'block';
+  const sorted = [...weightRecords].sort((a,b) => a.date.localeCompare(b.date));
+  const maxW = Math.max(...sorted.map(r => parseFloat(r.value)));
+  barsDiv.innerHTML = sorted.slice(-8).map(r => {
+    const w = parseFloat(r.value), pct = maxW>0?(w/maxW*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px"><div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">'+r.date.slice(5)+'</div><div style="flex:1;background:var(--sf2);border-radius:2px;height:4px"><div class="weight-chart-bar" style="width:'+pct+'%"></div></div><div style="font-size:11px;font-weight:700;color:var(--ac);width:35px;flex-shrink:0">'+w+'g</div></div>';
+  }).join('');
+}
+
+</script>
+
+<!-- 사업자 정보 푸터 -->
+<div id="business-info-footer" style="background:#0a1209;border-top:1px solid rgba(93,220,106,0.2);padding:24px 16px;text-align:center;font-size:11px;color:rgba(221,240,222,0.5);line-height:1.8;margin-top:40px">
+<div style="max-width:480px;margin:0 auto">
+<div style="margin-bottom:8px;font-size:12px;color:rgba(221,240,222,0.7)">볏마루도감 (ByetMaru)</div>
+<div>상호: 리비틀 (L.Beetle) | 대표: 이규훈<br>사업자등록번호: 104-16-65460 | 통신판매업: 제 2026-인천연수구-1224 호<br>소재지: 인천광역시 연수구 컨벤시아대로 81, 5층 509-J630호<br>구매안전서비스: 토스페이먼츠(주) (1544-7772)<br>연락처: dlrbgns456@gmail.com</div>
+</div>
+</div>
+
+</body>
+</html>
