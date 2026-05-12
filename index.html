@@ -678,7 +678,7 @@ input[type=file]{display:none}
   <div id="shared-gecko-content"></div>
   <div style="text-align:center;margin-top:20px">
     <a href="/" style="display:inline-block;background:var(--ac);color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:700">볏마루도감 앱 시작하기</a>
-    <div style="font-size:10px;color:var(--tx3);margin-top:10px">byetmaru.com</div>
+    <div class="web-only-url" style="font-size:10px;color:var(--tx3);margin-top:10px">byetmaru.com</div>
   </div>
 </div>
 
@@ -764,6 +764,10 @@ input[type=file]{display:none}
       <button class="social-btn kakao-btn" onclick="signInWithKakao()">
         <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0"><path fill="#3C1E1E" d="M12 3C6.477 3 2 6.477 2 10.5c0 2.544 1.394 4.788 3.5 6.186L4.5 20.5l4.229-2.797C9.584 17.9 10.775 18 12 18c5.523 0 10-3.477 10-7.5S17.523 3 12 3z"/></svg>
         카카오로 계속하기
+      </button>
+      <button class="social-btn" onclick="signInWithApple()" style="background:#000;color:#fff;border:1px solid #333">
+        <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0;fill:#fff"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.53-3.23 0-1.44.62-2.2.44-3.06-.4C3.79 16.17 4.36 9.02 8.87 8.76c1.27.07 2.15.72 2.91.77.79-.16 1.55-.83 2.93-.71 1.52.13 2.65.75 3.35 1.86-3.02 1.83-2.37 5.83.52 6.97-.63 1.64-1.44 3.27-2.53 4.63zM12.03 8.7C11.88 6.38 13.76 4.5 15.95 4.33c.34 2.62-2.38 4.58-3.92 4.37z"/></svg>
+        Apple로 계속하기
       </button>
 
       <div style="text-align:center;margin-top:10px;font-size:10.5px;color:var(--tx3);line-height:1.5">
@@ -1485,6 +1489,14 @@ input[type=file]{display:none}
       <div class="more-item-info">
         <div class="more-item-title">알림 설정</div>
         <div class="more-item-sub">급이·체중·탈피 리마인더, 커뮤니티 알림</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+    <div class="more-item" onclick="openBlockedUsersManager()">
+      <div class="more-icon" style="background:var(--sf2)">🚫</div>
+      <div class="more-item-info">
+        <div class="more-item-title">차단 관리</div>
+        <div class="more-item-sub">차단한 사용자 목록 확인 및 해제</div>
       </div>
       <div class="more-item-arrow">›</div>
     </div>
@@ -2502,6 +2514,12 @@ const TIERS = {
     price: { monthly: 0, yearly: 0 },
   },
 };
+
+// iOS 네이티브 앱 감지 (Capacitor iOS)
+function _isIOSNativeApp() {
+  return (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios')
+    || (/iPhone|iPad|iPod/.test(navigator.userAgent) && navigator.userAgent.includes('com.lbeetle.byetmaru'));
+}
 
 // AI 크레딧 팩 정의
 const AI_CREDIT_PACKS = [
@@ -7073,8 +7091,8 @@ async function renderPosts() {
     return;
   }
 
-  // 공지는 커뮤니티 목록에서 제외 (더보기 > 공지사항에서 별도 노출)
-  const filtered = all.filter(p => p.cat !== 'notice');
+  // 공지는 커뮤니티 목록에서 제외 + 차단한 유저 글 숨김
+  const filtered = all.filter(p => p.cat !== 'notice' && !_isUserBlocked(p.user_id));
   filtered.forEach(p => list.appendChild(buildPostCard(p, false)));
 }
 
@@ -7533,7 +7551,10 @@ async function openPostDetail(p) {
         <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="submitComment()">등록</button>
       </div>
       ${p.isOwn ? '<button class="btn-outline" onclick="deletePost(' + p.id + ')" style="color:var(--coral);border-color:var(--coral);background:var(--co2);margin-top:10px;width:100%">🗑 이 게시글 삭제</button>' : ''}
-      ${!p.isOwn && !isNotice ? '<button class="btn-outline" onclick="reportPost(' + p.id + ')" style="color:var(--tx3);border-color:var(--br);margin-top:8px;width:100%;font-size:12px">🚨 이 게시글 신고하기</button>' : ''}
+      ${!p.isOwn && !isNotice ? `<div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-outline" onclick="reportPost(${p.id})" style="flex:1;color:var(--tx3);border-color:var(--br);font-size:12px">🚨 게시글 신고</button>
+        <button class="btn-outline" onclick="blockUser('${p.user_id}','${(p.author||'').replace(/'/g,'')}')" style="flex:1;color:var(--tx3);border-color:var(--br);font-size:12px">🚫 사용자 차단</button>
+      </div>` : ''}
     </div>`;
   openSheet('sheet-post-detail');
   loadComments(p.id);
@@ -7610,12 +7631,14 @@ async function loadComments(postId) {
       list.innerHTML = '<div style="background:var(--sf2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--tx2)">궁금한 게 있으면 댓글로 물어보세요!</div>';
       return;
     }
-    list.innerHTML = data.map(c => `
+    list.innerHTML = data.filter(c => !_isUserBlocked(c.user_id)).map(c => `
       <div style="background:var(--sf2);border-radius:10px;padding:10px 12px;margin-bottom:6px">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span style="font-size:12px;font-weight:700">${c.author}</span>
           <span style="font-size:10px;color:var(--tx3);margin-left:auto">${_timeAgo(c.created_at)}</span>
-          ${_currentUser && c.user_id === _currentUser.id ? `<button onclick="deleteComment(${c.id})" style="background:none;border:none;font-size:11px;color:var(--coral);cursor:pointer;padding:0">삭제</button>` : ''}
+          ${_currentUser && c.user_id === _currentUser.id
+            ? `<button onclick="deleteComment(${c.id})" style="background:none;border:none;font-size:11px;color:var(--coral);cursor:pointer;padding:0">삭제</button>`
+            : (_currentUser ? `<button onclick="reportComment(${c.id},'${(c.author||'').replace(/'/g,'')}')" style="background:none;border:none;font-size:10px;color:var(--tx3);cursor:pointer;padding:0" title="댓글 신고">🚨</button><button onclick="blockUser('${c.user_id}','${(c.author||'').replace(/'/g,'')}')" style="background:none;border:none;font-size:10px;color:var(--tx3);cursor:pointer;padding:0" title="사용자 차단">🚫</button>` : '')}
         </div>
         <div style="font-size:13px;color:var(--tx2);line-height:1.5">${c.body}</div>
       </div>`).join('');
@@ -9032,6 +9055,113 @@ async function _logPaymentError(merchantUid, errorMsg, detail) {
 
 // 게시물 신고
 let _reportStep = 0;
+
+// ── 유저 차단 (localStorage 기반, Apple 1.2.0 UGC 가이드라인 충족) ──
+function _getBlockedUsers() {
+  try { return JSON.parse(localStorage.getItem('mycre_blocked_users') || '[]'); }
+  catch(e) { return []; }
+}
+function _isUserBlocked(userId) {
+  return _getBlockedUsers().includes(userId);
+}
+async function blockUser(userId, authorName) {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  if (userId === _currentUser.id) { showToast('본인을 차단할 수 없어요'); return; }
+  const confirmed = await $confirm(
+    `"${authorName || '이 사용자'}"님을 차단하면:\n· 이 사용자의 글과 댓글이 숨겨집니다\n· 차단은 설정 > 차단 관리에서 해제 가능`,
+    '🚫 사용자 차단'
+  );
+  if (!confirmed) return;
+  const blocked = _getBlockedUsers();
+  if (!blocked.includes(userId)) {
+    blocked.push(userId);
+    localStorage.setItem('mycre_blocked_users', JSON.stringify(blocked));
+  }
+  showToast('🚫 차단되었습니다. 해당 사용자의 콘텐츠가 숨겨집니다.');
+  // 현재 보고 있는 게시글 상세 닫고 목록 새로고침
+  closeSheet('sheet-post-detail');
+  renderPosts();
+}
+function unblockUser(userId) {
+  const blocked = _getBlockedUsers().filter(id => id !== userId);
+  localStorage.setItem('mycre_blocked_users', JSON.stringify(blocked));
+  showToast('차단이 해제되었습니다.');
+}
+
+// 댓글 신고
+async function reportComment(commentId, authorName) {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  const reasons = ['스팸/광고','욕설/비방','부적절한 콘텐츠','사기 의심','기타'];
+  const overlay = document.createElement('div');
+  overlay.setAttribute('style','position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)');
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1.5px solid var(--br);border-radius:18px;padding:22px;max-width:320px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+      <div style="font-size:18px;font-weight:900;margin-bottom:4px;text-align:center">🚨 댓글 신고</div>
+      <div style="font-size:12px;color:var(--tx3);text-align:center;margin-bottom:16px">"${(authorName||'').slice(0,10)}" 님의 댓글</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${reasons.map(r =>
+          `<button onclick="_submitCommentReport(${commentId},'${r}');this.closest('div[style*=fixed]').remove()" style="padding:12px;border-radius:10px;background:var(--sf2);border:1px solid var(--br);color:var(--tx);font-size:13px;font-family:inherit;cursor:pointer;text-align:left">${r}</button>`
+        ).join('')}
+      </div>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;background:none;border:1px solid var(--br);color:var(--tx3);font-size:12px;font-family:inherit;cursor:pointer">취소</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+// 차단 관리 화면
+async function openBlockedUsersManager() {
+  const blocked = _getBlockedUsers();
+  const overlay = document.createElement('div');
+  overlay.setAttribute('style','position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)');
+
+  let listHtml = '';
+  if (blocked.length === 0) {
+    listHtml = '<div style="text-align:center;color:var(--tx3);font-size:13px;padding:20px">차단한 사용자가 없습니다.</div>';
+  } else {
+    // 프로필 정보 가져오기
+    try {
+      const { data: profiles } = await _supabase.from('profiles').select('id,name').in('id', blocked);
+      const profileMap = {};
+      (profiles || []).forEach(p => profileMap[p.id] = p.name || '알 수 없는 사용자');
+      listHtml = blocked.map(uid => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--sf2);border-radius:10px;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:600">${profileMap[uid] || uid.slice(0,8) + '…'}</span>
+          <button onclick="unblockUser('${uid}');this.closest('div[style*=fixed]').remove();openBlockedUsersManager()" style="padding:6px 12px;border-radius:8px;background:var(--ac2);border:1px solid var(--ac);color:var(--ac);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">차단 해제</button>
+        </div>`).join('');
+    } catch(e) {
+      listHtml = blocked.map(uid => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--sf2);border-radius:10px;margin-bottom:6px">
+          <span style="font-size:13px">${uid.slice(0,8)}…</span>
+          <button onclick="unblockUser('${uid}');this.closest('div[style*=fixed]').remove();openBlockedUsersManager()" style="padding:6px 12px;border-radius:8px;background:var(--ac2);border:1px solid var(--ac);color:var(--ac);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">차단 해제</button>
+        </div>`).join('');
+    }
+  }
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1.5px solid var(--br);border-radius:18px;padding:22px;max-width:360px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+      <div style="font-size:18px;font-weight:900;margin-bottom:4px;text-align:center">🚫 차단 관리</div>
+      <div style="font-size:12px;color:var(--tx3);text-align:center;margin-bottom:16px">차단한 사용자의 글·댓글이 숨겨집니다</div>
+      ${listHtml}
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;margin-top:12px;padding:11px;border-radius:10px;background:none;border:1px solid var(--br);color:var(--tx3);font-size:12px;font-family:inherit;cursor:pointer">닫기</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+async function _submitCommentReport(commentId, reason) {
+  try {
+    await _supabase.from('reports').insert({
+      reporter_id: _currentUser.id,
+      comment_id: commentId,
+      reason: reason
+    });
+    _notifyAdmin('comment_report', '댓글 신고 접수',
+      `신고자: ${_currentUser.email}\n댓글 ID: ${commentId}\n사유: ${reason}`);
+    showToast('🚨 댓글 신고가 접수되었습니다.');
+  } catch(e) {
+    showToast('신고 접수 중 오류가 발생했습니다.');
+  }
+}
 async function reportPost(postId) {
   if (_reportStep === 0) {
     _reportStep = 1;
@@ -10020,6 +10150,14 @@ async function signInWithKakao() {
   if (error) showAuthErr('카카오 로그인 실패: ' + error.message);
 }
 
+async function signInWithApple() {
+  const { error } = await _supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: { redirectTo: 'https://byetmaru.com' }
+  });
+  if (error) showAuthErr('Apple 로그인 실패: ' + error.message);
+}
+
 function showAuthErr(msg) {
   const el = document.getElementById('auth-err');
   if (el) { el.textContent = msg; el.style.color = 'var(--coral)'; }
@@ -10847,7 +10985,6 @@ async function openNotifSettings() {
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">
             ✨ 탈피 주기 알림
-            <span style="font-size:9px;background:var(--am2);color:var(--am);border:1px solid var(--am);border-radius:4px;padding:1px 5px;font-weight:800;letter-spacing:.3px">준비중</span>
           </div>
           <div style="font-size:11px;color:var(--tx3);margin-top:2px">탈피 기록이 충분히 쌓이면 자동으로 켜집니다</div>
         </div>
@@ -11942,6 +12079,32 @@ function _showAICreditPopup() {
   overlay.setAttribute('data-ai-credit-popup', '1');
   overlay.setAttribute('style','position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)');
 
+  // iOS 네이티브 앱에서는 웹사이트 안내만 표시 (Apple Guideline 3.1.1)
+  if (_isIOSNativeApp()) {
+    overlay.innerHTML = `
+      <div style="background:var(--card);border:2px solid var(--ac);border-radius:22px;padding:28px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+        <div style="font-size:48px;margin-bottom:12px">🔬</div>
+        <div style="font-size:18px;font-weight:900;color:var(--ac);margin-bottom:6px">AI 모프 판별</div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:6px">
+          오늘의 무료 3회를 모두 사용했어요.
+        </div>
+        <div style="font-size:12px;color:var(--tx3);line-height:1.6;margin-bottom:16px;padding:12px;background:var(--sf2);border-radius:10px">
+          추가 크레딧은 웹사이트 <b style="color:var(--ac)">byetmaru.com</b>에서 충전할 수 있어요.
+          충전한 크레딧은 앱에서도 동일하게 사용됩니다.
+        </div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:16px">
+          💡 무료 3회는 매일 자정(KST)에 리셋됩니다
+        </div>
+        <button onclick="this.closest('[data-ai-credit-popup]').remove()"
+                style="width:100%;padding:12px;border-radius:12px;background:var(--sf2);border:1px solid var(--br);color:var(--tx3);font-size:13px;font-family:inherit;cursor:pointer">
+          확인
+        </button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    return;
+  }
+
   const packsHTML = AI_CREDIT_PACKS.map(p => `
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color .15s"
          onclick="purchaseAICredit('${p.id}')"
@@ -11993,6 +12156,12 @@ async function purchaseAICredit(packId) {
   const pack = AI_CREDIT_PACKS.find(p => p.id === packId);
   if (!pack) return;
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+
+  // iOS 네이티브 앱에서는 외부 결제 차단 (Apple Guideline 3.1.1)
+  if (_isIOSNativeApp()) {
+    showToast('iOS 앱에서는 웹사이트(byetmaru.com)에서 크레딧을 충전해 주세요.');
+    return;
+  }
 
   // 팝업 닫기
   document.querySelectorAll('[data-ai-credit-popup]').forEach(el => el.remove());
@@ -12284,6 +12453,11 @@ function _showUpdateBanner(newWorker) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // ── Capacitor/네이티브 앱에서 웹 전용 URL 숨김 (Apple 4.0.0 Design)
+  if (window.Capacitor || navigator.userAgent.includes('com.lbeetle.byetmaru')) {
+    document.querySelectorAll('.web-only-url').forEach(el => el.style.display = 'none');
+  }
+
   // ── QR 공유 페이지: ?gecko=ID&owner=UID 파라미터 감지
   const _urlParams = new URLSearchParams(window.location.search);
   if (_urlParams.has('gecko') && _urlParams.has('owner')) {
@@ -12631,9 +12805,7 @@ async function openVerificationSheet() {
 }
 
 async function startPhoneVerification() {
-  // TODO: PASS 또는 토스페이먼츠 본인인증 API 연동 (사업자 가입 후 활성화)
-  // 현재는 안내만 표시
-  showToast('📱 휴대폰 인증 API 연동 준비 중입니다. 출시 후 제공 예정.');
+  showToast('📱 휴대폰 인증은 현재 사업자 회원만 이용 가능합니다.');
 }
 
 async function submitBizNumber() {
@@ -13210,202 +13382,4 @@ async function deleteSingleRecord(recordId, recordCreatedAt, refreshCtx) {
     message: '삭제 후에는 되돌릴 수 없어요.',
     okText: '삭제', cancelText: '취소'
   });
-  if (!ok) return;
-  try {
-    if (recordId) {
-      await _supabase.from('gecko_logs').delete().eq('id', recordId).eq('user_id', _currentUser.id);
-    } else if (recordCreatedAt) {
-      await _supabase.from('gecko_logs').delete().eq('created_at', recordCreatedAt).eq('user_id', _currentUser.id);
-    }
-  } catch(e) {}
-  // localStorage 정리
-  try {
-    const key = 'gecko_logs_' + _currentUser.id;
-    const local = JSON.parse(localStorage.getItem(key) || '[]');
-    const filtered = local.filter(r => {
-      if (recordId && r.id) return String(r.id) !== String(recordId);
-      if (recordCreatedAt) return r.created_at !== recordCreatedAt;
-      return true;
-    });
-    localStorage.setItem(key, JSON.stringify(filtered));
-  } catch(e) {}
-  showToast('🗑 기록 삭제됨');
-  // 화면 새로고침
-  if (refreshCtx === 'all') {
-    if (typeof renderAllRecords === 'function') renderAllRecords();
-  } else if (refreshCtx) {
-    loadRecords(refreshCtx);
-  }
-}
-
-async function loadRecords(geckoId) {
-  let records = [];
-  try {
-    const { data, error } = await _supabase.from('gecko_logs').select('*').eq('gecko_id', geckoId).eq('user_id', _currentUser.id).order('date', { ascending: false });
-    if (!error && data) records = data;
-  } catch(e) {}
-  try {
-    const key='gecko_logs_'+_currentUser.id; const local=JSON.parse(localStorage.getItem(key)||'[]');
-    const localForGecko = local.filter(r => String(r.gecko_id) === String(geckoId));
-    const existingDates = new Set(records.map(r => r.created_at));
-    localForGecko.forEach(r => { if (!existingDates.has(r.created_at)) records.push(r); });
-  } catch(e) {}
-  records.sort((a, b) => b.date.localeCompare(a.date));
-  renderWeightChart(records.filter(r => r.type === 'weight'));
-  renderShedChart(records.filter(r => r.type === 'shed'), geckoId);
-  const timeline = document.getElementById('record-timeline');
-  if (records.length === 0) { timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요. 위 버튼으로 첫 기록을 추가해보세요!</div>'; return; }
-  const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'}, egg:{emoji:'🥚',label:'산란',color:'#ff8fb1',bg:'rgba(255,143,177,.15)'} };
-  timeline.innerHTML = records.map(r => {
-    const c = tc[r.type] || tc.memo;
-    let detail;
-    if (r.type === 'weight') detail = '<b>'+r.value+'g</b>';
-    else if (r.type === 'feed') detail = r.value;
-    else if (r.type === 'shed') detail = r.value;
-    else if (r.type === 'egg') {
-      detail = '<b>'+r.value+'</b>';
-      if (String(r.value).startsWith('유정란')) {
-        const t = _extractTempFromNote(r.note);
-        const h = _calcHatchRange(r.date, t);
-        if (h) {
-          const tLabel = t != null ? ' · ' + t + '°C' : '';
-          detail += tLabel + '<div style="font-size:11px;color:#c8860d;margin-top:2px">🐣 부화 예상: ' + h.early + ' ~ ' + h.late + '</div>';
-        }
-      }
-      // 해칭 완료 버튼 (개체별 기록 시트 안에서만, 유정란 + 아직 해칭 안된 경우)
-      if (String(r.value).startsWith('유정란') && !String(r.note||'').includes('hatched=')) {
-        detail += `<button class="btn-sm" style="margin-top:6px;padding:5px 10px;font-size:11px;background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="event.stopPropagation();markEggHatched('${r.id||r.created_at}','${r.gecko_id}','${r.date}','${r.value}')">🐣 해칭 완료</button>`;
-      }
-    }
-    else detail = r.note || '';
-    const noteHtml = (r.note && r.type!=='health' && r.type!=='memo') ? '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+r.note+'</div>' : '';
-    const rid = r.id ? String(r.id).replace(/'/g,"\\'") : '';
-    const rca = r.created_at ? String(r.created_at).replace(/'/g,"\\'") : '';
-    const delBtn = '<button onclick="event.stopPropagation();deleteSingleRecord(\''+rid+'\',\''+rca+'\',\''+String(geckoId).replace(/\'/g,"\\'")+'\')" aria-label="기록 삭제" style="position:absolute;top:8px;right:6px;width:28px;height:28px;background:transparent;border:none;color:var(--tx3);font-size:16px;cursor:pointer;border-radius:6px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,107,107,.15)">×</button>';
-    const safeNote = String(r.note || '').replace(/'/g,"\\'").replace(/\n/g,' ');
-    const editFn = r.type === 'egg'
-      ? `editEggRecord('${rid}','${r.date||''}','${safeNote}','${String(geckoId).replace(/'/g,"\\'")}')`
-      : `editRecordDate('${rid}','${r.date||''}','${String(geckoId).replace(/'/g,"\\'")}')`;
-    const editTitle = r.type === 'egg' ? '날짜·온도 수정' : '날짜 변경';
-    const dateBtn = '<div class="record-date" onclick="'+editFn+'" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;touch-action:manipulation" title="'+editTitle+'">'+r.date+' ✎</div>';
-    return '<div class="record-item type-'+r.type+'" style="position:relative">'+delBtn+dateBtn+'<div class="record-content" style="padding-right:24px"><span class="record-type-badge" style="background:'+c.bg+';color:'+c.color+'">'+c.emoji+' '+c.label+'</span>'+detail+noteHtml+'</div></div>';
-  }).join('');
-}
-
-function renderShedChart(shedRecords, geckoId) {
-  const container = document.getElementById('record-shed-chart');
-  const barsDiv = document.getElementById('shed-chart-bars');
-  const summaryDiv = document.getElementById('shed-chart-summary');
-  if (!container || !barsDiv) return;
-  if (!shedRecords || shedRecords.length < 1) { container.style.display = 'none'; return; }
-  container.style.display = 'block';
-
-  // 시간 오름차순 정렬
-  const sorted = [...shedRecords].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-  // 탈피 간 간격(일수) 계산
-  const gaps = [];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1].date);
-    const cur = new Date(sorted[i].date);
-    const days = Math.floor((cur - prev) / 86400000);
-    if (days > 0 && days < 365) gaps.push({ date: sorted[i].date, days });
-  }
-
-  // 평균 탈피 주기
-  const avgCycle = gaps.length > 0
-    ? Math.round(gaps.reduce((s, g) => s + g.days, 0) / gaps.length)
-    : null;
-
-  // 마지막 탈피 후 경과일
-  const lastShed = sorted[sorted.length - 1].date;
-  const daysSinceLast = lastShed
-    ? Math.floor((Date.now() - new Date(lastShed).getTime()) / 86400000)
-    : null;
-
-  if (summaryDiv) {
-    if (avgCycle != null) {
-      let nextHint = '';
-      if (daysSinceLast != null && avgCycle > 0) {
-        const dDay = avgCycle - daysSinceLast;
-        if (dDay > 0) {
-          nextHint = ` · 다음 예상 D-${dDay}`;
-        } else if (dDay >= -7) {
-          nextHint = ` · 🔔 곧 탈피 시기예요!`;
-        } else {
-          nextHint = ` · 마지막 탈피 ${daysSinceLast}일 전`;
-        }
-      }
-      summaryDiv.textContent = `📊 평균 ${avgCycle}일 주기 (${gaps.length}회 측정)${nextHint}`;
-    } else {
-      summaryDiv.textContent = '탈피 기록을 2회 이상 쌓으면 평균 주기가 계산돼요';
-      summaryDiv.style.color = 'var(--tx3)';
-    }
-  }
-
-  // 차트 막대 (최근 8회)
-  const maxGap = gaps.length > 0 ? Math.max(...gaps.map(g => g.days), 1) : 1;
-  const recent = sorted.slice(-8);
-  let html = '';
-  recent.forEach((r, idx) => {
-    const dateLabel = (r.date || '').slice(5);
-    if (idx === 0) {
-      html += `<div style="display:flex;align-items:center;gap:8px">
-        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">${dateLabel}</div>
-        <div style="flex:1;font-size:10px;color:var(--tx3)">첫 기록</div>
-        <div style="width:50px"></div>
-      </div>`;
-    } else {
-      const prev = new Date(recent[idx - 1].date);
-      const cur = new Date(r.date);
-      const days = Math.max(1, Math.floor((cur - prev) / 86400000));
-      const pct = (days / maxGap) * 100;
-      html += `<div style="display:flex;align-items:center;gap:8px">
-        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">${dateLabel}</div>
-        <div style="flex:1;background:var(--sf2);border-radius:2px;height:4px">
-          <div style="height:4px;width:${pct}%;background:var(--blue);border-radius:2px;transition:width .3s"></div>
-        </div>
-        <div style="font-size:11px;font-weight:700;color:var(--blue);width:50px;flex-shrink:0">+${days}일</div>
-      </div>`;
-    }
-  });
-  barsDiv.innerHTML = html;
-
-  // 부수효과: gecko 행에 shedCycle/lastShedAt 캐시 (탈피 알림 활성화용)
-  if (geckoId && avgCycle != null && avgCycle > 0) {
-    try {
-      const g = state.geckos.find(x => String(x.id) === String(geckoId));
-      if (g) {
-        g.shedCycle = avgCycle;
-        g.lastShedAt = lastShed;
-      }
-    } catch(e) {}
-  }
-}
-
-function renderWeightChart(weightRecords) {
-  const container = document.getElementById('record-weight-chart');
-  const barsDiv = document.getElementById('weight-chart-bars');
-  if (!container || !barsDiv) return;
-  if (weightRecords.length < 1) { container.style.display='none'; return; }
-  container.style.display = 'block';
-  const sorted = [...weightRecords].sort((a,b) => a.date.localeCompare(b.date));
-  const maxW = Math.max(...sorted.map(r => parseFloat(r.value)));
-  barsDiv.innerHTML = sorted.slice(-8).map(r => {
-    const w = parseFloat(r.value), pct = maxW>0?(w/maxW*100):0;
-    return '<div style="display:flex;align-items:center;gap:8px"><div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--tx3);width:55px;text-align:right;flex-shrink:0">'+r.date.slice(5)+'</div><div style="flex:1;background:var(--sf2);border-radius:2px;height:4px"><div class="weight-chart-bar" style="width:'+pct+'%"></div></div><div style="font-size:11px;font-weight:700;color:var(--ac);width:35px;flex-shrink:0">'+w+'g</div></div>';
-  }).join('');
-}
-
-</script>
-
-<!-- 사업자 정보 푸터 -->
-<div id="business-info-footer" style="background:#0a1209;border-top:1px solid rgba(93,220,106,0.2);padding:24px 16px;text-align:center;font-size:11px;color:rgba(221,240,222,0.5);line-height:1.8;margin-top:40px">
-<div style="max-width:480px;margin:0 auto">
-<div style="margin-bottom:8px;font-size:12px;color:rgba(221,240,222,0.7)">볏마루도감 (ByetMaru)</div>
-<div>상호: 리비틀 (L.Beetle) | 대표: 이규훈<br>사업자등록번호: 104-16-65460 | 통신판매업: 제 2026-인천연수구-1224 호<br>소재지: 인천광역시 연수구 컨벤시아대로 81, 5층 509-J630호<br>구매안전서비스: 토스페이먼츠(주) (1544-7772)<br>연락처: dlrbgns456@gmail.com</div>
-</div>
-</div>
-
-</body>
-</html>
+  if (!ok) retur
