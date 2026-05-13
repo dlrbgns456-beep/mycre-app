@@ -1500,6 +1500,14 @@ input[type=file]{display:none}
       </div>
       <div class="more-item-arrow">›</div>
     </div>
+    <div class="more-item" onclick="showCommunityGuidelines()">
+      <div class="more-icon" style="background:var(--sf2)">📋</div>
+      <div class="more-item-info">
+        <div class="more-item-title">커뮤니티 가이드라인</div>
+        <div class="more-item-sub">커뮤니티 이용 규칙 확인</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
   </div>
 
   <div class="more-section">
@@ -7715,6 +7723,11 @@ async function loadComments(postId) {
 
 async function submitComment() {
   if (!_currentUser || !_currentPostId) return;
+  // 커뮤니티 가이드라인 동의 확인 (Apple 1.2.0 UGC)
+  if (!_hasAgreedCommunityGuidelines()) {
+    showCommunityGuidelines(function() { submitComment(); });
+    return;
+  }
   const input = document.getElementById('comment-input');
   const body = input.value.trim();
   if (!body) return;
@@ -7822,7 +7835,58 @@ function filterPosts() {
   filtered.forEach(p => list.appendChild(buildPostCard(p, false)));
 }
 
+// ── 커뮤니티 가이드라인 (Apple 1.2.0 UGC 대응) ──
+function _hasAgreedCommunityGuidelines() {
+  return localStorage.getItem('mycre_community_agreed') === '1';
+}
+function showCommunityGuidelines(onAgree) {
+  const overlay = document.createElement('div');
+  overlay.setAttribute('style','position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)');
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1.5px solid var(--br);border-radius:18px;padding:24px 20px;max-width:360px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+      <div style="font-size:20px;font-weight:900;text-align:center;margin-bottom:14px">커뮤니티 이용 가이드라인</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.8;margin-bottom:18px">
+        <p style="margin-bottom:10px">볏마루도감 커뮤니티를 이용하시기 전에 아래 가이드라인에 동의해 주세요.</p>
+        <div style="background:var(--sf2);border-radius:10px;padding:14px;margin-bottom:10px">
+          <b style="color:var(--ac)">1. 존중과 배려</b><br>
+          다른 사용자를 존중하고, 욕설/비방/혐오 표현을 사용하지 않습니다.
+        </div>
+        <div style="background:var(--sf2);border-radius:10px;padding:14px;margin-bottom:10px">
+          <b style="color:var(--ac)">2. 적절한 콘텐츠</b><br>
+          동물 학대, 불법 거래, 음란물, 폭력적 콘텐츠를 게시하지 않습니다.
+        </div>
+        <div style="background:var(--sf2);border-radius:10px;padding:14px;margin-bottom:10px">
+          <b style="color:var(--ac)">3. 스팸 금지</b><br>
+          반복적인 광고, 스팸, 사기 관련 게시물을 올리지 않습니다.
+        </div>
+        <div style="background:var(--sf2);border-radius:10px;padding:14px;margin-bottom:10px">
+          <b style="color:var(--ac)">4. 신고 및 제재</b><br>
+          가이드라인을 위반하는 콘텐츠는 신고할 수 있으며, 위반 시 게시물 삭제 및 이용 제한 조치가 이루어집니다.
+        </div>
+        <div style="background:var(--sf2);border-radius:10px;padding:14px">
+          <b style="color:var(--ac)">5. 문의</b><br>
+          문제가 있으시면 dlrbgns456@gmail.com 으로 연락해 주세요.
+        </div>
+      </div>
+      <button id="btn-agree-guidelines" style="width:100%;padding:14px;border-radius:12px;background:var(--ac);border:none;color:#fff;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:8px">동의하고 계속하기</button>
+      <button id="btn-cancel-guidelines" style="width:100%;padding:11px;border-radius:10px;background:none;border:1px solid var(--br);color:var(--tx3);font-size:12px;font-family:inherit;cursor:pointer">취소</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#btn-agree-guidelines').addEventListener('click', function() {
+    localStorage.setItem('mycre_community_agreed', '1');
+    overlay.remove();
+    if (onAgree) onAgree();
+  });
+  overlay.querySelector('#btn-cancel-guidelines').addEventListener('click', function() { overlay.remove(); });
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
 function openWritePost() {
+  // 🛡️ 커뮤니티 가이드라인 동의 확인 (Apple 1.2.0 UGC)
+  if (!_hasAgreedCommunityGuidelines()) {
+    showCommunityGuidelines(function() { openWritePost(); });
+    return;
+  }
   // 🛡️ 이전 상태 완전 초기화 (사진 재업로드 버그 방지)
   _postPhotoData = null;
   _postPhotoBlob = null;
@@ -12190,8 +12254,8 @@ function _showAICreditPopup() {
           오늘의 무료 3회를 모두 사용했어요.
         </div>
         <div style="font-size:12px;color:var(--tx3);line-height:1.6;margin-bottom:16px;padding:12px;background:var(--sf2);border-radius:10px">
-          추가 크레딧은 웹사이트 <b style="color:var(--ac)">byetmaru.com</b>에서 충전할 수 있어요.
-          충전한 크레딧은 앱에서도 동일하게 사용됩니다.
+          무료 판별 횟수를 모두 소진했어요.<br>
+          내일 다시 무료로 이용할 수 있습니다.
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-bottom:16px">
           💡 무료 3회는 매일 자정(KST)에 리셋됩니다
@@ -12260,7 +12324,7 @@ async function purchaseAICredit(packId) {
 
   // iOS 네이티브 앱에서는 외부 결제 차단 (Apple Guideline 3.1.1)
   if (_isIOSNativeApp()) {
-    showToast('iOS 앱에서는 웹사이트(byetmaru.com)에서 크레딧을 충전해 주세요.');
+    showToast('무료 판별 횟수를 모두 사용했어요. 매일 자정에 리셋됩니다.');
     return;
   }
 
