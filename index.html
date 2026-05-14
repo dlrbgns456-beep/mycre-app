@@ -13754,6 +13754,189 @@ function renderWeightChart(weightRecords) {
   }).join('');
 }
 
+/* ════════════════════════════════════════════════════════════════════
+ * iOS APP STORE COMPLIANCE PATCH — v1.0.3 (Build 4)
+ * 3차 리젝 (G1.2/G1.5/G2.1/G3.1.1/G4) 대응
+ * ════════════════════════════════════════════════════════════════════
+ * - G4: 외부 브라우저 호출 금지 → iOS에서 모든 OAuth(소셜 로그인) 버튼 숨김
+ *       이메일/비밀번호 로그인은 앱 내부에서 처리됨 (외부 브라우저 X)
+ * - G2.1(a): "Unable to sign in using Sign in with Apple" → Apple 버튼 자체를 숨김
+ *           (네이티브 Sign in with Apple은 다음 빌드에서 추가 예정)
+ * - G3.1.1: AI Package 결제 시트(sheet-pro) iOS에서 절대 안 열림
+ * - G1.2: EULA 동의를 회원가입/로그인 전에 강제 표시 (첫 진입 시)
+ * - G1.2: signup-agreements 영역을 iOS에서 항상 표시 (signup 탭 안 눌러도)
+ * ════════════════════════════════════════════════════════════════════ */
+(function() {
+  function _isIOSNative() {
+    return (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios')
+      || (/iPhone|iPad|iPod/.test(navigator.userAgent) && /com\.lbeetle\.byetmaru/.test(navigator.userAgent));
+  }
+
+  if (!_isIOSNative()) return; // iOS 네이티브 앱이 아니면 패치 안 함
+
+  // ─── 1. body 클래스 + CSS 주입 ───
+  document.documentElement.classList.add('ios-native');
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('ios-native');
+  });
+  const style = document.createElement('style');
+  style.id = 'ios-compliance-style';
+  style.textContent = `
+    /* iOS: 모든 소셜 로그인 버튼 숨김 (외부 브라우저 호출 차단) */
+    .ios-native .social-btn,
+    .ios-native .auth-divider-line { display: none !important; }
+    /* iOS: 회원가입 약관 동의 영역 항상 표시 */
+    .ios-native #signup-agreements { display: block !important; }
+    /* iOS: PRO 결제 시트는 절대 표시 안 됨 */
+    .ios-native #sheet-pro { display: none !important; }
+    /* iOS: 첫 진입 EULA 모달 */
+    #ios-eula-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      z-index: 999999; display: flex; align-items: center; justify-content: center;
+      padding: 20px; backdrop-filter: blur(6px);
+    }
+    #ios-eula-overlay .eula-card {
+      background: #1a1f1a; border: 2px solid #5ddc6a; border-radius: 18px;
+      padding: 24px 22px; max-width: 380px; width: 100%;
+      color: #ddf0de; font-family: inherit;
+      max-height: 85vh; display: flex; flex-direction: column;
+    }
+    #ios-eula-overlay h2 {
+      font-size: 19px; font-weight: 900; color: #5ddc6a;
+      margin: 0 0 12px; text-align: center;
+    }
+    #ios-eula-overlay .eula-body {
+      font-size: 13px; line-height: 1.65; color: #ddf0de;
+      overflow-y: auto; flex: 1; min-height: 0;
+      padding: 14px; background: rgba(255,255,255,0.04);
+      border-radius: 10px; margin-bottom: 14px;
+    }
+    #ios-eula-overlay .eula-body ul { padding-left: 18px; margin: 6px 0; }
+    #ios-eula-overlay .eula-body li { margin-bottom: 6px; }
+    #ios-eula-overlay .eula-body b { color: #ff7a7a; }
+    #ios-eula-overlay .eula-check {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px; background: rgba(93,220,106,0.08);
+      border: 1px solid rgba(93,220,106,0.3); border-radius: 10px;
+      margin-bottom: 12px; cursor: pointer; font-size: 13px;
+    }
+    #ios-eula-overlay .eula-check input { width: 18px; height: 18px; accent-color: #5ddc6a; }
+    #ios-eula-overlay .eula-buttons { display: flex; gap: 10px; }
+    #ios-eula-overlay button {
+      flex: 1; padding: 14px; border-radius: 12px; border: none;
+      font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    #ios-eula-overlay .btn-agree { background: #5ddc6a; color: #0a1209; }
+    #ios-eula-overlay .btn-agree:disabled { background: #333; color: #888; cursor: not-allowed; }
+    #ios-eula-overlay .btn-decline { background: transparent; color: #aaa; border: 1px solid #555; }
+  `;
+  document.head.appendChild(style);
+
+  // ─── 2. openSheet 훅: 'sheet-pro' 차단 ───
+  function _patchOpenSheet() {
+    if (typeof window.openSheet !== 'function' || window.openSheet.__iosPatched) return;
+    const _orig = window.openSheet;
+    window.openSheet = function(id) {
+      if (id === 'sheet-pro') {
+        if (typeof window._showAICreditPopup === 'function') {
+          try { window._showAICreditPopup(); } catch(e) {}
+        } else if (typeof window.showToast === 'function') {
+          window.showToast('무료 판별 횟수 (매일 3회)를 사용해 주세요. 자정에 리셋됩니다.');
+        }
+        return;
+      }
+      return _orig.call(this, id);
+    };
+    window.openSheet.__iosPatched = true;
+  }
+  _patchOpenSheet();
+  // openSheet가 나중에 정의될 가능성 대비 — DOMContentLoaded 시 다시 시도
+  document.addEventListener('DOMContentLoaded', _patchOpenSheet);
+
+  // ─── 3. OAuth 함수 차단 (혹시 코드로 호출되더라도 외부 브라우저 안 열리게) ───
+  function _patchOAuth() {
+    ['signInWithApple', 'signInWithGoogle', 'signInWithKakao'].forEach(fn => {
+      if (typeof window[fn] === 'function' && !window[fn].__iosPatched) {
+        window[fn] = async function() {
+          if (typeof window.showAuthErr === 'function') {
+            window.showAuthErr('iOS 앱에서는 이메일 로그인을 이용해 주세요.');
+          }
+        };
+        window[fn].__iosPatched = true;
+      }
+    });
+  }
+  _patchOAuth();
+  document.addEventListener('DOMContentLoaded', _patchOAuth);
+
+  // ─── 4. 첫 진입 EULA 강제 동의 모달 ───
+  function showEULAOverlay() {
+    if (localStorage.getItem('_ios_eula_v1_accepted') === '1') return;
+    if (document.getElementById('ios-eula-overlay')) return;
+    if (!document.body) return; // body 없으면 대기
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ios-eula-overlay';
+    overlay.innerHTML = `
+      <div class="eula-card">
+        <h2>📜 커뮤니티 가이드라인</h2>
+        <div class="eula-body">
+          <p style="margin:0 0 10px">볏마루도감을 이용하기 전에 아래 내용에 동의해 주세요.</p>
+          <p style="margin:6px 0;font-weight:700;color:#5ddc6a">금지 사항 (Zero Tolerance)</p>
+          <ul>
+            <li><b>욕설/혐오/괴롭힘</b> — 다른 회원에 대한 공격, 차별, 위협</li>
+            <li><b>부적절한 콘텐츠</b> — 음란물, 폭력적 이미지, 게코 외 부적절 사진</li>
+            <li><b>스팸/광고</b> — 무관한 외부 링크, 반복 게시, 사기</li>
+            <li><b>거짓·기만</b> — 허위 모프 정보, 가격 조작, 다중 계정</li>
+          </ul>
+          <p style="margin:10px 0 6px;font-weight:700;color:#5ddc6a">신고·차단·모더레이션 정책</p>
+          <ul>
+            <li>모든 게시글/댓글에 <b style="color:#5ddc6a">신고 버튼</b>이 있습니다</li>
+            <li>다른 회원을 <b style="color:#5ddc6a">차단</b>하면 즉시 피드에서 사라집니다</li>
+            <li>운영자는 신고 접수 후 <b>24시간 이내</b> 콘텐츠 삭제 및 위반자 제재합니다</li>
+            <li>위반 누적 시 영구 이용 정지</li>
+          </ul>
+          <p style="margin:10px 0 6px;font-weight:700;color:#5ddc6a">계정 권리</p>
+          <ul>
+            <li>더보기 → 계정 탈퇴로 언제든 계정·데이터 즉시 삭제 가능</li>
+            <li>문의: <span style="color:#5ddc6a">dlrbgns456@gmail.com</span></li>
+          </ul>
+        </div>
+        <label class="eula-check">
+          <input type="checkbox" id="ios-eula-check">
+          <span>위 내용을 읽고 동의하며, 부적절한 행동은 하지 않겠습니다.</span>
+        </label>
+        <div class="eula-buttons">
+          <button class="btn-decline" id="ios-eula-decline">동의 안 함</button>
+          <button class="btn-agree" id="ios-eula-agree" disabled>동의하고 시작</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const cb = document.getElementById('ios-eula-check');
+    const btnAgree = document.getElementById('ios-eula-agree');
+    const btnDecline = document.getElementById('ios-eula-decline');
+    cb.addEventListener('change', () => { btnAgree.disabled = !cb.checked; });
+    btnAgree.addEventListener('click', () => {
+      if (!cb.checked) return;
+      localStorage.setItem('_ios_eula_v1_accepted', '1');
+      localStorage.setItem('_ios_eula_v1_accepted_at', new Date().toISOString());
+      overlay.remove();
+    });
+    btnDecline.addEventListener('click', () => {
+      try { window.showToast && window.showToast('가이드라인에 동의해야 앱을 사용할 수 있어요.'); } catch(e) {}
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showEULAOverlay);
+  } else {
+    showEULAOverlay();
+  }
+})();
+/* ═══════════ iOS COMPLIANCE PATCH END ═══════════ */
+
 </script>
 
 <!-- 사업자 정보 푸터 -->
