@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>볏마루도감 — 고객 지원</title>
+<meta name="description" content="볏마루도감 앱 사용 중 궁금한 점이나 문제가 있으시면 도움받을 수 있는 페이지입니다.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', sans-serif;
+    background: #0a1209; color: #ddf0de;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 40px 24px 80px; }
+  header { text-align: center; margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(93,220,106,0.25); }
+  header h1 { color: #5ddc6a; font-size: 28px; margin: 0 0 8px; font-weight: 900; }
+  header .sub { color: rgba(221,240,222,0.65); font-size: 14px; }
+  header a.logo-link { color: rgba(221,240,222,0.5); font-size: 12px; text-decoration: none; }
+  header a.logo-link:hover { color: #5ddc6a; text-decoration: underline; }
+  h2 { color: #5ddc6a; font-size: 19px; margin: 36px 0 14px; font-weight: 800; }
+  .card {
+    background: rgba(93,220,106,0.06);
+    border: 1px solid rgba(93,220,106,0.25);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .contact-grid { display: grid; gap: 14px; }
+  .contact-grid .row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .contact-grid .label {
+    color: #5ddc6a; font-weight: 700; font-size: 13px;
+    min-width: 110px;
+  }
+  .contact-grid .value { color: #ddf0de; font-size: 14px; word-break: break-all; }
+  .contact-grid a { color: #5ddc6a; text-decoration: none; border-bottom: 1px dashed rgba(93,220,106,0.4); }
+  .contact-grid a:hover { color: #88ef94; }
+  details {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+  }
+  details summary {
+    cursor: pointer; font-weight: 700; color: #ddf0de; font-size: 15px;
+    padding: 2px 0; outline: none;
+  }
+  details summary:hover { color: #5ddc6a; }
+  details[open] summary { color: #5ddc6a; margin-bottom: 10px; }
+  details p, details ul { margin: 8px 0; color: rgba(221,240,222,0.85); font-size: 14px; }
+  details ul { padding-left: 22px; }
+  details li { margin-bottom: 6px; }
+  .moderation {
+    background: rgba(245,200,66,0.06);
+    border: 1px solid rgba(245,200,66,0.35);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin: 24px 0;
+  }
+  .moderation b { color: #f5c842; }
+  footer {
+    margin-top: 56px; padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    color: rgba(221,240,222,0.45); font-size: 11px; line-height: 1.8;
+    text-align: center;
+  }
+  footer a { color: rgba(221,240,222,0.65); }
+  @media (max-width: 480px) {
+    .container { padding: 28px 18px 60px; }
+    header h1 { font-size: 24px; }
+    .contact-grid .label { min-width: 90px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🦎 볏마루도감 — 고객 지원</h1>
+    <div class="sub">크레스티드 게코 사육자를 위한 관리 도구</div>
+    <div style="margin-top:10px"><a class="logo-link" href="https://byetmaru.com">← byetmaru.com 메인으로</a></div>
+  </header>
+
+  <h2>📮 문의 받는 곳</h2>
+  <div class="card">
+    <div class="contact-grid">
+      <div class="row">
+        <div class="label">이메일</div>
+        <div class="value"><a href="mailto:dlrbgns456@gmail.com?subject=[볏마루도감] 문의">dlrbgns456@gmail.com</a></div>
+      </div>
+      <div class="row">
+        <div class="label">답변 시간</div>
+        <div class="value">영업일 기준 <b style="color:#5ddc6a">24시간 이내</b> 답변 (한국 시간 KST 평일 9–18시)</div>
+      </div>
+      <div class="row">
+        <div class="label">개발사</div>
+        <div class="value">리비틀 (L.Beetle) · 대표 이규훈</div>
+      </div>
+      <div class="row">
+        <div class="label">사업자번호</div>
+        <div class="value">104-16-65460 · 통신판매업: 제 2026-인천연수구-1224 호</div>
+      </div>
+      <div class="row">
+        <div class="label">소재지</div>
+        <div class="value">인천광역시 연수구 컨벤시아대로 81, 5층 509-J630호</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>❓ 자주 묻는 질문 (FAQ)</h2>
+
+  <details>
+    <summary>로그인이 안 돼요</summary>
+    <p>볏마루도감 iOS 앱에서는 <b>이메일/비밀번호 로그인</b>만 지원합니다.</p>
+    <ul>
+      <li>회원가입 화면에서 이메일 인증 메일을 확인했는지 확인해 주세요.</li>
+      <li>비밀번호 분실 시 로그인 화면 하단의 <b>"비밀번호 잊으셨나요?"</b>를 통해 재설정할 수 있습니다.</li>
+      <li>인증 메일이 안 오면 스팸 메일함을 확인해 주세요.</li>
+      <li>그래도 안 되면 위 이메일로 가입 이메일 + 발생 상황을 보내주세요.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>계정/데이터를 삭제하고 싶어요</summary>
+    <p>앱 내에서 직접 삭제 가능합니다:</p>
+    <ul>
+      <li><b>앱 실행 → 하단 [더보기] 탭 → [회원 탈퇴]</b></li>
+      <li>탈퇴 시 등록한 모든 개체 정보·사육 기록·게시물이 <b>즉시 삭제</b>됩니다 (복구 불가).</li>
+      <li>분양/입양 거래 추적이 필요한 게시물은 작성자 정보를 익명화한 채 보존될 수 있습니다.</li>
+      <li>앱 접근이 어려우면 위 이메일로 가입 이메일과 함께 삭제 요청을 보내주세요.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>AI 모프 판별 무료 횟수가 다 떨어졌어요</summary>
+    <p>매일 <b>3회 무료 판별</b>이 제공되며, 한국 시간 자정(KST 00:00)에 자동 리셋됩니다.</p>
+    <ul>
+      <li>오늘의 무료 횟수를 소진하면 다음 날 자정에 다시 사용할 수 있어요.</li>
+      <li>판별 결과는 참고용이며, 정확한 판별을 위해서는 전문 브리더의 확인을 권장합니다.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>커뮤니티에서 부적절한 게시물/댓글을 봤어요</summary>
+    <p>각 게시글/댓글의 <b>신고 버튼</b>을 통해 즉시 신고할 수 있습니다.</p>
+    <ul>
+      <li><b>운영자는 신고 접수 후 24시간 이내</b> 콘텐츠 검토 → 위반 시 즉시 삭제 + 작성자 제재합니다.</li>
+      <li>특정 사용자의 모든 글/댓글을 안 보이게 하려면 <b>차단 기능</b>을 이용해 주세요. 차단한 사용자의 콘텐츠는 즉시 피드에서 사라집니다.</li>
+      <li>긴급한 경우 위 이메일로 신고 내용을 직접 보내주셔도 됩니다.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>차단한 사용자를 다시 보이게 하려면?</summary>
+    <p>[더보기] 탭 → <b>[차단 관리]</b> 메뉴에서 차단 목록을 확인하고 해제할 수 있습니다.</p>
+  </details>
+
+  <details>
+    <summary>분양/입양 거래 관련 문의</summary>
+    <p>볏마루도감은 거래 중개 플랫폼이 아니며, <b>직거래 또는 외부 안전결제(네이버페이 안전결제 등)를 권장</b>합니다.</p>
+    <ul>
+      <li>선입금은 절대 권장하지 않습니다.</li>
+      <li>거래 분쟁이 발생한 경우 위 이메일로 거래 내역과 함께 신고해 주세요.</li>
+      <li>거래 관련 보존 정보는 개인정보처리방침에 따라 처리됩니다.</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>데이터가 동기화 안 돼요 / 앱이 느려요</summary>
+    <p>먼저 시도해 보세요:</p>
+    <ul>
+      <li>인터넷 연결 확인 (Wi-Fi ↔ 데이터 전환)</li>
+      <li>앱 완전 종료 후 재실행</li>
+      <li>최신 버전인지 확인 (App Store에서 업데이트 확인)</li>
+      <li>그래도 안 되면 위 이메일로 <b>사용 기기 모델 + iOS 버전 + 발생 시점</b>을 알려주세요.</li>
+    </ul>
+  </details>
+
+  <h2>🛡 커뮤니티 가이드라인 · 모더레이션 정책</h2>
+  <div class="moderation">
+    <p style="margin-top:0"><b>금지 콘텐츠</b>: 욕설/혐오/괴롭힘, 음란·폭력 이미지, 게코 외 부적절 사진, 스팸/광고, 허위 모프 정보, 거래 사기</p>
+    <p><b>운영자 약속</b>: 신고 접수 시 <b>24시간 이내</b> 검토 → 위반 콘텐츠 삭제 + 위반자 계정 이용 제한 또는 영구 정지</p>
+    <p style="margin-bottom:0"><b>회원 권리</b>: 언제든 [더보기] → [회원 탈퇴]로 모든 데이터 즉시 삭제 가능</p>
+  </div>
+
+  <h2>📄 법적 문서</h2>
+  <div class="card">
+    <div class="contact-grid">
+      <div class="row">
+        <div class="label">이용약관</div>
+        <div class="value">앱 내 <b>[더보기 → 이용약관]</b>에서 열람 가능</div>
+      </div>
+      <div class="row">
+        <div class="label">개인정보처리방침</div>
+        <div class="value">앱 내 <b>[더보기 → 개인정보처리방침]</b>에서 열람 가능</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div>볏마루도감 (ByetMaru) · © 2026 리비틀 (L.Beetle)</div>
+    <div style="margin-top:4px">대표: 이규훈 · 사업자등록번호 104-16-65460</div>
+    <div style="margin-top:4px">구매안전서비스: 토스페이먼츠(주) (1544-7772)</div>
+    <div style="margin-top:8px"><a href="https://byetmaru.com">byetmaru.com</a> · <a href="mailto:dlrbgns456@gmail.com">dlrbgns456@gmail.com</a></div>
+  </footer>
+</div>
+</body>
+</html>
