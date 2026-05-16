@@ -12104,7 +12104,14 @@ async function _onSignedIn() {
       }
       if (!existCheck) {
         const randomNick = _currentUser.user_metadata?.full_name || _generateRandomNickname();
-        await _supabase.from('profiles').insert({ id: _currentUser.id, nickname: randomNick, tier: 'free' });
+        // upsert — 중복/재시도 안전 (insert 실패 시 유령 계정 방지)
+        const { error: profInsErr } = await _supabase.from('profiles')
+          .upsert({ id: _currentUser.id, nickname: randomNick, tier: 'free' }, { onConflict: 'id' });
+        if (profInsErr) {
+          console.error('[Auth] 프로필 생성 실패:', profInsErr.message);
+          _debugLog?.('error', 'auth', '신규 프로필 생성 실패: ' + profInsErr.message, { user_id: _currentUser.id });
+          // 실패해도 앱 진입은 허용 — 다음 로그인 시 재시도됨 (upsert라 안전)
+        }
         _profile.name = randomNick;
         state.tier = 'free';
         _saveProfileLocal();
