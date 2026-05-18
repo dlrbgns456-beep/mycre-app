@@ -174,11 +174,14 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 /* ─── Sheets (bottom modal) ─── */
 .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(0px);transition:background .25s ease,backdrop-filter .25s ease}
 .sheet-overlay.show{display:flex;background:rgba(0,0,0,.7);backdrop-filter:blur(4px)}
-.sheet{background:var(--sf);border-radius:26px 26px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);transform:translateY(100%);transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.sheet{position:relative;background:var(--sf);border-radius:26px 26px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom);transform:translateY(100%);transition:transform .3s cubic-bezier(.22,1,.36,1)}
 .sheet-overlay.show .sheet{transform:translateY(0)}
 .sheet-overlay.closing{display:flex;background:rgba(0,0,0,0);backdrop-filter:blur(0px)}
 .sheet-overlay.closing .sheet{transform:translateY(100%)}
 .sheet-handle{width:38px;height:4px;background:var(--br);border-radius:2px;margin:13px auto 0}
+/* 시트 닫기 버튼 (iOS 하드웨어 뒤로가기 없음 대응) — sticky로 스크롤해도 항상 보임 */
+.sheet-close-btn{position:sticky;top:8px;float:right;margin:8px 12px -34px 0;width:34px;height:34px;border-radius:17px;background:var(--sf2);border:1px solid var(--br);color:var(--tx2);font-size:17px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.08);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.sheet-close-btn:active{background:var(--br)}
 .sheet-title{font-size:20px;font-weight:800;padding:14px 18px 4px}
 .sheet-body{padding:12px 18px 20px}
 
@@ -3746,6 +3749,19 @@ async function _validateGeckoPhoto(imgDataUrl) {
           return { ok: false, reason: '사진에서 사람 얼굴이 감지됐어요. 개체 사진만 업로드해주세요.' };
         }
       } catch(e) {}
+    } else {
+      // FaceDetector 미지원 (iOS Safari/WebView 등) → 자동 감지 불가
+      // 사용자 확인 게이트로 책임 명시 + 부적절 사진 억제
+      const confirmed = await _showCustomDialog({
+        mode: 'confirm',
+        title: '🦎 게코 사진이 맞나요?',
+        message: '사람·다른 동물·스크린샷이 아닌\n실제 크레스티드 게코 사진인지 확인해 주세요.\n\n부적절한 사진은 신고 및 삭제 대상이며,\n반복 시 이용이 제한될 수 있어요.',
+        okText: '네, 게코 사진이에요',
+        cancelText: '다시 선택',
+      });
+      if (!confirmed) {
+        return { ok: false, reason: '게코 사진으로 다시 선택해 주세요.' };
+      }
     }
 
     // 3) 단색 / 스크린샷 / 극도로 인공적인 이미지 감지 (색상 다양성 부족)
@@ -4759,11 +4775,30 @@ function showToast(msg) {
 function openSheet(id) {
   const el = document.getElementById(id);
   if (!el) { console.warn('[openSheet] not found:', id); return; }
+  // iOS 대응: 닫기(✕) 버튼이 없으면 자동 주입 (하드웨어 뒤로가기 없음)
+  _ensureSheetCloseBtn(el);
   el.classList.remove('closing');
   el.style.display = 'flex';
   // force reflow for transition
   void el.offsetHeight;
   el.classList.add('show');
+}
+
+// 시트 패널에 닫기 버튼 보장 (iOS 갇힘 방지)
+function _ensureSheetCloseBtn(overlayEl) {
+  const panel = overlayEl.querySelector('.sheet');
+  if (!panel || panel.querySelector('.sheet-close-btn')) return;
+  const btn = document.createElement('button');
+  btn.className = 'sheet-close-btn';
+  btn.type = 'button';
+  btn.setAttribute('aria-label', '닫기');
+  btn.textContent = '✕';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    _animateSheetClose(overlayEl);
+  });
+  // 시트 첫 요소로 삽입 — sticky가 스크롤 컨테이너 상단에 고정되도록
+  panel.insertBefore(btn, panel.firstChild);
 }
 function _animateSheetClose(el) {
   if (!el || !el.classList.contains('show')) return;
@@ -11132,7 +11167,11 @@ async function openNotifSettings() {
   if (!content) return;
   let permBanner = '';
   if (permission === 'unsupported') {
-    permBanner = `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">이 브라우저는 알림을 지원하지 않아요.</div>`;
+    // iOS는 홈 화면 추가(PWA) 시에만 웹 알림 지원 — 안내 톤 완화
+    const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    permBanner = _isIOS
+      ? `<div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.35);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;color:#c9a850;line-height:1.7">📱 <b>iOS 알림 안내</b><br>아이폰·아이패드에서는 <b>홈 화면에 앱을 추가</b>하면 알림을 받을 수 있어요.<br><span style="font-size:11px;color:var(--tx3)">Safari 공유 버튼 → "홈 화면에 추가" → 추가된 앱에서 알림 허용</span><br><br>아래 알림 항목은 켜 두시면 홈 화면 추가 후 자동 적용돼요.</div>`
+      : `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">이 브라우저는 알림을 지원하지 않아요.</div>`;
   } else if (permission === 'denied') {
     permBanner = `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">알림이 차단되어 있어요. 브라우저 설정에서 허용으로 변경해 주세요.</div>`;
   } else if (permission === 'default') {
