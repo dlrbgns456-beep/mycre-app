@@ -1,11 +1,11 @@
-const CACHE_NAME = 'byetmaru-v21';
+const CACHE_NAME = 'byetmaru-v22';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
   '/icon-badge.svg',
 ];
-// index.html은 캐시하지 않음 — 항상 최신 버전을 네트워크에서 가져옴
+// index.html은 네트워크 우선 + 3.5초 타임아웃 — 빠르면 최신, 느리면 캐시 즉시
 
 // 설치 — 즉시 활성화
 self.addEventListener('install', (e) => {
@@ -46,11 +46,28 @@ self.addEventListener('fetch', (e) => {
   if (url.includes('supabase.co') || url.includes('googleapis.com')) return;
   if (url.includes('code=') || url.includes('access_token=') || url.includes('_logout=') || url.includes('_deleted=')) return;
 
-  // HTML 요청 → 항상 네트워크 (최신 코드 보장)
+  // HTML 요청 → 네트워크 우선 + 3.5초 타임아웃
+  // 빠른 망: 항상 최신 / 느린 망: 캐시된 버전 즉시 표시 (앱 안 열리는 듯한 체감 제거)
   if (e.request.mode === 'navigate' || url.endsWith('.html')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match('/index.html'))
-    );
+    e.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      try {
+        const netResp = await Promise.race([
+          fetch(e.request),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500)),
+        ]);
+        if (netResp && netResp.ok) {
+          cache.put('/index.html', netResp.clone()).catch(() => {});
+        }
+        return netResp;
+      } catch (err) {
+        // 네트워크 느림/실패 → 캐시된 index.html 즉시 반환
+        const cached = await cache.match('/index.html');
+        if (cached) return cached;
+        // 캐시도 없으면(최초 방문) 네트워크 끝까지 대기
+        return fetch(e.request);
+      }
+    })());
     return;
   }
 

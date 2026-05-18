@@ -647,24 +647,36 @@ input[type=file]{display:none}
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <!-- QR코드 생성 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<!-- 배경 제거 AI 라이브러리 (esm.sh CDN — lodash 등 Node 의존성 자동 번들링) -->
-<script type="module">
-  window.imglyLoadStatus = 'loading';
-  console.log('[imgly] 모듈 로드 시작 (esm.sh CDN)...');
-  try {
-    const { removeBackground } = await import('https://esm.sh/@imgly/background-removal@1.4.5');
-    if (typeof removeBackground !== 'function') {
-      throw new Error('removeBackground export가 함수가 아님: ' + typeof removeBackground);
+<!-- 배경 제거 AI 라이브러리 — 지연 로딩 (앱 시작 시 X, AI 스캔 사용 시에만 다운로드) -->
+<!-- 수 MB 라이브러리라 앱 시작 속도 위해 startup에서 제외 -->
+<script>
+  window.imglyLoadStatus = 'idle';
+  window._loadImgly = async function() {
+    if (window.imglyLoadStatus === 'ready') return window.imglyRemoveBackground || null;
+    if (window.imglyLoadStatus === 'loading') {
+      // 이미 로드 중 — 완료까지 대기 (최대 30초)
+      let waited = 0;
+      while (window.imglyLoadStatus === 'loading' && waited < 30000) {
+        await new Promise(r => setTimeout(r, 150)); waited += 150;
+      }
+      return window.imglyRemoveBackground || null;
     }
-    window.imglyRemoveBackground = removeBackground;
-    window.imglyLoadStatus = 'ready';
-    console.log('[imgly] ✅ 모듈 로드 성공 — window.imglyRemoveBackground 사용 가능');
-  } catch (err) {
-    window.imglyLoadStatus = 'failed';
-    window.imglyLoadError = err;
-    console.error('[imgly] ❌ 모듈 로드 실패:', err);
-    console.error('[imgly] → 배경 제거 기능이 비활성화됩니다. 원본 사진으로 분석됩니다.');
-  }
+    window.imglyLoadStatus = 'loading';
+    console.log('[imgly] 지연 로딩 시작...');
+    try {
+      const mod = await import('https://esm.sh/@imgly/background-removal@1.4.5');
+      if (typeof mod.removeBackground !== 'function') throw new Error('removeBackground export 아님');
+      window.imglyRemoveBackground = mod.removeBackground;
+      window.imglyLoadStatus = 'ready';
+      console.log('[imgly] ✅ 로드 완료');
+      return mod.removeBackground;
+    } catch (err) {
+      window.imglyLoadStatus = 'failed';
+      window.imglyLoadError = err;
+      console.error('[imgly] ❌ 로드 실패:', err);
+      return null;
+    }
+  };
 </script>
 </head>
 <body>
@@ -6122,21 +6134,18 @@ async function handleScanPhotos(e) {
   if (files.length > remaining) showToast(`최대 6장까지 업로드 가능해요 (${remaining}장 추가됨)`);
 
   const toggleChecked = document.getElementById('bg-remove-toggle')?.checked;
-  const libReady = typeof window.imglyRemoveBackground === 'function';
-  const useBgRemove = toggleChecked && libReady;
-
-  console.log('[배경제거] 상태 점검:', {
-    toggle: toggleChecked,
-    libReady,
-    loadStatus: window.imglyLoadStatus,
-    loadError: window.imglyLoadError?.message,
-    fileCount: toAdd.length,
-    willUse: useBgRemove
-  });
-
-  if (toggleChecked && !libReady) {
-    console.warn('[배경제거] ⚠️ 토글은 켜져있으나 라이브러리가 준비되지 않음 → 원본 사진으로 진행');
-    showToast('⚠️ 배경 제거 AI 로딩 실패 — 원본 사진으로 분석해요');
+  // 배경제거 토글이 켜져 있을 때만 imgly 라이브러리 지연 로드
+  let useBgRemove = false;
+  if (toggleChecked) {
+    if (window.imglyLoadStatus !== 'ready') {
+      showToast('🎨 배경 제거 AI 준비 중...');
+    }
+    const _imglyFn = await window._loadImgly();
+    useBgRemove = (typeof _imglyFn === 'function');
+    if (!useBgRemove) {
+      console.warn('[배경제거] 라이브러리 로드 실패 → 원본 사진으로 진행');
+      showToast('⚠️ 배경 제거 AI 로딩 실패 — 원본 사진으로 분석해요');
+    }
   }
 
   if (useBgRemove) {
