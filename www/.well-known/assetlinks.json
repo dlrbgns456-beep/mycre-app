@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.lbeetle.byetmaru",
+      "sha256_cert_fingerprints": [
+        "95:35:6A:11:36:47:05:C7:FB:4A:FB:06:69:1F:F1:EE:A7:AC:F1:80:A1:03:E5:59:C0:04:C1:A1:60:C4:6D:D5"
+      ]
+    }
+  }
+]
