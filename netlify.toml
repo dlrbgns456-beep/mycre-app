@@ -4,6 +4,13 @@
 
 [build]
   publish = "www"
+  # 정적 사이트 — 빌드 단계 없음 (Capacitor 의존성은 네이티브 빌드용)
+  command = "echo 'No build step — static deploy from www/'"
+  ignore = "false"
+
+[build.environment]
+  # Capacitor 패키지가 v7/v8 혼용이라 엄격한 peer dep 체크 우회
+  NPM_FLAGS = "--legacy-peer-deps"
 
 # 캐시 헤더 — index.html은 항상 최신, 정적 자산은 1년 캐시
 [[headers]]
