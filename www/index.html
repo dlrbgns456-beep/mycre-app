@@ -10333,18 +10333,7 @@ async function signInWithGoogle() {
   }
 
   // ── Capacitor 앱: Chrome Custom Tabs로 Google OAuth (WebView 403 방지) ──
-  // 🔬 진단용 토스트 — 어디서 막히는지 시각적으로 확인 (런칭 안정화 후 제거)
-  const _hasCap = !!(window.Capacitor);
-  const _isNative = !!(_hasCap && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  const _hasBrowser = !!(_hasCap && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser);
-  showToast(`🔬 Cap=${_hasCap?'O':'X'} Native=${_isNative?'O':'X'} Browser=${_hasBrowser?'O':'X'}`);
-
-  if (_isNative) {
-    if (!_hasBrowser) {
-      showAuthErr('⚠️ @capacitor/browser 플러그인이 빌드에 없음. AAB 재빌드 필요.');
-      _debugLog('error', 'auth', 'Browser 플러그인 미존재 — sync/install 누락');
-      return;
-    }
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
     try {
       showAuthErr('Google 로그인 중...');
       document.getElementById('auth-err').style.color = 'var(--tx2)';
@@ -10356,22 +10345,20 @@ async function signInWithGoogle() {
         }
       });
       if (error) {
-        showAuthErr('OAuth URL 발급 실패: ' + error.message);
+        showAuthErr('Google 로그인 실패: ' + error.message);
         _debugLog('error', 'auth', 'Google OAuth 실패: ' + error.message);
         return;
       }
       if (!data || !data.url) {
-        showAuthErr('⚠️ OAuth URL 없음 (data.url 누락)');
-        _debugLog('error', 'auth', 'OAuth URL 누락 — signInWithOAuth 응답 이상');
+        showAuthErr('OAuth URL 발급 실패');
         return;
       }
-      showToast('🌐 CCT 열기 시도: ' + String(data.url).slice(0, 50) + '...');
+      // Chrome Custom Tabs로 열기 (Google 403 차단 우회 + assetlinks.json 으로 앱 복귀)
       const Browser = window.Capacitor.Plugins.Browser;
       await Browser.open({ url: data.url });
-      showToast('✅ CCT 열림 — Google 로그인 진행 후 자동 복귀');
       _debugLog('info', 'auth', 'Google OAuth → Chrome Custom Tabs 열림');
     } catch(e) {
-      showAuthErr('CCT 오류: ' + (e?.message || e));
+      showAuthErr('Google 로그인 오류: ' + (e?.message || e));
       _debugLog('error', 'auth', 'Google OAuth(Capacitor) 예외: ' + (e?.message || e), { stack: e?.stack });
     }
     return;
