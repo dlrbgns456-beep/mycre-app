@@ -10331,6 +10331,36 @@ async function signInWithGoogle() {
     setTimeout(() => _openInExternalBrowser(url), 1200);
     return;
   }
+
+  // ── Capacitor 앱: Chrome Custom Tabs로 Google OAuth (WebView 403 방지) ──
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+    try {
+      showAuthErr('Google 로그인 중...');
+      document.getElementById('auth-err').style.color = 'var(--tx2)';
+      const { data, error } = await _supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'https://byetmaru.com',
+          skipBrowserRedirect: true, // URL만 받고 직접 열기
+        }
+      });
+      if (error) {
+        showAuthErr('Google 로그인 실패: ' + error.message);
+        _debugLog('error', 'auth', 'Google OAuth 실패: ' + error.message);
+        return;
+      }
+      // Chrome Custom Tabs로 열기 (Google 403 차단 우회)
+      const Browser = window.Capacitor.Plugins.Browser;
+      await Browser.open({ url: data.url });
+      _debugLog('info', 'auth', 'Google OAuth → Chrome Custom Tabs 열림');
+    } catch(e) {
+      showAuthErr('Google 로그인 오류: ' + e.message);
+      _debugLog('error', 'auth', 'Google OAuth(Capacitor) 예외: ' + e.message, { stack: e.stack });
+    }
+    return;
+  }
+
+  // ── 일반 웹 브라우저: 기존 redirect 방식 ──
   try {
     showAuthErr('Google 로그인 중...');
     document.getElementById('auth-err').style.color = 'var(--tx2)';
@@ -10338,7 +10368,7 @@ async function signInWithGoogle() {
       provider: 'google',
       options: {
         redirectTo: 'https://byetmaru.com',
-        skipBrowserRedirect: false, // 항상 redirect 방식
+        skipBrowserRedirect: false,
       }
     });
     if (error) {
@@ -12703,6 +12733,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   const authTimeout = setTimeout(() => {
     if (!_currentUser) _showAuthScreen();
   }, hasAuthCode ? 10000 : 6000);
+
+  // ── Capacitor: Chrome Custom Tabs OAuth 콜백 처리 ──
+  // Google 로그인 후 byetmaru.com으로 리다이렉트 → 앱이 딥링크로 받음
+  if (window.Capacitor && window.Capacitor.Plugins) {
+    const App = window.Capacitor.Plugins.App;
+    const Browser = window.Capacitor.Plugins.Browser;
+    if (App && App.addListener) {
+      App.addListener('appUrlOpen', async (event) => {
+        console.log('[DeepLink] URL:', event.url);
+        // Chrome Custom Tabs 닫기
+        try { if (Browser) await Browser.close(); } catch(e) {}
+        // URL에서 세션 토큰 추출 (access_token 또는 code 파라미터)
+        if (event.url && (event.url.includes('access_token') || event.url.includes('code='))) {
+          try {
+            // URL의 hash fragment에서 세션 복원
+            const url = new URL(event.url);
+            const hashParams = new URLSearchParams(url.hash.replace('#', ''));
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+            if (accessToken && refreshToken) {
+              const { error } = await _supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              });
+              if (error) console.warn('[DeepLink] setSession 실패:', error.message);
+              else console.log('[DeepLink] 세션 복원 성공');
+            }
+            // PKCE code= 방식인 경우 Supabase가 자동 교환
+            if (url.searchParams.has('code')) {
+              const { error } = await _supabase.auth.exchangeCodeForSession(url.searchParams.get('code'));
+              if (error) console.warn('[DeepLink] code 교환 실패:', error.message);
+              else console.log('[DeepLink] PKCE 세션 교환 성공');
+            }
+          } catch(e) { console.warn('[DeepLink] 세션 처리 예외:', e?.message); }
+        }
+      });
+    }
+  }
 
   // ── 앱 포그라운드 복귀 시 세션 자동 갱신 (Google 로그인 풀림 방지) ──
   // 모바일에서 앱 백그라운드 → 포그라운드 전환 시 token이 만료되어 있으면
