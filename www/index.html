@@ -6207,9 +6207,19 @@ function removeScanPhoto(idx) {
 async function startAnalysis() {
   if (scanPhotos.length === 0) { showToast('⚠️ 사진을 최소 1장 이상 올려주세요'); return; }
 
-  // ── AI 판별 게이트: 베타 > 무료 > 유료 크레딧 순 ──
+  // ── AI 판별 게이트: 게스트 > 베타 > 무료 > 유료 크레딧 순 ──
   state._usedPaidCredit = false;
-  if (state._isBetaTester) {
+  state._isGuestScan = false;
+
+  if (!_currentUser) {
+    // ── 비회원 게스트 스캔 (1회 무료 체험) ──
+    const guestUsed = localStorage.getItem('_guest_scan_used');
+    if (guestUsed) {
+      _showGuestSignupPrompt();
+      return;
+    }
+    state._isGuestScan = true;
+  } else if (state._isBetaTester) {
     // 베타 테스터: 무제한
   } else if (state.freeScansLeft > 0) {
     // 일일 무료 차감은 _useDailyScan에서 처리
@@ -6402,6 +6412,9 @@ function showResult(photoCount, fireUp, colorAnalyses) {
   document.getElementById('feedback-morph').value = '';
 
   document.getElementById('result-area').classList.add('show');
+
+  // ── 비회원이면 가입 유도 배너 표시 ──
+  if (!_currentUser) _showGuestResultBanner();
 }
 
 // 후보 상세 렌더링 (1위 또는 다른 후보 탭 시)
@@ -12265,6 +12278,14 @@ function _loadDailyScanCount() {
 }
 
 function _useDailyScan() {
+  // ── 비회원 게스트 스캔 ──
+  if (state._isGuestScan) {
+    localStorage.setItem('_guest_scan_used', '1');
+    state._isGuestScan = false;
+    _updateScanBadge();
+    return;
+  }
+
   if (state._isBetaTester) { _updateScanBadge(); updateCreditDisplays(); return; } // 베타 테스터 무제한
 
   // 이번 판별이 유료 크레딧 사용이었으면 startAnalysis에서 이미 차감됨
@@ -12294,6 +12315,25 @@ async function _updateScanBadge() {
   // 클릭 핸들러 초기화 (이후 조건에서 재설정)
   badge.onclick = null;
   badge.style.cursor = '';
+
+  // ── 비회원 게스트 모드 ──
+  if (!_currentUser) {
+    const guestUsed = localStorage.getItem('_guest_scan_used');
+    if (guestUsed) {
+      badge.textContent = '체험 완료 · 가입하면 매일 3회 무료';
+      badge.style.background = 'rgba(245,200,66,.12)';
+      badge.style.borderColor = '#f5c842';
+      badge.style.color = '#f5c842';
+      badge.style.cursor = 'pointer';
+      badge.onclick = () => _showGuestSignupPrompt();
+    } else {
+      badge.textContent = '🎁 무료 체험 1회';
+      badge.style.background = 'rgba(46,125,87,.12)';
+      badge.style.borderColor = 'var(--ac)';
+      badge.style.color = 'var(--ac)';
+    }
+    return;
+  }
 
   if (state._isBetaTester) {
     badge.textContent = '💚 베타 테스터 무제한';
@@ -12326,6 +12366,56 @@ async function _updateScanBadge() {
     badge.style.cursor = 'pointer';
     badge.onclick = () => _showAICreditPopup();
   }
+}
+
+// ── 비회원 가입 유도 팝업 ──
+function _showGuestSignupPrompt() {
+  if (document.querySelector('[data-guest-signup-popup]')) return;
+  const overlay = document.createElement('div');
+  overlay.setAttribute('data-guest-signup-popup', '1');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div style="background:var(--sf);border-radius:20px;padding:28px 22px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:40px;margin-bottom:8px">🦎</div>
+        <div style="font-size:18px;font-weight:800;color:var(--tx)">무료 체험이 끝났어요!</div>
+        <div style="font-size:13px;color:var(--tx2);margin-top:6px;line-height:1.5">
+          회원가입하면 <b style="color:var(--ac)">매일 3회 무료</b>로<br>AI 모프 판별을 이용할 수 있어요
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="this.closest('[data-guest-signup-popup]').remove();showPage('more')" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+          회원가입 / 로그인하기
+        </button>
+        <button onclick="this.closest('[data-guest-signup-popup]').remove()" style="width:100%;padding:12px;border:1px solid var(--br);border-radius:12px;background:transparent;color:var(--tx3);font-size:13px;cursor:pointer">
+          다음에 할게요
+        </button>
+      </div>
+      <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--tx3)">
+        개체 관리 · 사육 기록 · 커뮤니티도 무료!
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ── 비회원 결과 화면 가입 유도 배너 ──
+function _showGuestResultBanner() {
+  const resultArea = document.getElementById('result-area');
+  if (!resultArea || resultArea.querySelector('.guest-signup-banner')) return;
+  const banner = document.createElement('div');
+  banner.className = 'guest-signup-banner';
+  banner.style.cssText = 'background:linear-gradient(135deg,rgba(46,125,87,.12),rgba(46,125,87,.05));border:1.5px solid var(--ac);border-radius:16px;padding:18px 16px;margin:16px 0;text-align:center';
+  banner.innerHTML = `
+    <div style="font-size:15px;font-weight:700;color:var(--ac);margin-bottom:6px">🎉 AI 판별 결과가 마음에 드셨나요?</div>
+    <div style="font-size:12px;color:var(--tx2);line-height:1.5;margin-bottom:12px">
+      회원가입하면 매일 3회 무료 · 개체 저장 · 사육 기록까지!
+    </div>
+    <button onclick="_showGuestSignupPrompt()" style="padding:10px 28px;border:none;border-radius:10px;background:var(--ac);color:#fff;font-size:14px;font-weight:700;cursor:pointer">
+      무료 가입하기
+    </button>`;
+  // 결과 영역 맨 아래에 삽입
+  resultArea.appendChild(banner);
 }
 
 // ── PRO 업그레이드 유도 팝업 ──
