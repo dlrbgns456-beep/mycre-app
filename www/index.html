@@ -10367,9 +10367,15 @@ async function signInWithGoogle() {
         return;
       }
       // Chrome Custom Tabs로 열기 (Google 403 차단 우회 + assetlinks.json 으로 앱 복귀)
-      const Browser = window.Capacitor.Plugins.Browser;
-      await Browser.open({ url: data.url });
-      _debugLog('info', 'auth', 'Google OAuth → Chrome Custom Tabs 열림');
+      const Browser = window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+      if (Browser && typeof Browser.open === 'function') {
+        await Browser.open({ url: data.url });
+        _debugLog('info', 'auth', 'Google OAuth → Chrome Custom Tabs 열림');
+      } else {
+        // 폴백: Browser 플러그인 미로드 시 시스템 브라우저로 직접 이동
+        _debugLog('warn', 'auth', 'Capacitor Browser 플러그인 미로드 — 시스템 브라우저 폴백');
+        window.open(data.url, '_system') || (window.location.href = data.url);
+      }
     } catch(e) {
       showAuthErr('Google 로그인 오류: ' + (e?.message || e));
       _debugLog('error', 'auth', 'Google OAuth(Capacitor) 예외: ' + (e?.message || e), { stack: e?.stack });
@@ -11387,7 +11393,7 @@ function sendLocalNotification(title, body, icon = '/icon-512.png', soundType = 
 
 // 앱 시작 시 리마인더 체크 (종류별 별도 캐시 — 카피 가이드 준수)
 function _checkDailyReminders() {
-  if (!_currentUser || Notification?.permission !== 'granted') return;
+  if (!_currentUser || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   if (state.geckos.length === 0) return;
   const prefs = _loadNotifPrefs();
   const todayKey = new Date().toISOString().slice(0, 10);
