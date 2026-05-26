@@ -3655,23 +3655,28 @@ function _estimatePhotoView(ca) {
 
 function _applyCAHardRules(scores, colorAnalyses) {
   if (!colorAnalyses || colorAnalyses.length === 0) return scores;
-  const udonCount = colorAnalyses.filter(ca => ca.tail.whiteRatio > 0.28 && ca.tail.avgSat < 0.14).length;
-  const yMarkCount = colorAnalyses.filter(ca => ca.tail.whiteRatio > 0.12 && ca.tail.whiteRatio < 0.35
-                                               && ca.brownRatio > 0.1 && (ca.spotContrastRatio||0) < 30).length;
+  // ── v4 보정 (2026-05-26): 제보 분석 22건 기반 임계 재조정 ──
+  // 바이컬러 8회 과예측, 트익할 5회 누락, 릴리화이트 4회 누락, 차콜 2회 오답(conf 68/75)
+  const udonCount = colorAnalyses.filter(ca => ca.tail.whiteRatio > 0.25 && ca.tail.avgSat < 0.14).length; // 0.28→0.25 완화 (릴리화이트 누락 줄이기)
+  const yMarkCount = colorAnalyses.filter(ca => ca.tail.whiteRatio > 0.15 && ca.tail.whiteRatio < 0.35
+                                               && ca.brownRatio > 0.12 && (ca.spotContrastRatio||0) < 30).length; // 0.12→0.15, brown 0.10→0.12 (카푸치노 오답 줄이기)
   const darkTailCount = colorAnalyses.filter(ca => ca.tail.darkRatio > 0.35 && (ca.avgBright - ca.tail.avgBright) > 18).length;
   const spotCount = colorAnalyses.filter(ca => (ca.centerSpotDensity||0) > 0.01 || ca.spotDensity > 0.02).length;
+  // v4 NEW: 점이 진하게 많이 보이는 패턴 (슈달 감지용)
+  const heavySpotCount = colorAnalyses.filter(ca => (ca.centerSpotDensity||0) > 0.02 || ca.spotDensity > 0.05).length;
 
   const bump = (name, n) => { if (scores[name] !== undefined) scores[name] += n; };
   const cut  = (name, n) => { if (scores[name] !== undefined) scores[name] = Math.max(0, scores[name] - n); };
 
-  // v3: 사진 1장이라도 보너스 적용 (기존 >= 2 → >= 1), 단 1장일 때 보너스 축소
   const photoN = colorAnalyses.length;
   if (udonCount >= 1) {
-    const udonBonus = udonCount >= 2 ? 20 : (photoN === 1 ? 14 : 10);
+    const udonBonus = udonCount >= 2 ? 22 : (photoN === 1 ? 16 : 12); // 살짝 강화 (20/14/10 → 22/16/12)
     ['릴리화이트','슈퍼릴리','프라푸치노','릴잔틱'].forEach(n => bump(n, udonBonus));
+    // v4: 우동꼬리면 바이컬러/노멀 가능성 낮음 (오답 8회 중 4회가 릴리화이트인데 바이컬러로 빠짐)
+    ['바이컬러','노멀','패턴리스'].forEach(n => cut(n, 10));
   }
   if (yMarkCount >= 1) {
-    const yBonus = yMarkCount >= 2 ? 25 : (photoN === 1 ? 18 : 12);
+    const yBonus = yMarkCount >= 2 ? 22 : (photoN === 1 ? 15 : 10); // 25/18/12 → 22/15/10 (살짝 보수)
     ['카푸치노','카푸치노+','카푸할리','카푸트리'].forEach(n => bump(n, yBonus));
     ['사이블','노멀','팬텀'].forEach(n => cut(n, yMarkCount >= 2 ? 15 : 8));
   }
@@ -3683,15 +3688,27 @@ function _applyCAHardRules(scores, colorAnalyses) {
     ['사이블','사이블할리','사이블트리'].forEach(n => bump(n, 15));
   }
 
-  // v3: 트익할 하드룰 — 3색 분리 패턴 감지 시 트리컬러 계열 보너스
+  // v4: 트익할 하드룰 — 임계 완화 + 보너스 강화 (5회 누락)
   const tricolorCount = colorAnalyses.filter(ca =>
-    ca.contrast > 30 && (ca.lateral?.whiteRatio || 0) > 0.10 && ca.darkRatio > 0.15
+    ca.contrast > 25 && (ca.lateral?.whiteRatio || 0) > 0.08 && ca.darkRatio > 0.13 // 30/0.10/0.15 → 25/0.08/0.13
   ).length;
   if (tricolorCount >= 1) {
-    const triBonus = tricolorCount >= 2 ? 18 : 10;
+    const triBonus = tricolorCount >= 2 ? 25 : (photoN === 1 ? 16 : 14); // 18/10 → 25/16/14
     ['트리컬러','트익할','카푸트리','사이블트리'].forEach(n => bump(n, triBonus));
-    // 바이컬러가 트익할을 먹는 현상 방지
-    bump('바이컬러', -5);
+    // 바이컬러 강력 억제 (-5 → tricolorCount 따라 -10/-15)
+    cut('바이컬러', tricolorCount >= 2 ? 15 : 10);
+  }
+
+  // v4 NEW: 슈달 보호 — 점이 많이 보이면 차콜 가능성 차단 (차콜 conf 68/75 오답 차단)
+  if (heavySpotCount >= Math.ceil(photoN / 2)) {
+    ['차콜','블랙나이트','다크나이트'].forEach(n => cut(n, 25));
+    ['슈퍼달마시안','달마시안'].forEach(n => bump(n, 15));
+  }
+
+  // v4 NEW: 바이컬러 폴백 과예측 종합 보정
+  // 우동/트리컬러/Y마크 중 하나라도 있으면 바이컬러는 확실히 아님
+  if (udonCount >= 1 || tricolorCount >= 1 || yMarkCount >= 1) {
+    cut('바이컬러', 8);
   }
 
   return scores;
