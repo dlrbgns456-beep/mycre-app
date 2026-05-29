@@ -748,16 +748,20 @@ input[type=file]{display:none}
             <input type="checkbox" id="agree-age" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
             <span style="color:var(--tx2)"><b style="color:var(--coral)">[필수]</b> 만 14세 이상이에요</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
-            <input type="checkbox" id="agree-tos" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
-            <span style="color:var(--tx2);flex:1"><b style="color:var(--coral)">[필수]</b> 이용약관에 동의합니다</span>
-            <span onclick="event.preventDefault();event.stopPropagation();openTermsSheet('terms')" style="color:var(--ac);font-size:11px;text-decoration:underline">보기</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
-            <input type="checkbox" id="agree-privacy" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
-            <span style="color:var(--tx2);flex:1"><b style="color:var(--coral)">[필수]</b> 개인정보처리방침에 동의합니다</span>
-            <span onclick="event.preventDefault();event.stopPropagation();openTermsSheet('privacy')" style="color:var(--ac);font-size:11px;text-decoration:underline">보기</span>
-          </label>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;margin:0">
+              <input type="checkbox" id="agree-tos" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
+              <span style="color:var(--tx2)"><b style="color:var(--coral)">[필수]</b> 이용약관에 동의합니다</span>
+            </label>
+            <button type="button" onclick="openTermsSheet('terms')" style="color:var(--ac);font-size:11px;text-decoration:underline;background:none;border:none;padding:4px 6px;cursor:pointer;font-family:inherit;touch-action:manipulation">보기</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;margin:0">
+              <input type="checkbox" id="agree-privacy" class="agreement-item" required style="width:16px;height:16px;accent-color:var(--ac)">
+              <span style="color:var(--tx2)"><b style="color:var(--coral)">[필수]</b> 개인정보처리방침에 동의합니다</span>
+            </label>
+            <button type="button" onclick="openTermsSheet('privacy')" style="color:var(--ac);font-size:11px;text-decoration:underline;background:none;border:none;padding:4px 6px;cursor:pointer;font-family:inherit;touch-action:manipulation">보기</button>
+          </div>
           <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
             <input type="checkbox" id="agree-marketing" class="agreement-item" style="width:16px;height:16px;accent-color:var(--ac)">
             <span style="color:var(--tx2)"><b style="color:var(--tx3)">[선택]</b> 신규 기능·이벤트 소식을 이메일로 받을게요</span>
@@ -793,10 +797,10 @@ input[type=file]{display:none}
     </div>
 
     <!-- 하단 약관 링크 -->
-    <div style="display:flex;justify-content:center;gap:16px;margin-top:16px;font-size:11px;color:var(--tx3)">
-      <span onclick="openTermsSheet('terms')" style="cursor:pointer;text-decoration:underline">이용약관 보기</span>
+    <div style="display:flex;justify-content:center;gap:16px;margin-top:16px;font-size:11px;color:var(--tx3);align-items:center">
+      <button type="button" onclick="openTermsSheet('terms')" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:var(--tx3);font-size:11px;font-family:inherit;padding:6px 4px;touch-action:manipulation">이용약관 보기</button>
       <span>·</span>
-      <span onclick="openTermsSheet('privacy')" style="cursor:pointer;text-decoration:underline">개인정보처리방침 보기</span>
+      <button type="button" onclick="openTermsSheet('privacy')" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:var(--tx3);font-size:11px;font-family:inherit;padding:6px 4px;touch-action:manipulation">개인정보처리방침 보기</button>
     </div>
   </div>
 </div>
