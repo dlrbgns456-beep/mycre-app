@@ -2334,7 +2334,7 @@ input[type=file]{display:none}
 <div class="sheet-overlay" id="sheet-write-post" onclick="closeSheet('sheet-write-post',event)">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">✏️ 게시글 작성</div>
+    <div class="sheet-title" id="write-post-sheet-title">✏️ 게시글 작성</div>
     <div class="sheet-body">
       <div class="form-group">
         <label class="form-label">카테고리</label>
@@ -7699,7 +7699,10 @@ async function openPostDetail(p) {
         <input id="comment-input" class="form-input" placeholder="댓글 작성..." style="flex:1;font-size:13px">
         <button class="btn-primary" style="width:auto;padding:11px 16px;border-radius:12px" onclick="submitComment()">등록</button>
       </div>
-      ${p.isOwn ? '<button class="btn-outline" onclick="deletePost(' + p.id + ')" style="color:var(--coral);border-color:var(--coral);background:var(--co2);margin-top:10px;width:100%">🗑 이 게시글 삭제</button>' : ''}
+      ${p.isOwn ? `<div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-outline" onclick="openEditPost(${p.id})" style="flex:1;color:var(--ac);border-color:var(--ac);background:var(--ac2)">✏️ 수정</button>
+        <button class="btn-outline" onclick="deletePost(${p.id})" style="flex:1;color:var(--coral);border-color:var(--coral);background:var(--co2)">🗑 삭제</button>
+      </div>` : ''}
       ${!p.isOwn && !isNotice ? `<div style="display:flex;gap:8px;margin-top:8px">
         <button class="btn-outline" onclick="reportPost(${p.id})" style="flex:1;color:var(--tx3);border-color:var(--br);font-size:12px">🚨 게시글 신고</button>
         <button class="btn-outline" onclick="blockUser('${p.user_id}','${(p.author||'').replace(/'/g,'')}')" style="flex:1;color:var(--tx3);border-color:var(--br);font-size:12px">🚫 사용자 차단</button>
@@ -7962,6 +7965,9 @@ function openWritePost() {
     showCommunityGuidelines(function() { openWritePost(); });
     return;
   }
+  // 신규 작성 모드로 전환
+  _editingPostId = null;
+  _setWriteModeLabels(false);
   // 🛡️ 이전 상태 완전 초기화 (사진 재업로드 버그 방지)
   _postPhotoData = null;
   _postPhotoBlob = null;
@@ -8006,6 +8012,74 @@ function openWritePost() {
 let _postPhotoData = null;
 
 let _postPhotoBlob = null; // 리사이즈된 Blob (업로드용)
+
+// 게시글 수정 모드 상태 — null이면 신규 작성, postId면 수정 중
+let _editingPostId = null;
+
+function _setWriteModeLabels(editing) {
+  const t = document.getElementById('write-post-sheet-title');
+  const b = document.getElementById('btn-submit-post');
+  if (t) t.textContent = editing ? '✏️ 게시글 수정' : '✏️ 게시글 작성';
+  if (b) b.textContent = editing ? '수정 완료' : '게시하기';
+}
+
+async function openEditPost(postId) {
+  const p = state.posts.find(x => String(x.id) === String(postId));
+  if (!p) { showToast('게시글을 찾을 수 없어요'); return; }
+  if (!_currentUser || String(p.user_id) !== String(_currentUser.id)) {
+    showToast('본인 글만 수정할 수 있어요'); return;
+  }
+  if (!_hasAgreedCommunityGuidelines()) {
+    showCommunityGuidelines(function() { openEditPost(postId); });
+    return;
+  }
+  _editingPostId = postId;
+  _postPhotoData = null;
+  _postPhotoBlob = null;
+  populateGeckoSelects();
+  // 폼 채우기
+  const catEl = document.getElementById('post-category');
+  if (catEl) catEl.value = p.cat || 'sale';
+  const titleEl = document.getElementById('post-title-input');
+  if (titleEl) titleEl.value = p.title || '';
+  const priceEl = document.getElementById('post-price-input');
+  if (priceEl) priceEl.value = p.price || '';
+  const bodyEl = document.getElementById('post-body-input');
+  if (bodyEl) bodyEl.value = p.body || '';
+  const linkEl = document.getElementById('post-gecko-link');
+  if (linkEl) linkEl.value = p.linked_gecko_id || '';
+  // 기존 사진 미리보기 (새로 업로드하지 않으면 그대로 유지)
+  const previewEl = document.getElementById('post-photo-preview');
+  const placeholderEl = document.getElementById('post-photo-placeholder');
+  const removeBtnEl = document.getElementById('post-photo-remove-btn');
+  const fileInputEl = document.getElementById('post-photo-input');
+  if (fileInputEl) fileInputEl.value = '';
+  if (p.photo && previewEl) {
+    previewEl.src = p.photo;
+    previewEl.style.display = 'block';
+    if (placeholderEl) placeholderEl.style.display = 'none';
+    if (removeBtnEl) removeBtnEl.style.display = 'inline-block';
+  } else {
+    if (previewEl) { previewEl.src = ''; previewEl.style.display = 'none'; }
+    if (placeholderEl) placeholderEl.style.display = 'block';
+    if (removeBtnEl) removeBtnEl.style.display = 'none';
+  }
+  // 관리자 공지 옵션 가시성 정리 (openWritePost와 동일 로직)
+  if (catEl) {
+    const hasNotice = [...catEl.options].some(o => o.value === 'notice');
+    if (_isAdmin() && !hasNotice) {
+      const opt = document.createElement('option');
+      opt.value = 'notice'; opt.textContent = '📢 공지사항';
+      catEl.insertBefore(opt, catEl.firstChild);
+    } else if (!_isAdmin() && hasNotice) {
+      [...catEl.options].forEach(o => { if (o.value === 'notice') o.remove(); });
+    }
+  }
+  _setWriteModeLabels(true);
+  _updateWriteFormForCategory();
+  closeSheetDirect('sheet-post-detail');
+  openSheet('sheet-write-post');
+}
 
 function handlePostPhoto(e) {
   const file = e.target.files[0];
@@ -8078,7 +8152,8 @@ async function submitPost() {
   }
 
   const btn = document.getElementById('btn-submit-post');
-  if (btn) { btn.disabled = true; btn.textContent = '게시 중...'; btn.style.opacity = '.6'; }
+  const isEdit = !!_editingPostId;
+  if (btn) { btn.disabled = true; btn.textContent = isEdit ? '수정 중...' : '게시 중...'; btn.style.opacity = '.6'; }
 
   try {
     let photo = null;
@@ -8125,6 +8200,9 @@ async function submitPost() {
       }
     }
 
+    // 수정 모드에선 본문에 aiPrefix 재추가 안 함 (이미 본문에 들어있음)
+    const bodyText = (isEdit ? '' : aiPrefix) + document.getElementById('post-body-input').value;
+
     // ── 먼저 텍스트만 DB에 즉시 저장 (사진 없이) ──
     const row = {
       user_id: _currentUser.id,
@@ -8133,7 +8211,7 @@ async function submitPost() {
       author: cat === 'notice' ? '볏마루도감 운영팀' : (_profile.name || '익명'),
       avatar: cat === 'notice' ? '📢' : '🦎',
       price: cat !== 'notice' ? (document.getElementById('post-price-input')?.value || null) : null,
-      body: aiPrefix + document.getElementById('post-body-input').value,
+      body: bodyText,
       photo,
       morph,
       emoji: cat === 'notice' ? '📢' : '🦎',
@@ -8143,6 +8221,7 @@ async function submitPost() {
     };
 
     // ── 사진이 있으면 먼저 업로드 (리사이즈 되어있으므로 빠름) ──
+    let newPhotoUploaded = false;
     if (pendingPostBlob && cat !== 'notice') {
       try {
         const fileName = `${_currentUser.id}/post_${Date.now()}.jpg`;
@@ -8152,34 +8231,81 @@ async function submitPost() {
         if (!upErr) {
           const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
           row.photo = urlData.publicUrl;
+          newPhotoUploaded = true;
         }
       } catch(e) { console.error('사진 업로드 실패:', e); }
     }
 
-    // ── DB 저장 ──
-    const { error } = await _supabase.from('posts').insert(row);
-    if (error) {
-      showToast('❌ 게시 실패: ' + error.message);
-      console.error('Post insert error:', error);
-      return;
+    if (isEdit) {
+      // ── UPDATE 모드: 본인 글만 갱신, 시스템 필드는 건드리지 않음 ──
+      const updateRow = {
+        cat: row.cat,
+        title: row.title,
+        price: row.price,
+        body: row.body,
+        morph: row.morph,
+        tags: row.tags,
+        is_verified: row.is_verified,
+        linked_gecko_id: row.linked_gecko_id,
+      };
+      // 사진 처리 분기:
+      //   - 새 업로드 → 새 URL로 교체
+      //   - 사용자가 사진 제거(_postPhotoData=null이고 preview 숨김) → null로 비움
+      //   - 그 외(미리보기 그대로) → photo 필드 안 건드림 (기존 보존)
+      if (newPhotoUploaded) {
+        updateRow.photo = row.photo;
+      } else {
+        const previewElCheck = document.getElementById('post-photo-preview');
+        const previewHidden = !previewElCheck || previewElCheck.style.display === 'none' || !previewElCheck.src;
+        if (previewHidden && !_postPhotoData) {
+          updateRow.photo = null;
+        }
+        // 미리보기 노출 중이면 photo 필드를 아예 안 보냄 → 기존 사진 그대로
+      }
+      const { error } = await _supabase.from('posts').update(updateRow).eq('id', _editingPostId).eq('user_id', _currentUser.id);
+      if (error) {
+        showToast('❌ 수정 실패: ' + error.message);
+        console.error('Post update error:', error);
+        return;
+      }
+      // state.posts 동기화
+      const idx = state.posts.findIndex(x => String(x.id) === String(_editingPostId));
+      if (idx >= 0) Object.assign(state.posts[idx], updateRow);
+      _editingPostId = null;
+      _setWriteModeLabels(false);
+      closeSheetDirect('sheet-write-post');
+      document.getElementById('post-title-input').value = '';
+      const priceInput = document.getElementById('post-price-input');
+      if (priceInput) priceInput.value = '';
+      document.getElementById('post-body-input').value = '';
+      removePostPhoto();
+      await renderPosts();
+      showToast('✅ 게시글이 수정되었어요!');
+    } else {
+      // ── INSERT 모드 (기존 흐름) ──
+      const { error } = await _supabase.from('posts').insert(row);
+      if (error) {
+        showToast('❌ 게시 실패: ' + error.message);
+        console.error('Post insert error:', error);
+        return;
+      }
+      // 시트 닫고 화면 전환
+      closeSheetDirect('sheet-write-post');
+      document.getElementById('post-title-input').value = '';
+      const priceInput = document.getElementById('post-price-input');
+      if (priceInput) priceInput.value = '';
+      document.getElementById('post-body-input').value = '';
+      removePostPhoto();
+      await renderPosts();
+      showPage('comm');
+      showToast(cat === 'notice' ? '📢 공지사항이 등록되었어요!' : '✅ 게시글이 등록되었어요!');
     }
-
-    // ── 시트 닫고 화면 전환 ──
-    closeSheetDirect('sheet-write-post');
-    document.getElementById('post-title-input').value = '';
-    const priceInput = document.getElementById('post-price-input');
-    if (priceInput) priceInput.value = '';
-    document.getElementById('post-body-input').value = '';
-    removePostPhoto();
-    await renderPosts();
-    showPage('comm');
-    showToast(cat === 'notice' ? '📢 공지사항이 등록되었어요!' : '✅ 게시글이 등록되었어요!');
 
   } catch(err) {
     console.error('게시글 저장 오류:', err);
-    showToast('⚠️ 게시 중 오류가 발생했습니다');
+    showToast(isEdit ? '⚠️ 수정 중 오류가 발생했습니다' : '⚠️ 게시 중 오류가 발생했습니다');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '게시하기'; btn.style.opacity = '1'; }
+    if (btn) { btn.disabled = false; btn.textContent = isEdit ? '수정 완료' : '게시하기'; btn.style.opacity = '1'; }
   }
 }
 
