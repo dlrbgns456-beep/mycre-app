@@ -41,3 +41,12 @@ Thumbs.db
 
 # ── Claude Code 로컬 설정 ────────────────────────
 .claude/
+
+# === 로컬 전용 (2026-05-31 통합 추가) ===
+docs/
+business/
+records/
+_legacy/
+keys/
+_setup_unified.sh
+CLAUDE.md.local_backup_*
