@@ -65,13 +65,24 @@ www/index.html 수정 → git add → git commit → git push origin master
 - Supabase 프로젝트: fatjjjwfauujgrvcihwd (ap-northeast-2)
 - Supabase MCP 연결됨 (execute_sql, list_tables, apply_migration, deploy_edge_function 등)
 - Edge Functions: send-admin-notification, delete-user, send-push, misting-cron, hatching-cron, confirm-payment
+- **Supabase ↔ GitHub Integration 활성** (2026-05-31~): `supabase/migrations/` 폴더에 새 .sql 푸시 시 master 브랜치에서 자동 적용
+  - 기존 마이그레이션 백업: `_legacy/migrations_archive/` (로컬, gitignore)
 
-## 외부 서비스 현황 (2026-05-22)
+## 🤖 AI 백엔드
+- **Google Gemini API** — AI 모프 판별(유료 기능)에 사용
+- 발급/사용량 관리: Google AI Studio (https://aistudio.google.com)
+- 매일 무료 3회 / 추가 사용은 크레딧 결제 (5/15/30회 팩)
+
+## 🖼️ 콘텐츠 자동화
+- **HTML/CSS to Image API (HCTI)** — SNS 마케팅 이미지 자동 생성
+- 대시보드: https://htmlcsstoimage.com/
+
+## 외부 서비스 현황 (2026-06-03 갱신)
 - 통신판매업: 신고 완료 (제2026-인천연수구-1224호)
 - 에스크로: 토스페이먼츠 확인증 발급 완료
-- 토스페이먼츠: 테스트 모드 연동 완료 (test_ck_yZqmkKeP8g9KW4EgwmyYVbQRxB9l)
-- Google Play: **비공개 테스트 재실시 (5/22~), v1.0.4 (versionCode 5) 출시 중**
-- Apple App Store: **iOS 심사 통과 ✅**
+- 토스페이먼츠: 테스트 모드 연동 완료 (test_ck_yZqmkKeP8g9KW4EgwmyYVbQRxB9l), **라이브 심사 회신 발송 대기**
+- Google Play: **비공개 테스트 재실시 (5/22~), v1.0.4 (versionCode 5) — 6/5 종료 예정**
+- Apple App Store: **iOS 심사 통과 ✅ — 정식 출시 시점 결정 대기**
 - 카카오 비즈앱: 승인 완료
 - 인스타그램: @byetmaru
 - 스레드: @byetmaru
@@ -82,9 +93,10 @@ www/index.html 수정 → git add → git commit → git push origin master
 
 ## 🔐 인증(OAuth) 연동 현황
 - OAuth Callback URI: https://fatjjjwfauujgrvcihwd.supabase.co/auth/v1/callback
-- 카카오: REST API 키 b6a33392bbb490581e1e99f46f57e6ec (앱 ID 1440509)
-- 구글: Supabase Auth 활성화
-- Apple: Service ID com.lbeetle.byetmaru.web
+- **카카오**: REST API 키 b6a33392bbb490581e1e99f46f57e6ec (앱 ID 1440509) — Kakao Developers 콘솔에서 관리
+- **구글**: Supabase Auth 활성화 — Google Cloud Console "My First Project"에서 OAuth client ID 발급
+- **Apple**: Service ID com.lbeetle.byetmaru.web (Team ID: L4GHAHN9TS, Key ID: X36UQ96KB2)
+- **NAVER**: NAVER Developers 등록만 한 상태, 구현 예정 (signInWithNaver 함수 + Supabase Custom OAuth Provider 활성화)
 
 ### ⭐ 안드로이드 OAuth — Chrome Custom Tabs + Deep Link 방식 (해결됨 2026-05-22)
 이전: WebView OAuth → 구글 "disallowed_useragent" 차단
@@ -138,13 +150,21 @@ www/index.html 수정 → git add → git commit → git push origin master
 - localStorage 키 `mycre_` 접두사 유지 (기존 사용자 데이터 호환)
 
 ## 🎯 진행 중 / 남은 일
-- [진행 중] 안드로이드 비공개 테스트 14일 재진행 (5/22 시작)
+- [진행 중] 안드로이드 비공개 테스트 14일 재진행 (5/22 시작, **6/5 종료 예정**)
 - [진행 중] 베타 테스터 피드백 수집
+- [대기] iOS 정식 출시 시점 결정 (이미 심사 통과됨)
+- [대기] 토스페이먼츠 회신 메일 발송 (라이브 심사용)
 - [대기] 카카오 로그인도 CCT 방식 확인 (구글 됐으니 거의 확실히 OK)
+- [신규] **NAVER 로그인 추가** — Supabase Custom OAuth + signInWithNaver()
 - [v1.1] 위젯 (분무 카운트다운), 네이티브 푸시 알림, Capacitor 버전 정렬
 - [v1.1] iOS Sign in with Apple, Apple IAP
 
-## 📝 최근 주요 변경 (2026-05-22)
+## 📝 최근 주요 변경 (2026-05-31)
+- **Supabase ↔ GitHub Integration 활성화** — `supabase/migrations/`에 푸시 시 자동 적용
+- **단일 통합 폴더**: ~/Desktop/볏마루도감 (mycre-app 코드 + docs/keys/business/records 통합, 윈도우/맥 워크플로우 분리)
+- mycre-beta Netlify 프로젝트 정리 (사용 안 함)
+
+## 📝 이전 주요 변경 (2026-05-22)
 - 단일 저장소 통합: byetmaru-capacitor → mycre-app 흡수
 - 안드로이드 구글 OAuth 완전 해결 (CCT + Deep Link + assetlinks.json)
 - Netlify peer dep 충돌 해결 (.npmrc + netlify.toml)
