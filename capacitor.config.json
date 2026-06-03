@@ -18,7 +18,8 @@
     }
   },
   "server": {
-    "url": "https://byetmaru.com",
+    "androidScheme": "https",
+    "iosScheme": "https",
     "cleartext": false,
     "allowNavigation": [
       "byetmaru.com",

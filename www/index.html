@@ -9328,6 +9328,43 @@ async function _notifyAdmin(type, subject, body) {
 // 🔍 DEBUG LOGGING SYSTEM (전역 에러 수집)
 // ══════════════════════════════
 const APP_VERSION = '2.5.0';
+
+// ══════════════════════════════
+// 🔄 백그라운드 업데이트 체크 (Capacitor 네이티브 앱 전용)
+//    capacitor.config.json에서 server.url 제거됨 (2026-06-03)
+//    → 앱은 로컬 자산으로 즉시 시작
+//    → 백그라운드로 byetmaru.com/version.json 비교
+//    → 새 버전 발견 시 사용자에게 토스트 안내 (Play Store/App Store 업데이트 유도)
+//    → 본격 hot-reload는 v1.1에서 (capacitor live-updates 도입 예정)
+// ══════════════════════════════
+async function _checkAppUpdate() {
+  // Capacitor 네이티브 앱에서만 동작 (웹 PWA는 SW가 처리)
+  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+  // 하루에 한 번만 체크 (사용자 데이터 절약)
+  const lastCheck = parseInt(localStorage.getItem('_byetmaru_last_update_check') || '0', 10);
+  const now = Date.now();
+  if (now - lastCheck < 24 * 60 * 60 * 1000) return; // 24시간 이내면 skip
+  try {
+    const resp = await fetch('https://byetmaru.com/version.json', { cache: 'no-store' });
+    if (!resp.ok) return;
+    const remote = await resp.json();
+    localStorage.setItem('_byetmaru_last_update_check', String(now));
+    if (remote.version && remote.version !== APP_VERSION) {
+      localStorage.setItem('_byetmaru_remote_version', remote.version);
+      // 사용자에게 조용히 안내 (앱 시작 직후가 아니라 30초 후, 사용자가 화면 본 뒤)
+      setTimeout(() => {
+        if (typeof window.showToast === 'function') {
+          window.showToast('🎉 새 버전(' + remote.version + ')이 준비됐어요! 스토어에서 업데이트해 주세요.');
+        }
+      }, 30000);
+    }
+  } catch(e) {
+    // 네트워크 오류는 조용히 무시 (다음에 다시 시도)
+  }
+}
+// 앱 시작 직후 5초 후에 체크 (사용자 경험 방해 안 하게)
+setTimeout(_checkAppUpdate, 5000);
+
 let _debugLogQueue = [];
 let _debugLogTimer = null;
 

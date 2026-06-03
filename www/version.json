@@ -1,0 +1,6 @@
+{
+  "version": "2.5.0",
+  "appVersion": "1.0.5",
+  "buildAt": "2026-06-03T20:30:00+09:00",
+  "comment": "이 파일은 byetmaru.com에서 fetch되어 앱이 새 웹 버전을 감지할 때 사용됩니다. www/index.html의 APP_VERSION 상수와 함께 갱신하세요."
+}
