@@ -10561,6 +10561,55 @@ async function signInWithKakao() {
 }
 
 async function signInWithApple() {
+  // ── Capacitor iOS: native Sign in with Apple (4.8.0 정책 충족) ──
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()
+      && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios') {
+    try {
+      showAuthErr('Apple 로그인 중...');
+      document.getElementById('auth-err').style.color = 'var(--tx2)';
+      const SignInWithApple = window.Capacitor.Plugins && window.Capacitor.Plugins.SignInWithApple;
+      if (!SignInWithApple || typeof SignInWithApple.authorize !== 'function') {
+        showAuthErr('Apple 로그인 플러그인 미로드');
+        _debugLog('error', 'auth', 'apple-sign-in 플러그인 미로드');
+        return;
+      }
+      const result = await SignInWithApple.authorize({
+        clientId: 'com.lbeetle.byetmaru',                                     // App Bundle ID
+        redirectURI: 'https://fatjjjwfauujgrvcihwd.supabase.co/auth/v1/callback',
+        scopes: 'email name',
+        state: 'apple-' + Date.now(),
+        nonce: 'nonce-' + Math.random().toString(36).slice(2)
+      });
+      const idToken = result && result.response && result.response.identityToken;
+      if (!idToken) {
+        showAuthErr('Apple identity token 발급 실패');
+        _debugLog('error', 'auth', 'apple authorize 성공이나 identityToken 없음', { result });
+        return;
+      }
+      const { error } = await _supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: idToken
+      });
+      if (error) {
+        showAuthErr('Apple 로그인 실패: ' + error.message);
+        _debugLog('error', 'auth', 'Supabase signInWithIdToken(apple) 실패: ' + error.message);
+      } else {
+        _debugLog('info', 'auth', 'Apple Sign In 성공');
+      }
+    } catch(e) {
+      // 사용자 취소는 조용히
+      const msg = e && (e.message || e.errorMessage || '');
+      if (e && (e.code === '1001' || /cancel/i.test(msg))) {
+        showAuthErr('');
+        return;
+      }
+      showAuthErr('Apple 로그인 오류: ' + (msg || e));
+      _debugLog('error', 'auth', 'Apple Sign In 예외: ' + msg, { stack: e && e.stack });
+    }
+    return;
+  }
+
+  // ── 일반 웹 브라우저: Supabase OAuth redirect ──
   const { error } = await _supabase.auth.signInWithOAuth({
     provider: 'apple',
     options: { redirectTo: 'https://byetmaru.com' }
@@ -14159,9 +14208,10 @@ function renderWeightChart(weightRecords) {
   const style = document.createElement('style');
   style.id = 'ios-compliance-style';
   style.textContent = `
-    /* iOS: 모든 소셜 로그인 버튼 숨김 (외부 브라우저 호출 차단) */
-    .ios-native .social-btn,
-    .ios-native .auth-divider-line { display: none !important; }
+    /* iOS: Google/Kakao 로그인 버튼 숨김 (Universal Links 미설정 — v1.0.6에서 활성화 예정).
+       Apple 버튼은 표시 (native Sign in with Apple 사용 — 4.8.0 정책 충족) */
+    .ios-native .google-btn,
+    .ios-native .kakao-btn { display: none !important; }
     /* iOS: 회원가입 약관 동의 영역 항상 표시 */
     .ios-native #signup-agreements { display: block !important; }
     /* iOS: PRO 결제 시트는 절대 표시 안 됨 */
@@ -14230,13 +14280,13 @@ function renderWeightChart(weightRecords) {
   // openSheet가 나중에 정의될 가능성 대비 — DOMContentLoaded 시 다시 시도
   document.addEventListener('DOMContentLoaded', _patchOpenSheet);
 
-  // ─── 3. OAuth 함수 차단 (혹시 코드로 호출되더라도 외부 브라우저 안 열리게) ───
+  // ─── 3. OAuth 함수 차단 (Google/Kakao만 차단 — Apple은 native flow 사용 가능) ───
   function _patchOAuth() {
-    ['signInWithApple', 'signInWithGoogle', 'signInWithKakao'].forEach(fn => {
+    ['signInWithGoogle', 'signInWithKakao'].forEach(fn => {
       if (typeof window[fn] === 'function' && !window[fn].__iosPatched) {
         window[fn] = async function() {
           if (typeof window.showAuthErr === 'function') {
-            window.showAuthErr('iOS 앱에서는 이메일 로그인을 이용해 주세요.');
+            window.showAuthErr('iOS 앱에서는 Apple 또는 이메일 로그인을 이용해 주세요.');
           }
         };
         window[fn].__iosPatched = true;
