@@ -1,4 +1,4 @@
-const CACHE_NAME = 'byetmaru-v22';
+const CACHE_NAME = 'byetmaru-v23';
 const ASSETS = [
   '/manifest.json',
   '/icon-192.png',
