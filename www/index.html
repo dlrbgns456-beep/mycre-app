@@ -11421,16 +11421,24 @@ async function openNotifSettings() {
   // 브라우저 권한 상태 확인
   const permission = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
   const prefs = _loadNotifPrefs();
+  // 환경 감지 — 네이티브 앱(안드/iOS Capacitor)은 WebView라 Web Notification 미지원
+  const _isCapacitorNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
   const content = document.getElementById('notif-settings-content');
   if (!content) return;
   let permBanner = '';
   if (permission === 'unsupported') {
-    // iOS는 홈 화면 추가(PWA) 시에만 웹 알림 지원 — 안내 톤 완화
-    const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    permBanner = _isIOS
-      ? `<div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.35);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;color:#c9a850;line-height:1.7">📱 <b>iOS 알림 안내</b><br>아이폰·아이패드에서는 <b>홈 화면에 앱을 추가</b>하면 알림을 받을 수 있어요.<br><span style="font-size:11px;color:var(--tx3)">Safari 공유 버튼 → "홈 화면에 추가" → 추가된 앱에서 알림 허용</span><br><br>아래 알림 항목은 켜 두시면 홈 화면 추가 후 자동 적용돼요.</div>`
-      : `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">이 브라우저는 알림을 지원하지 않아요.</div>`;
+    if (_isCapacitorNative) {
+      // 안드/iOS Capacitor 앱 — WebView 환경에선 Web Notification API 미지원
+      // 네이티브 푸시(@capacitor/push-notifications)는 다음 업데이트(v1.1)에 도입 예정
+      permBanner = `<div style="background:rgba(74,158,255,.08);border:1px solid rgba(74,158,255,.3);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;color:#4a9eff;line-height:1.7">📱 <b>네이티브 푸시 준비 중</b><br>설치된 앱에서는 <b>다음 업데이트(v1.1)</b>에 네이티브 푸시 알림이 추가될 예정입니다.<br><span style="font-size:11px;color:var(--tx3)">아래에서 켠 항목은 업데이트 후 자동 적용돼요. 분무·체중 카드는 지금도 화면 내 카운트다운으로 표시됩니다.</span></div>`;
+    } else {
+      // iOS Safari PWA / 기타 브라우저 — 홈 화면 추가 안내
+      const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      permBanner = _isIOS
+        ? `<div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.35);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;color:#c9a850;line-height:1.7">📱 <b>iOS 알림 안내</b><br>아이폰·아이패드에서는 <b>홈 화면에 앱을 추가</b>하면 알림을 받을 수 있어요.<br><span style="font-size:11px;color:var(--tx3)">Safari 공유 버튼 → "홈 화면에 추가" → 추가된 앱에서 알림 허용</span><br><br>아래 알림 항목은 켜 두시면 홈 화면 추가 후 자동 적용돼요.</div>`
+        : `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">이 브라우저는 알림을 지원하지 않아요.</div>`;
+    }
   } else if (permission === 'denied') {
     permBanner = `<div style="background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#d44">알림이 차단되어 있어요. 브라우저 설정에서 허용으로 변경해 주세요.</div>`;
   } else if (permission === 'default') {
@@ -11450,15 +11458,29 @@ async function openNotifSettings() {
   content.innerHTML = permBanner
     + item('feed', '🦴 급이 리마인더', '오늘 급이 여부 체크')
     + item('weight', '📊 주간 체중 측정', '주 1회, 개체별 체중 기록 권장')
-    + `<label style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--br);opacity:.55">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">
-            ✨ 탈피 주기 알림
+    + (function() {
+        // 탈피 알림 — 개체에 평균 탈피 주기(shedCycle)가 설정돼야 작동
+        // 안내 문구를 사용자 상황에 맞게 동적으로
+        const geckoN = (state && state.geckos) ? state.geckos.length : 0;
+        const anyShedCycle = geckoN > 0 && state.geckos.some(g => g.shedCycle && parseInt(g.shedCycle) > 0);
+        let sub;
+        if (geckoN === 0) {
+          sub = '먼저 \'내 크레\' 탭에서 개체를 등록하면 활성화돼요';
+        } else if (!anyShedCycle) {
+          sub = '개체 편집 → \'평균 탈피 주기\'를 입력하면 자동 활성화 (v1.1에서 네이티브 푸시로 발송)';
+        } else {
+          sub = '평균 탈피 주기가 설정되어 있어요 · 네이티브 푸시 도입(v1.1) 후 자동 발송';
+        }
+        return `<label style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--br);opacity:.55">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">
+              ✨ 탈피 주기 알림
+            </div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px;line-height:1.5">${sub}</div>
           </div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">탈피 기록이 충분히 쌓이면 자동으로 켜집니다</div>
-        </div>
-        <input type="checkbox" disabled style="width:40px;height:22px;accent-color:var(--ac);cursor:not-allowed">
-      </label>`
+          <input type="checkbox" disabled style="width:40px;height:22px;accent-color:var(--ac);cursor:not-allowed">
+        </label>`;
+      })()
     + item('community', '💬 커뮤니티 알림', '내 글에 댓글이 달릴 때')
     + item('marketing', '🎁 마케팅 · 이벤트 소식', '신규 기능·쿠폰 등 (선택)')
     + `<div style="border-top:2px solid var(--br);margin-top:12px;padding-top:12px">
