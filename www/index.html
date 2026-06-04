@@ -13023,12 +13023,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => showOnboarding(), 800);
   }
 
-  // ── 안전장치: 6초 안에 아무것도 안 되면 강제로 로그인 화면 표시
-  // (iOS PKCE 교환은 시간이 더 걸릴 수 있으므로 여유 확보)
+  // ── 안전장치: 3초 안에 세션 응답 없으면 강제로 로그인 화면 표시
+  // (PKCE OAuth 콜백은 토큰 교환에 더 시간 걸리므로 8초)
   const hasAuthCode = window.location.search.includes('code=') || window.location.hash.includes('access_token');
   const authTimeout = setTimeout(() => {
     if (!_currentUser) _showAuthScreen();
-  }, hasAuthCode ? 10000 : 6000);
+  }, hasAuthCode ? 8000 : 3000);
+
+  // ── 🚀 Optimistic Auth: localStorage 토큰이 충분히 유효하면 서버 응답 대기 없이 즉시 진입
+  // 위험: 토큰이 revoke됐어도 잠시 home 보임 → onAuthStateChange가 SIGNED_OUT 또는 INITIAL_SESSION(null)으로 복귀 처리
+  (function _tryOptimisticAuth() {
+    if (hasAuthCode) return; // OAuth/PWD 리셋 콜백 중이면 정상 PKCE 흐름이 처리하도록 양보
+    try {
+      // Supabase v2 default storage 키
+      const tokenKey = 'sb-fatjjjwfauujgrvcihwd-auth-token';
+      const raw = localStorage.getItem(tokenKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const exp = parsed && parsed.expires_at; // epoch seconds
+      if (typeof exp !== 'number') return;
+      // 토큰이 1분 이상 유효해야 진입 (만료 직전엔 서버 refresh를 기다리는 게 안전)
+      if (exp * 1000 <= Date.now() + 60000) return;
+      if (!parsed.user || !parsed.user.id) return;
+      // 즉시 진입 — 이후 INITIAL_SESSION 콜백은 _currentUser 세팅 상태를 보고 _onSignedIn 중복 호출 안 함
+      clearTimeout(authTimeout);
+      _currentUser = parsed.user;
+      console.log('[OptimisticAuth] 캐시 토큰으로 즉시 진입:', parsed.user.email);
+      _onSignedIn();
+    } catch(e) {
+      console.warn('[OptimisticAuth] 실패 — 정상 흐름으로 대체:', e && e.message);
+    }
+  })();
 
   // ── Capacitor: Chrome Custom Tabs OAuth 콜백 처리 ──
   // Google 로그인 후 byetmaru.com으로 리다이렉트 → 앱이 딥링크로 받음
@@ -13114,6 +13139,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         || window.location.hash.includes('access_token');
       if (!hasAuthCallback) {
         clearTimeout(authTimeout);
+        // Optimistic auth가 캐시 토큰으로 진입했는데 서버 세션이 실제로 없으면 — 깔끔히 복구
+        if (_currentUser) {
+          console.warn('[OptimisticAuth] 서버 세션 없음 — 로그아웃 복구');
+          _currentUser = null;
+          try { showToast && showToast('세션이 만료되어 다시 로그인이 필요해요'); } catch(_) {}
+        }
         _showAuthScreen();
       }
     }
