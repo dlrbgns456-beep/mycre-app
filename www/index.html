@@ -1918,7 +1918,10 @@ input[type=file]{display:none}
       </div>
 
       <div class="form-group" style="position:relative">
-        <label class="form-label">모프 <span style="color:var(--tx3);font-size:10px;font-weight:400">검색하거나 직접 입력</span></label>
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <span>모프 <span style="color:var(--tx3);font-size:10px;font-weight:400">검색하거나 직접 입력</span></span>
+          <button type="button" id="btn-ai-suggest-morph" onclick="aiSuggestMorphForRegister()" style="background:linear-gradient(135deg,var(--ac),#38c947);color:#fff;border:none;padding:6px 11px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.1);box-shadow:0 1px 4px rgba(46,125,87,.25)">🤖 AI 추천받기</button>
+        </label>
         <input type="hidden" id="gecko-morph" value="">
         <input type="text" id="morph-inline-input" autocomplete="off"
           placeholder="모프 검색... (예: 릴리화이트)"
@@ -5096,6 +5099,124 @@ function handleAddPhoto(e) {
     }, 'image/jpeg', _lim.quality);
   };
   img.src = url;
+}
+
+// ══════════════════════════════════════
+// 🤖 개체 등록 폼용 AI 모프 추천 (1단계 통합)
+// 기존 스캔 페이지의 분석 로직을 재사용 — 결과를 모프 입력에 자동 채움
+// 일일 무료 카운트(daily_scan_count) 미적용 → 등록 흐름에선 무제한
+// ══════════════════════════════════════
+async function _aiSuggestMorphFromPhotos(dataUrls) {
+  if (!dataUrls || !dataUrls.length) return null;
+  try {
+    // 1) 색상 분석 (병렬)
+    const colorAnalyses = await Promise.all(dataUrls.map(d => _analyzeImageColors(d, 0)));
+    // 2) 사진별 selections → scores
+    const scoreArrays = [];
+    colorAnalyses.forEach(ca => {
+      if (!ca) return;
+      const selections = _colorAnalysisToTraits(ca);
+      if (selections && selections._reasons) delete selections._reasons;
+      scoreArrays.push(calcMultiLayerScores(selections));
+    });
+    if (!scoreArrays.length) return null;
+    // 3) 멀티사진 합산 + 하드룰 v4 보정
+    const photoViews = colorAnalyses.map(ca => ca ? _estimatePhotoView(ca) : 'unknown');
+    let merged = scoreArrays.length > 1 ? mergeMultiPhotoScores(scoreArrays, photoViews) : scoreArrays[0];
+    merged = _applyCAHardRules(merged, colorAnalyses);
+    // 4) Top 3 + 확률 계산
+    const top = getTopCandidates(merged, 3);
+    if (!top.length) return null;
+    const totalScore = top.reduce((s, t) => s + (t.score || 0), 0) || 1;
+    const candidates = top.map(t => ({
+      name: t.name,
+      score: t.score || 0,
+      prob: Math.max(1, Math.round((t.score / totalScore) * 100)),
+    }));
+    return { candidates, photoCount: dataUrls.length };
+  } catch(e) {
+    console.warn('[AI Suggest]', e);
+    return null;
+  }
+}
+
+// 등록/수정 시트에서 'AI 추천받기' 버튼 클릭 핸들러
+async function aiSuggestMorphForRegister() {
+  const btn = document.getElementById('btn-ai-suggest-morph');
+  // currentPhotoData = 현재 첨부된 사진 (handleAddPhoto에서 세팅)
+  if (!currentPhotoData) {
+    try { showToast && showToast('⚠️ 먼저 사진을 첨부해주세요'); } catch(_) {}
+    return;
+  }
+  const origLabel = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '🤖 분석 중...'; btn.style.opacity = '.7'; }
+  try {
+    const result = await _aiSuggestMorphFromPhotos([currentPhotoData]);
+    if (!result || !result.candidates || !result.candidates.length) {
+      showToast('⚠️ AI가 모프를 추정하지 못했어요. 다른 각도·밝기로 다시 시도해 주세요');
+      return;
+    }
+    // 후보 3개를 다이얼로그로 보여주고 사용자가 선택
+    _showAISuggestionPicker(result.candidates);
+  } catch(e) {
+    console.error('[AI Suggest]', e);
+    showToast('⚠️ AI 분석 중 오류가 발생했습니다');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '🤖 AI 추천받기'; btn.style.opacity = ''; }
+  }
+}
+
+// AI 추천 결과를 후보 카드로 표시 — 사용자가 직접 선택
+function _showAISuggestionPicker(candidates) {
+  const exist = document.getElementById('ai-morph-suggest-overlay');
+  if (exist) exist.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-morph-suggest-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)');
+
+  const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1.5px solid var(--ac);border-radius:18px;padding:22px 18px;max-width:360px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4)">
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:26px;margin-bottom:4px">🤖</div>
+        <div style="font-size:16px;font-weight:900;color:var(--ac)">AI 모프 추천</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px;line-height:1.6">사진 색상·패턴 분석 결과예요.<br>가장 가까운 모프를 선택하거나, 모두 다르면 닫고 직접 입력해 주세요.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+        ${candidates.map((c, i) => {
+          const safeName = escapeHtml(c.name);
+          const safeForAttr = String(c.name).replace(/'/g, "\\'");
+          const badge = i === 0 ? '<span style="background:var(--ac);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:6px">1순위</span>' : '';
+          return `<button type="button" onclick="_applyAISuggestion('${safeForAttr}')" style="display:flex;align-items:center;justify-content:space-between;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:13px 14px;cursor:pointer;font-family:inherit;text-align:left;touch-action:manipulation;-webkit-tap-highlight-color:rgba(46,125,87,.15)">
+            <span style="font-size:14px;font-weight:700;color:var(--tx)">${safeName}${badge}</span>
+            <span style="font-size:12px;font-weight:800;color:var(--ac);font-family:'DM Mono',monospace">${c.prob}%</span>
+          </button>`;
+        }).join('')}
+      </div>
+      <button type="button" onclick="document.getElementById('ai-morph-suggest-overlay').remove()" style="width:100%;padding:11px;background:var(--sf2);border:1px solid var(--br);border-radius:10px;font-size:13px;color:var(--tx2);cursor:pointer;font-family:inherit">닫기 (직접 입력)</button>
+    </div>
+  `;
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+}
+
+// 후보 선택 → 모프 input에 채움
+function _applyAISuggestion(morphName) {
+  const overlay = document.getElementById('ai-morph-suggest-overlay');
+  if (overlay) overlay.remove();
+  const hiddenInput = document.getElementById('gecko-morph');
+  const searchInput = document.getElementById('morph-inline-input');
+  if (hiddenInput) hiddenInput.value = morphName;
+  if (searchInput) {
+    searchInput.value = morphName;
+    searchInput.style.borderColor = 'var(--ac)';
+  }
+  try { if (typeof updateGeckoGrade === 'function') updateGeckoGrade(); } catch(_) {}
+  try { if (typeof hideMorphInline === 'function') hideMorphInline(); } catch(_) {}
+  showToast(`🤖 '${morphName}' 적용됨 · 다르면 위에서 수정`);
 }
 
 // Storage에 사진 업로드 → 공개 URL 반환
