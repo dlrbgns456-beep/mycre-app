@@ -5106,11 +5106,38 @@ function handleAddPhoto(e) {
 // 기존 스캔 페이지의 분석 로직을 재사용 — 결과를 모프 입력에 자동 채움
 // 일일 무료 카운트(daily_scan_count) 미적용 → 등록 흐름에선 무제한
 // ══════════════════════════════════════
+
+// 분석 전용 빠른 리사이즈 — 720px 원본을 240px로 줄여 디코드/캔버스 시간 단축
+// 정확도 손실은 거의 없음 (_analyzeImageColors가 어차피 120px로 다시 리사이즈)
+function _resizeForAnalysis(dataUrl, maxSize) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.width, h = img.height;
+      if (Math.max(w, h) <= maxSize) { resolve(dataUrl); return; }
+      const ratio = maxSize / Math.max(w, h);
+      const newW = Math.round(w * ratio), newH = Math.round(h * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = newW; canvas.height = newH;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'medium';
+      ctx.drawImage(img, 0, 0, newW, newH);
+      try { resolve(canvas.toDataURL('image/jpeg', 0.85)); }
+      catch(e) { resolve(dataUrl); }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 async function _aiSuggestMorphFromPhotos(dataUrls) {
   if (!dataUrls || !dataUrls.length) return null;
   try {
+    // 0) 분석용 추가 리사이즈 (속도 최적화)
+    const optimized = await Promise.all(dataUrls.map(d => _resizeForAnalysis(d, 240)));
     // 1) 색상 분석 (병렬)
-    const colorAnalyses = await Promise.all(dataUrls.map(d => _analyzeImageColors(d, 0)));
+    const colorAnalyses = await Promise.all(optimized.map(d => _analyzeImageColors(d, 0)));
     // 2) 사진별 selections → scores
     const scoreArrays = [];
     colorAnalyses.forEach(ca => {
@@ -5140,6 +5167,33 @@ async function _aiSuggestMorphFromPhotos(dataUrls) {
   }
 }
 
+// 분석 중 가시적 오버레이 — 사용자가 '멈춤'으로 오인하지 않도록
+function _showAiAnalysisOverlay() {
+  const exist = document.getElementById('ai-analysis-overlay');
+  if (exist) return exist;
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-analysis-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99997;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)');
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1.5px solid var(--ac);border-radius:18px;padding:24px 22px;max-width:280px;width:80%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+      <div style="font-size:34px;margin-bottom:8px">🤖</div>
+      <div style="width:36px;height:36px;border:3px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px"></div>
+      <div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">AI가 사진을 분석 중...</div>
+      <div id="ai-analysis-step" style="font-size:11px;color:var(--tx3);line-height:1.6">색상·패턴 인식 중</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+function _setAiAnalysisStep(text) {
+  const el = document.getElementById('ai-analysis-step');
+  if (el) el.textContent = text;
+}
+function _hideAiAnalysisOverlay() {
+  const el = document.getElementById('ai-analysis-overlay');
+  if (el) el.remove();
+}
+
 // 등록/수정 시트에서 'AI 추천받기' 버튼 클릭 핸들러
 async function aiSuggestMorphForRegister() {
   const btn = document.getElementById('btn-ai-suggest-morph');
@@ -5150,7 +5204,12 @@ async function aiSuggestMorphForRegister() {
   }
   const origLabel = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = '🤖 분석 중...'; btn.style.opacity = '.7'; }
+  _showAiAnalysisOverlay();
   try {
+    _setAiAnalysisStep('사진 최적화 중...');
+    // 단계 표시 시각화용 — 분석은 별도로 진행
+    setTimeout(() => _setAiAnalysisStep('색상·패턴 인식 중...'), 250);
+    setTimeout(() => _setAiAnalysisStep('모프 후보 점수 계산 중...'), 700);
     const result = await _aiSuggestMorphFromPhotos([currentPhotoData]);
     if (!result || !result.candidates || !result.candidates.length) {
       showToast('⚠️ AI가 모프를 추정하지 못했어요. 다른 각도·밝기로 다시 시도해 주세요');
@@ -5162,6 +5221,7 @@ async function aiSuggestMorphForRegister() {
     console.error('[AI Suggest]', e);
     showToast('⚠️ AI 분석 중 오류가 발생했습니다');
   } finally {
+    _hideAiAnalysisOverlay();
     if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '🤖 AI 추천받기'; btn.style.opacity = ''; }
   }
 }
