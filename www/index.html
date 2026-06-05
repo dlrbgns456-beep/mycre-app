@@ -1920,7 +1920,10 @@ input[type=file]{display:none}
       <div class="form-group" style="position:relative">
         <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
           <span>모프 <span style="color:var(--tx3);font-size:10px;font-weight:400">검색하거나 직접 입력</span></span>
-          <button type="button" id="btn-ai-suggest-morph" onclick="aiSuggestMorphForRegister()" style="background:linear-gradient(135deg,var(--ac),#38c947);color:#fff;border:none;padding:6px 11px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.1);box-shadow:0 1px 4px rgba(46,125,87,.25)">🤖 AI 추천받기</button>
+          <div style="display:inline-flex;gap:6px;flex-wrap:wrap">
+            <button type="button" id="btn-ai-suggest-morph" onclick="aiSuggestMorphForRegister()" title="빠른 룰 기반 분석 (무료, 즉시)" style="background:linear-gradient(135deg,var(--ac),#38c947);color:#fff;border:none;padding:6px 10px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:3px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.1);box-shadow:0 1px 4px rgba(46,125,87,.25)">🤖 빠른 추천</button>
+            <button type="button" id="btn-ai-precision-morph" onclick="aiPrecisionMorphForRegister()" title="Gemini AI 정밀 분석 (정확도 ↑, 2-3초)" style="background:linear-gradient(135deg,#9b6bff,#7849e3);color:#fff;border:none;padding:6px 10px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:3px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.1);box-shadow:0 1px 4px rgba(155,107,255,.3)">✨ AI 정밀</button>
+          </div>
         </label>
         <input type="hidden" id="gecko-morph" value="">
         <input type="text" id="morph-inline-input" autocomplete="off"
@@ -5227,7 +5230,10 @@ async function aiSuggestMorphForRegister() {
 }
 
 // AI 추천 결과를 후보 카드로 표시 — 사용자가 직접 선택
-function _showAISuggestionPicker(candidates) {
+// opts.source = 'gemini' | undefined  (Gemini는 보라색 라벨 + reason 표시)
+function _showAISuggestionPicker(candidates, opts) {
+  opts = opts || {};
+  const isGemini = opts.source === 'gemini';
   const exist = document.getElementById('ai-morph-suggest-overlay');
   if (exist) exist.remove();
   const overlay = document.createElement('div');
@@ -5236,21 +5242,33 @@ function _showAISuggestionPicker(candidates) {
 
   const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+  const accentColor = isGemini ? '#9b6bff' : 'var(--ac)';
+  const accentBg = isGemini ? 'rgba(155,107,255,.12)' : 'var(--ac2)';
+  const headerIcon = isGemini ? '✨' : '🤖';
+  const headerLabel = isGemini ? 'Gemini AI 정밀 분석' : 'AI 모프 추천 (빠른)';
+  const headerSub = isGemini
+    ? '구글 Vision AI 분석 결과예요.<br>각 후보의 근거도 함께 확인할 수 있어요.'
+    : '사진 색상·패턴 분석 결과예요.<br>모두 다르면 닫고 직접 입력해 주세요.';
+
   overlay.innerHTML = `
-    <div style="background:var(--card);border:1.5px solid var(--ac);border-radius:18px;padding:22px 18px;max-width:360px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4)">
+    <div style="background:var(--card);border:1.5px solid ${accentColor};border-radius:18px;padding:22px 18px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4)">
       <div style="text-align:center;margin-bottom:14px">
-        <div style="font-size:26px;margin-bottom:4px">🤖</div>
-        <div style="font-size:16px;font-weight:900;color:var(--ac)">AI 모프 추천</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:4px;line-height:1.6">사진 색상·패턴 분석 결과예요.<br>가장 가까운 모프를 선택하거나, 모두 다르면 닫고 직접 입력해 주세요.</div>
+        <div style="font-size:26px;margin-bottom:4px">${headerIcon}</div>
+        <div style="font-size:16px;font-weight:900;color:${accentColor}">${headerLabel}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px;line-height:1.6">${headerSub}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
         ${candidates.map((c, i) => {
           const safeName = escapeHtml(c.name);
           const safeForAttr = String(c.name).replace(/'/g, "\\'");
-          const badge = i === 0 ? '<span style="background:var(--ac);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:6px">1순위</span>' : '';
-          return `<button type="button" onclick="_applyAISuggestion('${safeForAttr}')" style="display:flex;align-items:center;justify-content:space-between;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:13px 14px;cursor:pointer;font-family:inherit;text-align:left;touch-action:manipulation;-webkit-tap-highlight-color:rgba(46,125,87,.15)">
-            <span style="font-size:14px;font-weight:700;color:var(--tx)">${safeName}${badge}</span>
-            <span style="font-size:12px;font-weight:800;color:var(--ac);font-family:'DM Mono',monospace">${c.prob}%</span>
+          const badge = i === 0 ? `<span style="background:${accentColor};color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:6px">1순위</span>` : '';
+          const reasonBlock = c.reason ? `<div style="font-size:10.5px;color:var(--tx3);margin-top:6px;line-height:1.5;text-align:left">${escapeHtml(c.reason)}</div>` : '';
+          return `<button type="button" onclick="_applyAISuggestion('${safeForAttr}')" style="display:flex;flex-direction:column;align-items:stretch;background:${accentBg};border:1.5px solid var(--br);border-radius:12px;padding:13px 14px;cursor:pointer;font-family:inherit;text-align:left;touch-action:manipulation;-webkit-tap-highlight-color:rgba(46,125,87,.15);gap:0">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:14px;font-weight:700;color:var(--tx)">${safeName}${badge}</span>
+              <span style="font-size:12px;font-weight:800;color:${accentColor};font-family:'DM Mono',monospace">${c.prob}%</span>
+            </div>
+            ${reasonBlock}
           </button>`;
         }).join('')}
       </div>
@@ -5261,6 +5279,88 @@ function _showAISuggestionPicker(candidates) {
     if (e.target === overlay) overlay.remove();
   });
   document.body.appendChild(overlay);
+}
+
+// ── ✨ Gemini AI 정밀 분석 (Edge Function: morph-vision) ──
+// 비용: Gemini 1.5 Flash ~3-5원/회 / 속도: 2-4초 / 정확도: 클라이언트 룰 대비 ↑
+async function _aiSuggestMorphViaGemini(dataUrl) {
+  if (!dataUrl) return null;
+  try {
+    // Edge Function payload 제한 + 비용 통제 위해 600px 다운샘플
+    const optimized = await _resizeForAnalysis(dataUrl, 600);
+    // Supabase JWT 가져오기 (verify_jwt 통과)
+    let session = null;
+    try { session = (await _supabase.auth.getSession()).data.session; } catch(_) {}
+    if (!session || !session.access_token) {
+      showToast('⚠️ 로그인이 필요합니다');
+      return null;
+    }
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/morph-vision', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+        'apikey': SUPABASE_KEY,
+      },
+      body: JSON.stringify({ image: optimized }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error('[Gemini API]', resp.status, data);
+      const msg = (data && data.error) ? data.error : 'AI 정밀 분석 실패';
+      // 503/502는 일시적, 400은 입력 문제 — 메시지 차별화
+      if (resp.status === 500 && msg.includes('GEMINI_API_KEY')) {
+        showToast('⚠️ 관리자: GEMINI_API_KEY 설정 필요');
+      } else {
+        showToast('⚠️ ' + msg);
+      }
+      return null;
+    }
+    if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+      showToast('⚠️ AI가 모프를 식별하지 못했어요. 사진을 더 선명하게 다시 찍어주세요');
+      return null;
+    }
+    // confidence(0-100) → prob 형식으로 통일
+    return {
+      candidates: data.candidates.map(c => ({
+        name: c.name,
+        prob: Math.max(1, Math.min(100, Math.round(c.confidence || 0))),
+        reason: c.reason || '',
+      })),
+      photoCount: 1,
+      source: 'gemini',
+    };
+  } catch(e) {
+    console.error('[Gemini fetch]', e);
+    showToast('⚠️ AI 정밀 분석 중 네트워크 오류');
+    return null;
+  }
+}
+
+// 등록 폼에서 '✨ 정밀 분석' 버튼 클릭
+async function aiPrecisionMorphForRegister() {
+  const btn = document.getElementById('btn-ai-precision-morph');
+  if (!currentPhotoData) {
+    try { showToast && showToast('⚠️ 먼저 사진을 첨부해주세요'); } catch(_) {}
+    return;
+  }
+  const origLabel = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '✨ 분석 중...'; btn.style.opacity = '.7'; }
+  _showAiAnalysisOverlay();
+  _setAiAnalysisStep('Gemini AI에 이미지 전송 중...');
+  setTimeout(() => _setAiAnalysisStep('AI가 모프 패턴 분석 중...'), 600);
+  setTimeout(() => _setAiAnalysisStep('결과 정리 중...'), 2200);
+  try {
+    const result = await _aiSuggestMorphViaGemini(currentPhotoData);
+    if (!result || !result.candidates || !result.candidates.length) return;
+    _showAISuggestionPicker(result.candidates, { source: 'gemini' });
+  } catch(e) {
+    console.error('[AI Precision]', e);
+    showToast('⚠️ AI 정밀 분석 중 오류');
+  } finally {
+    _hideAiAnalysisOverlay();
+    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '✨ AI 정밀'; btn.style.opacity = ''; }
+  }
 }
 
 // 후보 선택 → 모프 input에 채움
