@@ -9439,6 +9439,11 @@ function printQR() {
         <div id="shed-chart-summary" style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px"></div>
         <div id="shed-chart-bars" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
+      <!-- 빠른 추가 (Phase 3-D): 최근 기록 같은 값으로 오늘 즉시 추가 -->
+      <div id="record-quick-add-bar" style="display:none;margin-bottom:10px;padding:10px 12px;background:linear-gradient(135deg,rgba(46,125,87,.08),rgba(46,125,87,.02));border:1px solid rgba(46,125,87,.2);border-radius:12px">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:6px">⚡ 빠른 추가 — 최근 값으로 오늘 1탭 기록</div>
+        <div id="record-quick-add-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn-sm" style="background:var(--ac2);border-color:var(--ac);color:var(--ac)" onclick="openAddRecord('weight')">⚖️ 체중</button>
         <button class="btn-sm" style="background:var(--am2);border-color:var(--am);color:var(--am)" onclick="openAddRecord('feed')">🍽️ 급여</button>
@@ -14869,6 +14874,74 @@ async function _renderAllRecordsTimeline() {
   }).join('');
 }
 
+// Phase 3-D: 빠른 추가 칩 — 최근 기록의 값(같은 타입)을 오늘 날짜로 즉시 복제
+function _renderQuickAddBar(records, geckoId) {
+  const bar = document.getElementById('record-quick-add-bar');
+  const chips = document.getElementById('record-quick-add-chips');
+  if (!bar || !chips) return;
+  // 타입별 가장 최근 1개씩 (memo는 제외 — 같은 메모 반복 의미 적음)
+  const typeOrder = ['weight', 'feed', 'shed'];
+  const types = {};
+  records.forEach(r => {
+    if (!typeOrder.includes(r.type)) return;
+    if (!types[r.type]) types[r.type] = r;
+  });
+  const items = typeOrder.map(t => types[t]).filter(Boolean);
+  if (items.length === 0) { bar.style.display = 'none'; chips.innerHTML = ''; return; }
+  const labels = {
+    weight: { icon: '⚖️', bg: 'var(--ac2)', border: 'var(--ac)', color: 'var(--ac)', suffix: 'g' },
+    feed: { icon: '🍽️', bg: 'var(--am2)', border: 'var(--am)', color: 'var(--am)', suffix: '' },
+    shed: { icon: '🦎', bg: 'var(--bl2)', border: 'var(--blue)', color: 'var(--blue)', suffix: '' },
+  };
+  const today = new Date().toISOString().slice(0, 10);
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  bar.style.display = 'block';
+  chips.innerHTML = items.map(r => {
+    const L = labels[r.type];
+    const alreadyToday = r.date === today;
+    const safeVal = String(r.value).replace(/'/g, "\\'");
+    const safeType = r.type;
+    const safeGid = String(geckoId).replace(/'/g, "\\'");
+    const display = L.icon + ' ' + escapeHtml(r.value) + L.suffix;
+    const disabledStyle = alreadyToday ? 'opacity:.5;cursor:not-allowed' : 'cursor:pointer';
+    const title = alreadyToday ? '오늘 이미 같은 기록 있음' : '오늘 날짜로 같은 값 추가';
+    return `<button type="button" ${alreadyToday ? 'disabled' : ''} onclick="_quickAddRecord('${safeType}','${safeVal}','${safeGid}')" title="${title}" style="background:${L.bg};border:1.5px solid ${L.border};color:${L.color};border-radius:18px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;${disabledStyle};touch-action:manipulation">${display} <span style="font-weight:500;opacity:.7;font-size:10px">+오늘</span></button>`;
+  }).join('');
+}
+
+async function _quickAddRecord(type, value, geckoId) {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  const record = {
+    gecko_id: geckoId,
+    user_id: _currentUser.id,
+    type,
+    date: today,
+    value,
+    note: '',
+    created_at: new Date().toISOString(),
+  };
+  try {
+    const { error } = await _supabase.from('gecko_logs').insert(record);
+    if (error) throw error;
+  } catch(e) {
+    // 오프라인 폴백
+    try {
+      const key = 'gecko_logs_' + _currentUser.id;
+      const logs = JSON.parse(localStorage.getItem(key) || '[]');
+      logs.push(record);
+      localStorage.setItem(key, JSON.stringify(logs));
+    } catch(_) {}
+  }
+  // 체중이면 개체 weight 갱신
+  if (type === 'weight') {
+    const g = state.geckos.find(x => String(x.id) === String(geckoId));
+    if (g) { g.weight = value; try { _saveGeckoToDB && _saveGeckoToDB(g); } catch(_) {} }
+  }
+  showToast('⚡ ' + value + ' 기록됨');
+  loadRecords(geckoId);
+}
+
 function openAddRecord(type) {
   _currentRecordType = type;
   const form = document.getElementById('record-add-form');
@@ -15238,6 +15311,7 @@ async function loadRecords(geckoId) {
   records.sort((a, b) => b.date.localeCompare(a.date));
   renderWeightChart(records.filter(r => r.type === 'weight'));
   renderShedChart(records.filter(r => r.type === 'shed'), geckoId);
+  _renderQuickAddBar(records, geckoId);
   const timeline = document.getElementById('record-timeline');
   if (records.length === 0) {
     timeline.innerHTML = _renderEmptyState({
