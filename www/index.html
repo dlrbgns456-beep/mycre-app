@@ -9451,7 +9451,9 @@ function printQR() {
       </div>
       <div id="record-shed-chart" style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px;display:none">
         <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">🦎 탈피 주기</div>
-        <div id="shed-chart-summary" style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px"></div>
+        <div id="shed-stat-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px"></div>
+        <div id="shed-chart-summary" style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px;display:none"></div>
+        <div id="shed-chart-svg" style="margin-bottom:10px"></div>
         <div id="shed-chart-bars" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
       <!-- 빠른 추가 (Phase 3-D): 최근 기록 같은 값으로 오늘 즉시 추가 -->
@@ -15626,24 +15628,82 @@ function renderShedChart(shedRecords, geckoId) {
     ? Math.floor((Date.now() - new Date(lastShed).getTime()) / 86400000)
     : null;
 
-  if (summaryDiv) {
-    if (avgCycle != null) {
-      let nextHint = '';
-      if (daysSinceLast != null && avgCycle > 0) {
-        const dDay = avgCycle - daysSinceLast;
-        if (dDay > 0) {
-          nextHint = ` · 다음 예상 D-${dDay}`;
-        } else if (dDay >= -7) {
-          nextHint = ` · 🔔 곧 탈피 시기예요!`;
-        } else {
-          nextHint = ` · 마지막 탈피 ${daysSinceLast}일 전`;
-        }
-      }
-      summaryDiv.textContent = `📊 평균 ${avgCycle}일 주기 (${gaps.length}회 측정)${nextHint}`;
-    } else {
-      summaryDiv.textContent = '탈피 기록을 2회 이상 쌓으면 평균 주기가 계산돼요';
-      summaryDiv.style.color = 'var(--tx3)';
+  // Phase 3-J: 통계 카드 (평균/마지막 후/다음 예상)
+  const statCardsEl = document.getElementById('shed-stat-cards');
+  if (statCardsEl) {
+    const minGap = gaps.length ? Math.min(...gaps.map(x => x.days)) : null;
+    const maxGap = gaps.length ? Math.max(...gaps.map(x => x.days)) : null;
+    let nextLabel = '—', nextColor = 'var(--tx3)';
+    if (avgCycle && daysSinceLast != null) {
+      const dDay = avgCycle - daysSinceLast;
+      if (dDay > 7) { nextLabel = `D-${dDay}`; nextColor = 'var(--tx2)'; }
+      else if (dDay > 0) { nextLabel = `D-${dDay}`; nextColor = 'var(--am)'; }
+      else if (dDay >= -7) { nextLabel = '🔔 임박'; nextColor = 'var(--coral)'; }
+      else { nextLabel = '지연'; nextColor = 'var(--coral)'; }
     }
+    statCardsEl.innerHTML = `
+      <div style="background:var(--sf2);border-radius:10px;padding:8px 10px;text-align:center">
+        <div style="font-size:9px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:2px">평균 주기</div>
+        <div style="font-size:16px;font-weight:900;color:var(--blue)">${avgCycle != null ? avgCycle : '—'}<span style="font-size:10px;font-weight:600;color:var(--tx3);margin-left:1px">일</span></div>
+      </div>
+      <div style="background:var(--sf2);border-radius:10px;padding:8px 10px;text-align:center">
+        <div style="font-size:9px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:2px">마지막 탈피</div>
+        <div style="font-size:14px;font-weight:800;color:var(--tx)">${daysSinceLast != null ? daysSinceLast + '일 전' : '—'}</div>
+      </div>
+      <div style="background:var(--sf2);border-radius:10px;padding:8px 10px;text-align:center">
+        <div style="font-size:9px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:2px">다음 예상</div>
+        <div style="font-size:14px;font-weight:800;color:${nextColor}">${nextLabel}</div>
+      </div>
+    `;
+    // 범위 (최단/최장) — 카드 아래 작은 라인
+    if (gaps.length >= 2 && minGap != null && maxGap != null) {
+      statCardsEl.insertAdjacentHTML('afterend', `<div id="shed-range-line" style="font-size:10px;color:var(--tx3);text-align:center;margin-bottom:10px">최단 ${minGap}일 · 최장 ${maxGap}일 (${gaps.length}회 측정)</div>`);
+    }
+  }
+  // SVG 간격 차트 (점 + 라인) — gaps 데이터
+  const svgEl = document.getElementById('shed-chart-svg');
+  if (svgEl) {
+    if (gaps.length < 2) {
+      svgEl.innerHTML = '';
+    } else {
+      const W = 320, H = 120, PAD_L = 30, PAD_R = 12, PAD_T = 10, PAD_B = 24;
+      const iW = W - PAD_L - PAD_R, iH = H - PAD_T - PAD_B;
+      const days = gaps.map(g => g.days);
+      const mn = Math.min(...days), mx = Math.max(...days);
+      const range = Math.max(1, mx - mn);
+      const yMin = Math.max(0, mn - range * 0.2);
+      const yMax = mx + range * 0.2;
+      const pts = gaps.map((g, i) => {
+        const x = PAD_L + (gaps.length === 1 ? iW / 2 : (i / (gaps.length - 1)) * iW);
+        const y = PAD_T + iH - ((g.days - yMin) / (yMax - yMin)) * iH;
+        return { x, y, v: g.days, d: g.date };
+      });
+      // 평균선
+      const avgY = avgCycle != null ? PAD_T + iH - ((avgCycle - yMin) / (yMax - yMin)) * iH : null;
+      const avgLine = avgY != null
+        ? `<line x1="${PAD_L}" y1="${avgY.toFixed(1)}" x2="${W - PAD_R}" y2="${avgY.toFixed(1)}" stroke="var(--am)" stroke-width="1.5" stroke-dasharray="4,3" opacity=".7"/><text x="${W - PAD_R - 4}" y="${(avgY - 4).toFixed(1)}" text-anchor="end" font-size="9" font-family="DM Mono, monospace" fill="var(--am)">평균 ${avgCycle}일</text>`
+        : '';
+      const linePath = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+      const dots = pts.map((p, i) => {
+        const isLast = i === pts.length - 1;
+        const r = isLast ? 4.5 : 3;
+        return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${isLast?'var(--blue)':'#fff'}" stroke="var(--blue)" stroke-width="${isLast?2:1.5}"><title>${p.d}: ${p.v}일 간격</title></circle>`;
+      }).join('');
+      // Y 라벨 (2단계)
+      const yLabels = [yMax, yMin].map((v, i) => {
+        const y = PAD_T + (i) * iH;
+        return `<text x="${PAD_L - 4}" y="${y + 3}" text-anchor="end" font-size="9" font-family="DM Mono, monospace" fill="var(--tx3)">${Math.round(v)}d</text>`;
+      }).join('');
+      svgEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+        ${yLabels}${avgLine}
+        <path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${dots}
+      </svg>`;
+    }
+  }
+
+  if (summaryDiv) {
+    summaryDiv.style.display = 'none'; // 통계 카드로 대체됨
   }
 
   // 차트 막대 (최근 8회)
