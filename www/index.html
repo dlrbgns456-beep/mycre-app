@@ -8085,6 +8085,51 @@ function buildPostCard(p, compact) {
   return div;
 }
 
+// 🛡 관리자 즉시 삭제 (MVP 모더레이션)
+async function _adminDeletePost(postId) {
+  if (!_isAdmin()) { showToast('⚠️ 관리자 권한 없음'); return; }
+  const p = state.posts.find(x => String(x.id) === String(postId));
+  if (!p) { showToast('게시글을 찾을 수 없어요'); return; }
+  const ok = await $confirm(`이 게시글을 즉시 삭제할까요?\n\n작성자: ${p.author || '?'}\n제목: ${p.title || '(제목 없음)'}\n\n관리자 삭제는 되돌릴 수 없어요.`, '🛡 관리자 삭제');
+  if (!ok) return;
+  try {
+    // 댓글도 같이 정리
+    try { await _supabase.from('comments').delete().eq('post_id', postId); } catch(_) {}
+    const { error } = await _supabase.from('posts').delete().eq('id', postId);
+    if (error) throw error;
+    // state 동기화 + 화면 갱신
+    state.posts = state.posts.filter(x => String(x.id) !== String(postId));
+    if (typeof renderPosts === 'function') await renderPosts();
+    // 게시글 상세 시트가 열려있다면 닫기
+    try { closeSheetDirect && closeSheetDirect('sheet-post-detail'); } catch(_) {}
+    showToast('🛡 관리자 삭제 완료');
+    // 운영 로그 (admin_notifications에 기록)
+    try {
+      _notifyAdmin('admin_post_delete', '🛡 관리자 게시글 삭제',
+        `삭제자: ${_currentUser.email}\n작성자: ${p.author || '?'} (${p.user_id || ''})\n제목: ${p.title || ''}\n카테고리: ${p.cat || ''}\n시간: ${new Date().toLocaleString('ko-KR')}`);
+    } catch(_) {}
+  } catch(e) {
+    console.error('[admin delete post]', e);
+    showToast('❌ 삭제 실패: ' + (e?.message || ''));
+  }
+}
+
+// 🛡 관리자 댓글 즉시 삭제 (상세 시트에서 사용)
+async function _adminDeleteComment(commentId, postId) {
+  if (!_isAdmin()) { showToast('⚠️ 관리자 권한 없음'); return; }
+  const ok = await $confirm('이 댓글을 즉시 삭제할까요?\n관리자 삭제는 되돌릴 수 없어요.', '🛡 관리자 댓글 삭제');
+  if (!ok) return;
+  try {
+    const { error } = await _supabase.from('comments').delete().eq('id', commentId);
+    if (error) throw error;
+    showToast('🛡 댓글 삭제됨');
+    if (postId && typeof loadComments === 'function') loadComments(postId);
+  } catch(e) {
+    console.error('[admin delete comment]', e);
+    showToast('❌ 삭제 실패: ' + (e?.message || ''));
+  }
+}
+
 // ID로 게시글 상세 열기 (state.posts에서 찾기)
 function _openPostDetailById(postId) {
   const p = state.posts.find(x => String(x.id) === String(postId));
@@ -8121,23 +8166,31 @@ function _showPostQuickActions(postId) {
   const p = state.posts.find(x => String(x.id) === String(postId));
   if (!p) return;
   const isOwn = _currentUser && String(p.user_id) === String(_currentUser.id);
+  const isAdmin = typeof _isAdmin === 'function' && _isAdmin();
   const exist = document.getElementById('post-quick-actions-overlay');
   if (exist) exist.remove();
   const overlay = document.createElement('div');
   overlay.id = 'post-quick-actions-overlay';
   overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99998;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)');
   const close = `document.getElementById('post-quick-actions-overlay').remove()`;
-  const items = isOwn
-    ? [
-        { icon: '✏️', label: '수정', fn: `${close};openEditPost(${postId})` },
-        { icon: '🔗', label: '링크 공유', fn: `${close};_sharePostLink(${postId})` },
-        { icon: '🗑️', label: '삭제', fn: `${close};deletePost(${postId})`, danger: true },
-      ]
-    : [
-        { icon: '🔗', label: '링크 공유', fn: `${close};_sharePostLink(${postId})` },
-        { icon: '🚨', label: '게시글 신고', fn: `${close};reportPost(${postId})`, danger: true },
-        { icon: '🚫', label: '사용자 차단', fn: `${close};blockUser('${p.user_id}','${String(p.author||'').replace(/'/g,"")}')`, danger: true },
-      ];
+  let items;
+  if (isOwn) {
+    items = [
+      { icon: '✏️', label: '수정', fn: `${close};openEditPost(${postId})` },
+      { icon: '🔗', label: '링크 공유', fn: `${close};_sharePostLink(${postId})` },
+      { icon: '🗑️', label: '삭제', fn: `${close};deletePost(${postId})`, danger: true },
+    ];
+  } else {
+    items = [
+      { icon: '🔗', label: '링크 공유', fn: `${close};_sharePostLink(${postId})` },
+      { icon: '🚨', label: '게시글 신고', fn: `${close};reportPost(${postId})`, danger: true },
+      { icon: '🚫', label: '사용자 차단', fn: `${close};blockUser('${p.user_id}','${String(p.author||'').replace(/'/g,"")}')`, danger: true },
+    ];
+  }
+  // 🛡 관리자는 본인 글이 아니어도 즉시 삭제 (MVP 모더레이션)
+  if (isAdmin) {
+    items.push({ icon: '🛡', label: '관리자 삭제 (즉시)', fn: `${close};_adminDeletePost(${postId})`, danger: true, admin: true });
+  }
   overlay.innerHTML = `
     <div style="background:var(--card);border-radius:16px;padding:14px;max-width:300px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.3)">
       <div style="display:flex;flex-direction:column;gap:2px">
