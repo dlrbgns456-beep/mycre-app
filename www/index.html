@@ -5279,9 +5279,11 @@ function _showAISuggestionPicker(candidates, opts) {
 }
 
 // ── ✨ Gemini AI 정밀 분석 (Edge Function: morph-vision) ──
-// 비용: Gemini 1.5 Flash ~3-5원/회 / 속도: 2-4초 / 정확도: 클라이언트 룰 대비 ↑
-async function _aiSuggestMorphViaGemini(dataUrl) {
+// 비용: Gemini 2.5 Flash ~0.15원/회 / 속도: 2-4초 / 정확도: 매우 높음
+// 사용 한도: 베타테스터 무제한 / PRO 무제한 / 무료 일일 3회 / 게스트 1회
+async function _aiSuggestMorphViaGemini(dataUrl, source) {
   if (!dataUrl) return null;
+  source = source || 'register';
   try {
     // Edge Function payload 제한 + 비용 통제 위해 600px 다운샘플
     const optimized = await _resizeForAnalysis(dataUrl, 600);
@@ -5304,8 +5306,9 @@ async function _aiSuggestMorphViaGemini(dataUrl) {
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
       console.error('[Gemini API]', resp.status, data);
+      // 실패 로그도 DB에 기록 (비용 추적은 0이지만 실패율 모니터링용)
+      _logAIUsage({ source, model: null, success: false, errorCode: data.code || 'HTTP_' + resp.status });
       const msg = (data && data.error) ? data.error : 'AI 정밀 분석 실패';
-      // 503/502는 일시적, 400은 입력 문제 — 메시지 차별화
       if (resp.status === 500 && msg.includes('GEMINI_API_KEY')) {
         showToast('⚠️ 관리자: GEMINI_API_KEY 설정 필요');
       } else {
@@ -5314,9 +5317,12 @@ async function _aiSuggestMorphViaGemini(dataUrl) {
       return null;
     }
     if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+      _logAIUsage({ source, model: data.modelUsed || null, success: false, errorCode: 'NO_CANDIDATES', usage: data.usage });
       showToast('⚠️ AI가 모프를 식별하지 못했어요. 사진을 더 선명하게 다시 찍어주세요');
       return null;
     }
+    // 성공 → 토큰/비용 로그 (background, 실패해도 무시)
+    _logAIUsage({ source, model: data.modelUsed, success: true, usage: data.usage });
     // confidence(0-100) → prob 형식으로 통일
     return {
       candidates: data.candidates.map(c => ({
@@ -5326,21 +5332,73 @@ async function _aiSuggestMorphViaGemini(dataUrl) {
       })),
       photoCount: 1,
       source: 'gemini',
+      modelUsed: data.modelUsed,
+      usage: data.usage,
     };
   } catch(e) {
     console.error('[Gemini fetch]', e);
+    _logAIUsage({ source, model: null, success: false, errorCode: 'NETWORK_ERROR' });
     showToast('⚠️ AI 정밀 분석 중 네트워크 오류');
     return null;
   }
 }
 
-// 등록 폼에서 '✨ 정밀 분석' 버튼 클릭
+// AI 사용 로그 → ai_usage_logs 테이블 (RLS: 본인만 INSERT)
+// 실패해도 사용자 흐름엔 영향 없음
+async function _logAIUsage({ source, model, success, errorCode, usage }) {
+  if (!_currentUser) return;
+  try {
+    const row = {
+      user_id: _currentUser.id,
+      source: source || 'unknown',
+      model: model || null,
+      success: !!success,
+      prompt_tokens: usage?.promptTokens || null,
+      output_tokens: usage?.outputTokens || null,
+      total_tokens: usage?.totalTokens || null,
+      cost_usd: usage?.costUsd || null,
+      error_code: errorCode || null,
+    };
+    await _supabase.from('ai_usage_logs').insert(row);
+  } catch(e) {
+    console.warn('[AI Usage Log]', e);
+  }
+}
+
+// AI 추천 호출 가능 여부 체크 (일일 카운트 / PRO / 베타테스터)
+// 반환: { allowed: bool, reason: string }
+function _canUseAISuggest() {
+  if (!_currentUser) return { allowed: false, reason: '로그인이 필요해요' };
+  if (state._isBetaTester) return { allowed: true, reason: 'beta_tester' };
+  if (state.tier === 'pro' || state.tier === 'breeder') return { allowed: true, reason: 'pro' };
+  if ((state.freeScansLeft || 0) > 0) return { allowed: true, reason: 'free_daily' };
+  if ((state.aiCredits || 0) > 0) return { allowed: true, reason: 'paid_credit' };
+  return { allowed: false, reason: 'limit_exceeded' };
+}
+
+// 등록 폼에서 '✨ AI 모프 추천' 버튼 클릭
 async function aiPrecisionMorphForRegister() {
   const btn = document.getElementById('btn-ai-precision-morph');
   if (!currentPhotoData) {
     try { showToast && showToast('⚠️ 먼저 사진을 첨부해주세요'); } catch(_) {}
     return;
   }
+  // 1) 한도 체크 — 베타/PRO/일일무료/크레딧 순
+  const gate = _canUseAISuggest();
+  if (!gate.allowed) {
+    if (gate.reason === 'limit_exceeded') {
+      // 한도 초과 → 크레딧 팩 결제 시트로 안내
+      if (typeof _showAICreditPopup === 'function') {
+        _showAICreditPopup();
+      } else {
+        showToast('⚠️ 오늘 무료 AI 판별을 모두 사용했어요. 내일 자정에 리셋됩니다.');
+      }
+    } else {
+      showToast('⚠️ ' + gate.reason);
+    }
+    return;
+  }
+
   const origLabel = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = '✨ 분석 중...'; btn.style.opacity = '.7'; }
   _showAiAnalysisOverlay();
@@ -5348,15 +5406,20 @@ async function aiPrecisionMorphForRegister() {
   setTimeout(() => _setAiAnalysisStep('AI가 모프 패턴 분석 중...'), 600);
   setTimeout(() => _setAiAnalysisStep('결과 정리 중...'), 2200);
   try {
-    const result = await _aiSuggestMorphViaGemini(currentPhotoData);
+    const result = await _aiSuggestMorphViaGemini(currentPhotoData, 'register');
     if (!result || !result.candidates || !result.candidates.length) return;
+    // 2) 성공 → 카운트 차감 (기존 _useDailyScan 활용 — 베타/유료크레딧/일일무료 모두 처리)
+    if (gate.reason === 'paid_credit') state._usedPaidCredit = true;
+    if (gate.reason !== 'pro' && gate.reason !== 'beta_tester') {
+      _useDailyScan();
+    }
     _showAISuggestionPicker(result.candidates, { source: 'gemini' });
   } catch(e) {
     console.error('[AI Precision]', e);
     showToast('⚠️ AI 정밀 분석 중 오류');
   } finally {
     _hideAiAnalysisOverlay();
-    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '✨ AI 정밀'; btn.style.opacity = ''; }
+    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '✨ AI 모프 추천'; btn.style.opacity = ''; }
   }
 }
 
