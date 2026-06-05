@@ -555,24 +555,107 @@ input[type=file]{display:none}
 .qr-wrap{display:flex;justify-content:center;padding:16px 0 8px}
 #qr-canvas,#qr-canvas canvas,#qr-canvas img{border-radius:12px!important}
 
-/* ─── COMMUNITY PAGE ─── */
+/* ─── COMMUNITY PAGE — v2 인스타/스레드 스타일 ─── */
 .post-card{
-  background:var(--card);border:1px solid var(--br);
-  border-radius:var(--r);margin:0 18px 10px;
-  overflow:hidden;cursor:pointer;transition:all .15s;
+  background:var(--card);
+  border-top:1px solid var(--br2);
+  border-bottom:1px solid var(--br2);
+  margin:0 0 6px;
+  overflow:hidden;
+  cursor:pointer;
+  transition:background-color .12s;
 }
-.post-card:active{transform:scale(.99)}
-.post-card-img{width:100%;height:160px;object-fit:cover;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:50px;color:var(--tx3)}
-.post-card-body{padding:12px 14px}
-.post-author-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.post-avatar{width:28px;height:28px;border-radius:50%;background:var(--ac2);border:1px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
-.post-author-name{font-size:12px;font-weight:600}
-.post-author-follow{margin-left:auto}
-.post-title{font-size:14px;font-weight:700;margin-bottom:5px;line-height:1.4}
-.post-meta{display:flex;gap:10px;align-items:center}
-.post-price{font-size:15px;font-weight:800;color:var(--am)}
-.post-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-.post-stats{display:flex;gap:14px;font-size:11px;color:var(--tx2);font-family:"DM Mono",monospace;margin-top:8px}
+.post-card + .post-card{margin-top:0}
+.post-card:active{background:var(--sf2)}
+.post-card.compact{padding:0}
+
+/* 상단 헤더 (아바타 + 닉네임 + 시간) */
+.post-header{display:flex;align-items:center;gap:10px;padding:11px 16px 9px}
+.post-avatar{
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,var(--ac2),var(--bl2));
+  border:1px solid var(--br);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  overflow:hidden;
+}
+.post-avatar img{width:100%;height:100%;object-fit:cover}
+.post-header-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.post-author-name{
+  font-size:13.5px;font-weight:800;color:var(--tx);
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;line-height:1.3;
+}
+.post-header-meta{font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:6px}
+.post-header-meta .dot{opacity:.4}
+.post-more-btn{
+  background:none;border:none;color:var(--tx3);
+  font-size:18px;cursor:pointer;padding:6px 4px;
+  border-radius:8px;font-family:inherit;line-height:1;
+}
+.post-more-btn:active{background:var(--sf2)}
+
+/* 사진 (정사각 또는 4:5 자유, full-width) */
+.post-img-wrap{
+  position:relative;width:100%;
+  background:var(--sf2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:64px;color:var(--tx3);
+  max-height:480px;overflow:hidden;
+}
+.post-img-wrap img{width:100%;height:auto;display:block;cursor:zoom-in;max-height:480px;object-fit:cover}
+
+/* 액션 바 (좋아요, 댓글, 공유) */
+.post-actions{display:flex;align-items:center;gap:2px;padding:8px 12px 2px}
+.post-action-btn{
+  background:none;border:none;color:var(--tx);
+  font-size:22px;cursor:pointer;padding:8px;
+  border-radius:50%;font-family:inherit;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:transform .12s;
+}
+.post-action-btn:active{transform:scale(.85)}
+.post-action-btn.liked{color:#ff5a76}
+.post-action-spacer{flex:1}
+.post-bookmark-btn{
+  background:none;border:none;color:var(--tx2);
+  font-size:20px;cursor:pointer;padding:8px;
+  border-radius:50%;font-family:inherit;line-height:1;
+}
+
+/* 본문 영역 */
+.post-body{padding:0 16px 8px}
+.post-likes-count{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px}
+.post-title{font-size:14px;font-weight:700;color:var(--tx);line-height:1.4;margin-bottom:4px}
+.post-preview{font-size:13px;color:var(--tx2);line-height:1.55;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;margin-bottom:6px}
+.post-preview b, .post-preview strong{color:var(--tx);font-weight:700}
+
+/* 가격 + 태그 */
+.post-price{font-size:15px;font-weight:900;color:var(--am);margin-bottom:6px}
+.post-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.post-tags .tag{font-size:10.5px;padding:2px 7px;border-radius:6px}
+
+/* 댓글 미리보기 */
+.post-comments-link{
+  font-size:12px;color:var(--tx3);
+  padding:2px 0 8px;cursor:pointer;
+}
+.post-comments-link:hover{color:var(--tx2)}
+.post-time-bottom{font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;padding:0 0 12px}
+
+/* 공지 카드 (별도 스타일 유지) */
+.post-card.notice{
+  background:linear-gradient(135deg,var(--ac2),transparent);
+  border-left:3px solid var(--ac);
+  margin:0 18px 10px;border-radius:12px;
+  border-top:none;border-bottom:none;
+}
+
+/* Breeder 브리더 글 강조 (헤더 배경) */
+.post-card.breeder .post-header{background:linear-gradient(90deg,rgba(212,175,55,.08),transparent)}
+.post-card.breeder{border-color:rgba(212,175,55,.25)}
+
+/* 축하 카드 */
+.post-card.celebrate{background:linear-gradient(180deg,rgba(255,215,0,.04),transparent 30%)}
 
 /* ─── AUTH SCREEN ─── */
 #auth-screen{
@@ -7916,73 +7999,155 @@ function _timeAgo(dateStr) {
 }
 
 function buildPostCard(p, compact) {
-  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양&입양',wanted:'🏷️ 분양&입양',info:'✍️ 끄적끄적',celebrate:'🎉 축하'};
+  const catLabels = {notice:'📢 공지',sale:'🏷️ 분양·입양',wanted:'🏷️ 분양·입양',info:'✍️ 끄적끄적',celebrate:'🎉 축하',qna:'❓ QnA'};
   const isNotice = p.cat === 'notice';
   const isCelebrate = p.cat === 'celebrate';
   const div = document.createElement('div');
   div.className = 'post-card';
+  if (p.authorIsBreeder && !isNotice) div.classList.add('breeder');
+  if (isCelebrate) div.classList.add('celebrate');
+  if (isNotice) div.classList.add('notice');
 
-  // Breeder 사용자 골드 테두리
-  if (p.authorIsBreeder && !isNotice) {
-    div.style.border = '1.5px solid transparent';
-    div.style.backgroundClip = 'padding-box';
-    div.style.position = 'relative';
-    div.style.overflow = 'hidden';
-    // 골드 그라데이션 테두리 효과 (::before 대체 — 인라인이므로 box-shadow 사용)
-    div.style.boxShadow = '0 0 0 1.5px rgba(212,175,55,.45), 0 0 12px rgba(212,175,55,.1)';
-  }
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  // 🎉 축하 카드 — 골드×핑크 그라데이션 배경
-  if (isCelebrate) {
-    div.style.background = 'linear-gradient(135deg, rgba(255,215,0,.08), rgba(255,143,177,.08))';
-    div.style.border = '1.5px solid rgba(255,215,0,.35)';
-  }
+  const proBadge = p.authorIsBreeder ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;letter-spacing:.3px">🧬 브리더</span>` : '';
+  const verifiedBadge = p.is_verified ? `<span title="볏마루도감에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:1px 6px;letter-spacing:.2px;box-shadow:0 0 6px rgba(74,222,128,.15)">✅ 인증</span>` : '';
 
-  const proBadge = p.authorIsBreeder ? `<span style="font-size:9px;font-weight:800;color:#d4af37;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;margin-left:3px;letter-spacing:.3px">🧬 브리더</span>` : '';
-  // ✅ 볏마루도감 인증 배지 — 닉네임 바로 옆 (더 눈에 띄게)
-  const verifiedBadge = p.is_verified ? `<span title="볏마루도감에 등록된 개체와 연결된 진짜 게시글" style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:800;color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.1));border:1px solid rgba(74,222,128,.45);border-radius:6px;padding:1px 6px;margin-left:3px;letter-spacing:.2px;box-shadow:0 0 6px rgba(74,222,128,.15)">✅ 볏마루도감 인증</span>` : '';
-  const certBadge = ''; // 배지가 닉네임 옆으로 이동했으므로 태그 라인에서는 비움
-
+  // 공지 — 별도 텍스트 카드
   if (isNotice) {
-    // 공지사항 카드 (사진 없이 텍스트)
-    div.style.cssText = 'display:block;padding:14px 18px;cursor:pointer;border-left:3px solid var(--ac)';
     const preview = p.body ? (p.body.length > 80 ? p.body.substring(0, 80) + '...' : p.body) : '';
     div.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--ac);font-weight:700">📢 공지</span>
-        <span style="font-size:11px;color:var(--tx3);margin-left:auto">${p.time}</span>
-      </div>
-      <div style="font-size:15px;font-weight:800;margin-bottom:4px;color:var(--tx)">${p.title}</div>
-      ${preview ? `<div style="font-size:12px;color:var(--tx2);line-height:1.6">${preview}</div>` : ''}`;
-  } else {
-    // 일반 게시글 카드
-    div.onclick = () => openPostDetail(p);
-    div.innerHTML = `
-      ${!compact ? `<div class="post-card-img" ${p.photo ? `style="cursor:zoom-in" onclick="event.stopPropagation();_openImageLightbox('${String(p.photo).replace(/'/g,"\\'")}')"` : ''}>${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:14px 0 0 14px">` : (p.emoji || '🦎')}</div>` : ''}
-      <div class="post-card-body">
-        <div class="post-author-row">
-          <div class="post-avatar">${p.avatar}</div>
-          <div class="post-author-name">${p.author}${proBadge}${verifiedBadge}</div>
+      <div style="padding:14px 18px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--ac);font-weight:700">📢 공지</span>
+          <span style="font-size:11px;color:var(--tx3);margin-left:auto">${escapeHtml(p.time||'')}</span>
         </div>
-        <div class="post-tags">
-          <span class="tag tag-gray">${catLabels[p.cat]||'—'}</span>
-          ${certBadge}
-          ${p.tags ? p.tags.map(t=>`<span class="tag tag-green">${t}</span>`).join('') : ''}
-        </div>
-        <div class="post-title">${p.title}</div>
-        ${p.price ? `<div class="post-price">${p.price}만원</div>` : ''}
-        <div class="post-stats">
-          <span>👁 ${p.views || 0}</span>
-          <span>💬 ${p.comments || 0}</span>
-          <button id="like-btn-${p.id}" data-liked="${p.isLiked ? '1' : '0'}" onclick="event.stopPropagation();togglePostLike(${p.id})" style="background:none;border:none;cursor:pointer;font-size:inherit;color:inherit;padding:0;display:inline-flex;align-items:center;gap:3px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,107,107,.15)">
-            <span class="like-icon">${p.isLiked ? '❤️' : '🤍'}</span><span class="like-count">${p.likes || 0}</span>
-          </button>
-          <span style="margin-left:auto">${p.time}</span>
-        </div>
+        <div style="font-size:15px;font-weight:800;margin-bottom:4px;color:var(--tx)">${escapeHtml(p.title)}</div>
+        ${preview ? `<div style="font-size:12px;color:var(--tx2);line-height:1.6">${escapeHtml(preview)}</div>` : ''}
       </div>`;
+    div.onclick = () => openPostDetail(p);
+    return div;
   }
+
+  // 인스타/스레드 스타일 카드
+  // 아바타 — 이모지 또는 첫글자
+  const avatarChar = (p.avatar && p.avatar.length <= 2) ? p.avatar : (p.author ? p.author.charAt(0) : '🦎');
+
+  // 카테고리 칩 (라벨로 표시)
+  const catLabel = catLabels[p.cat] || '';
+  const catChip = catLabel ? `<span class="tag tag-gray">${escapeHtml(catLabel)}</span>` : '';
+
+  // 본문 미리보기 (3줄 클램프)
+  const previewText = p.body || '';
+
+  // 사진 영역
+  const safePhotoAttr = p.photo ? String(p.photo).replace(/'/g, "\\'") : '';
+  const photoBlock = p.photo
+    ? `<div class="post-img-wrap" onclick="event.stopPropagation();_openImageLightbox('${safePhotoAttr}')"><img src="${escapeHtml(p.photo)}" loading="lazy" alt=""></div>`
+    : '';
+
+  // 액션 바 (인스타 스타일: 좋아요 / 댓글 / 공유)
+  const likedClass = p.isLiked ? 'liked' : '';
+  const likeIcon = p.isLiked ? '❤️' : '🤍';
+
+  div.innerHTML = `
+    <div class="post-header">
+      <div class="post-avatar">${escapeHtml(avatarChar)}</div>
+      <div class="post-header-info">
+        <div class="post-author-name">${escapeHtml(p.author || '익명')}${proBadge}${verifiedBadge}</div>
+        <div class="post-header-meta">
+          ${catChip ? `<span>${catChip}</span>` : ''}
+          <span class="dot">·</span>
+          <span>${escapeHtml(p.time || '')}</span>
+        </div>
+      </div>
+      <button class="post-more-btn" onclick="event.stopPropagation();_showPostQuickActions(${p.id})" aria-label="더보기">⋯</button>
+    </div>
+    ${photoBlock}
+    <div class="post-actions">
+      <button id="like-btn-${p.id}" class="post-action-btn ${likedClass}" data-liked="${p.isLiked ? '1' : '0'}" onclick="event.stopPropagation();togglePostLike(${p.id})" aria-label="좋아요">
+        <span class="like-icon">${likeIcon}</span>
+      </button>
+      <button class="post-action-btn" onclick="event.stopPropagation();_openPostDetailById(${p.id})" aria-label="댓글">💬</button>
+      <button class="post-action-btn" onclick="event.stopPropagation();_sharePostLink(${p.id})" aria-label="공유">📤</button>
+      <span class="post-action-spacer"></span>
+    </div>
+    <div class="post-body">
+      ${p.likes > 0 ? `<div class="post-likes-count">좋아요 <span class="like-count">${p.likes}</span>개</div>` : ''}
+      <div class="post-title">${escapeHtml(p.title)}</div>
+      ${p.price ? `<div class="post-price">${escapeHtml(p.price)}만원</div>` : ''}
+      ${p.tags && p.tags.length ? `<div class="post-tags">${p.tags.map(t=>`<span class="tag tag-green">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      ${previewText ? `<div class="post-preview">${escapeHtml(previewText)}</div>` : ''}
+      ${p.comments > 0 ? `<div class="post-comments-link">💬 댓글 ${p.comments}개 보기</div>` : ''}
+    </div>
+  `;
   div.onclick = () => openPostDetail(p);
   return div;
+}
+
+// ID로 게시글 상세 열기 (state.posts에서 찾기)
+function _openPostDetailById(postId) {
+  const p = state.posts.find(x => String(x.id) === String(postId));
+  if (p) openPostDetail(p);
+}
+
+// 공유 링크 복사
+function _sharePostLink(postId) {
+  const url = `https://byetmaru.com/?post=${postId}`;
+  if (navigator.share) {
+    navigator.share({ url, title: '볏마루도감 게시글' }).catch(() => {
+      _copyTextToClipboard(url);
+      showToast('🔗 링크 복사됨');
+    });
+  } else {
+    _copyTextToClipboard(url);
+    showToast('🔗 링크 복사됨');
+  }
+}
+function _copyTextToClipboard(text) {
+  try {
+    if (navigator.clipboard) { navigator.clipboard.writeText(text); return; }
+  } catch(_) {}
+  // 폴백
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch(_) {}
+  ta.remove();
+}
+
+// 게시글 ⋯ 버튼 빠른 액션
+function _showPostQuickActions(postId) {
+  const p = state.posts.find(x => String(x.id) === String(postId));
+  if (!p) return;
+  const isOwn = _currentUser && String(p.user_id) === String(_currentUser.id);
+  const exist = document.getElementById('post-quick-actions-overlay');
+  if (exist) exist.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'post-quick-actions-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99998;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)');
+  const close = `document.getElementById('post-quick-actions-overlay').remove()`;
+  const items = isOwn
+    ? [
+        { icon: '✏️', label: '수정', fn: `${close};openEditPost(${postId})` },
+        { icon: '🔗', label: '링크 공유', fn: `${close};_sharePostLink(${postId})` },
+        { icon: '🗑️', label: '삭제', fn: `${close};deletePost(${postId})`, danger: true },
+      ]
+    : [
+        { icon: '🔗', label: '링크 공유', fn: `${close};_sharePostLink(${postId})` },
+        { icon: '🚨', label: '게시글 신고', fn: `${close};reportPost(${postId})`, danger: true },
+        { icon: '🚫', label: '사용자 차단', fn: `${close};blockUser('${p.user_id}','${String(p.author||'').replace(/'/g,"")}')`, danger: true },
+      ];
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;padding:14px;max-width:300px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.3)">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        ${items.map(it => `<button type="button" onclick="${it.fn}" style="display:flex;align-items:center;gap:12px;background:transparent;border:none;padding:11px 12px;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;font-size:13.5px;color:${it.danger?'var(--coral)':'var(--tx)'};font-weight:600;touch-action:manipulation"><span style="font-size:18px;width:24px;text-align:center">${it.icon}</span><span>${it.label}</span></button>`).join('')}
+      </div>
+      <button type="button" onclick="${close}" style="width:100%;margin-top:6px;padding:10px;background:var(--sf2);border:1px solid var(--br);border-radius:10px;font-size:12px;color:var(--tx2);cursor:pointer;font-family:inherit">취소</button>
+    </div>
+  `;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 let _currentPostId = null;
