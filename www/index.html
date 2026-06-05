@@ -11755,10 +11755,30 @@ async function openGeckoPhotoGallery(id) {
   if (!g) { showToast('개체를 찾을 수 없어요'); return; }
 
   // 1) 사진 출처 수집
-  const photos = []; // { url, source, label, date }
+  const photos = []; // { url, source, label, date, photoId? }
   if (g.photo && !g.photo.startsWith('data:')) {
     photos.push({ url: g.photo, source: 'profile', label: '🦎 프로필 사진', date: g.created_at || '' });
   }
+  // 갤러리 전용 사진들 (gecko_photos 테이블)
+  try {
+    const { data: galleryPhotos } = await _supabase
+      .from('gecko_photos')
+      .select('id, photo_url, caption, created_at')
+      .eq('user_id', _currentUser.id)
+      .eq('gecko_id', String(id))
+      .order('created_at', { ascending: false });
+    (galleryPhotos || []).forEach(p => {
+      if (p.photo_url) {
+        photos.push({
+          url: p.photo_url,
+          source: 'gallery',
+          label: p.caption ? '📷 ' + p.caption : '📷 갤러리 사진',
+          date: p.created_at || '',
+          photoId: p.id,
+        });
+      }
+    });
+  } catch(e) { console.warn('[gallery photos]', e); }
   // 커뮤니티 글에서 이 개체로 연결된 사진들
   try {
     const { data: linkedPosts } = await _supabase
@@ -11802,10 +11822,11 @@ async function openGeckoPhotoGallery(id) {
     : _renderEmptyState({
         icon: '🖼️',
         title: '아직 사진이 없어요',
-        sub: '개체 등록 시 사진을 추가하거나\n커뮤니티 글에 이 개체를 연결해 보세요',
-        hint: '💡 연결된 글의 사진이 자동으로 모여요',
+        sub: '위 \'📷 사진 추가\' 버튼으로\n갤러리를 시작해보세요',
+        hint: '💡 커뮤니티에 이 개체를 연결한 글의 사진도 자동으로 모여요',
       });
 
+  const safeId = String(id).replace(/'/g, "\\'");
   overlay.innerHTML = `
     <div style="background:var(--card);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:18px 18px 22px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.25)">
       <div style="width:36px;height:4px;background:var(--br);border-radius:2px;margin:0 auto 14px"></div>
@@ -11816,14 +11837,113 @@ async function openGeckoPhotoGallery(id) {
         </div>
         <button onclick="document.getElementById('gecko-gallery-overlay').remove()" style="background:var(--sf2);border:1px solid var(--br);width:30px;height:30px;border-radius:50%;font-size:14px;color:var(--tx2);cursor:pointer;font-family:inherit">✕</button>
       </div>
+      <!-- 사진 추가 영역 -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button type="button" onclick="document.getElementById('gallery-photo-input-${safeId}').click()" style="flex:1;background:linear-gradient(135deg,var(--ac),#38c947);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;touch-action:manipulation">📷 사진 추가</button>
+        <button type="button" onclick="document.getElementById('gallery-photo-cam-${safeId}').click()" style="background:var(--sf2);border:1.5px solid var(--br);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--tx);font-family:inherit;cursor:pointer;touch-action:manipulation">📸</button>
+        <input type="file" id="gallery-photo-input-${safeId}" accept="image/*" multiple onchange="_handleGalleryUpload(event,'${safeId}')" style="display:none">
+        <input type="file" id="gallery-photo-cam-${safeId}" accept="image/*" capture="camera" onchange="_handleGalleryUpload(event,'${safeId}')" style="display:none">
+      </div>
       <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px">
         ${gridHtml}
       </div>
     </div>
   `;
   overlay._photos = photos;
+  overlay._geckoId = id;
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+}
+
+// 갤러리에 사진 업로드 (여러 장 가능)
+async function _handleGalleryUpload(e, geckoId) {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  showToast(`📷 ${files.length}장 업로드 중...`);
+  let okCount = 0;
+  for (const file of files) {
+    try {
+      if (file.size > 20 * 1024 * 1024) { showToast('⚠️ ' + file.name + ' 파일이 너무 커요 (20MB 초과)'); continue; }
+      // 리사이즈
+      const dataUrl = await _resizeImageForGallery(file);
+      // 유효성 검사 (사람 얼굴 등)
+      const check = await _validateGeckoPhoto(dataUrl);
+      if (!check.ok) { showToast('⚠️ ' + check.reason); continue; }
+      // Storage 업로드
+      const blob = await (await fetch(dataUrl)).blob();
+      const fileName = `${_currentUser.id}/gallery_${geckoId}_${Date.now()}_${Math.floor(Math.random()*1000)}.jpg`;
+      const { error: upErr } = await _supabase.storage.from('gecko-photos').upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+      if (upErr) { console.warn('[gallery upload]', upErr); continue; }
+      const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+      const photoUrl = urlData?.publicUrl;
+      if (!photoUrl) continue;
+      // DB insert
+      const { error: insErr } = await _supabase.from('gecko_photos').insert({
+        gecko_id: String(geckoId),
+        user_id: _currentUser.id,
+        photo_url: photoUrl,
+        caption: null,
+      });
+      if (!insErr) okCount++;
+    } catch(err) {
+      console.warn('[gallery file]', err);
+    }
+  }
+  e.target.value = '';
+  if (okCount > 0) {
+    showToast(`✅ ${okCount}장 저장됨`);
+    // 갤러리 다시 로드
+    document.getElementById('gecko-gallery-overlay')?.remove();
+    openGeckoPhotoGallery(geckoId);
+  } else {
+    showToast('⚠️ 업로드 실패');
+  }
+}
+
+// 갤러리용 빠른 리사이즈 (1024px max)
+function _resizeImageForGallery(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1024;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'medium';
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      try { resolve(canvas.toDataURL('image/jpeg', 0.85)); }
+      catch(e) { reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+    img.src = url;
+  });
+}
+
+// 갤러리 사진 삭제 (라이트박스에서 호출)
+async function _deleteGalleryPhoto(photoId, geckoId) {
+  if (!_currentUser || !photoId) return;
+  const ok = await $confirm('이 사진을 갤러리에서 삭제할까요?\n(Storage의 원본 파일은 남을 수 있어요)', '🗑️ 사진 삭제');
+  if (!ok) return;
+  try {
+    const { error } = await _supabase.from('gecko_photos').delete().eq('id', photoId).eq('user_id', _currentUser.id);
+    if (error) throw error;
+    showToast('🗑 삭제됨');
+    document.getElementById('photo-lightbox-overlay')?.remove();
+    document.getElementById('gecko-gallery-overlay')?.remove();
+    openGeckoPhotoGallery(geckoId);
+  } catch(e) {
+    console.warn('[delete photo]', e);
+    showToast('⚠️ 삭제 실패');
+  }
 }
 
 // ══════════════════════════════════════
@@ -11845,10 +11965,16 @@ function _openLightbox(sourceOverlayId, startIdx) {
 
   function render() {
     const p = photos[idx] || {};
+    const sourceOverlay = document.getElementById('gecko-gallery-overlay');
+    const geckoId = sourceOverlay?._geckoId;
+    const canDelete = p.source === 'gallery' && p.photoId && geckoId;
+    const deleteBtn = canDelete
+      ? `<button onclick="_deleteGalleryPhoto(${p.photoId},'${String(geckoId).replace(/'/g,"\\'")}')" aria-label="삭제" style="background:rgba(255,107,107,.25);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:14px;cursor:pointer;font-family:inherit;margin-right:8px">🗑</button>`
+      : '';
     overlay.innerHTML = `
       <div style="position:absolute;top:0;left:0;right:0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;color:#fff;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2">
         <div style="font-size:12px;font-weight:600;opacity:.9">${idx + 1} / ${photos.length}</div>
-        <button onclick="document.getElementById('photo-lightbox-overlay').remove()" aria-label="닫기" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;font-family:inherit">✕</button>
+        <div style="display:flex;align-items:center">${deleteBtn}<button onclick="document.getElementById('photo-lightbox-overlay').remove()" aria-label="닫기" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;font-family:inherit">✕</button></div>
       </div>
       <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:60px 12px">
         <img src="${escapeHtml(p.url)}" alt="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px"/>
