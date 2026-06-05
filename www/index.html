@@ -1926,7 +1926,12 @@ input[type=file]{display:none}
           onclick="showMorphInline()"
           oninput="filterMorphInline()"
           style="width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:11px 13px;color:var(--tx);font-family:'Noto Sans KR',sans-serif;font-size:14px;transition:border-color .15s;box-sizing:border-box">
-        <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5);touch-action:pan-y;overscroll-behavior:contain">
+        <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5);touch-action:pan-y;overscroll-behavior:contain">
+          <!-- sticky 닫기 헤더 — 드롭다운 열린 채로 페이지 스크롤 불가 문제 해결 -->
+          <div style="position:sticky;top:0;background:var(--sf);padding:8px 10px 8px 12px;border-bottom:1px solid var(--br2);display:flex;align-items:center;justify-content:space-between;z-index:2">
+            <span style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:1.5px">MORPH 검색</span>
+            <button type="button" onclick="event.stopPropagation();hideMorphInline()" aria-label="모프 선택 닫기" style="background:var(--sf2);border:1px solid var(--br);width:28px;height:28px;border-radius:50%;font-size:13px;color:var(--tx2);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.1)">✕</button>
+          </div>
           <div id="morph-inline-list"></div>
         </div>
       </div>
