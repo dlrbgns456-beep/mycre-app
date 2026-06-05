@@ -6585,6 +6585,10 @@ function openGeckoDetail(id) {
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px;border-color:var(--ac);color:var(--ac)" onclick="closeSheetDirect('sheet-gecko-detail');setTimeout(()=>openLineageTree('${id}'),250)">
         🌳 혈통 트리 보기
       </button>
+      <!-- 사진 갤러리 (개체 사진 + 커뮤니티 사진 모음) -->
+      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px;border-color:var(--blue);color:var(--blue);background:var(--bl2)" onclick="openGeckoPhotoGallery('${id}')">
+        🖼️ 사진 갤러리
+      </button>
       <!-- 카드 이미지 공유 (SNS 자랑/마케팅용) -->
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px;border-color:var(--ac);color:#fff;background:linear-gradient(135deg,var(--ac),#38c947)" onclick="openGeckoShareCard('${id}')">
         📸 카드 이미지로 공유
@@ -11498,6 +11502,156 @@ async function _downloadMyDataJSON() {
     console.error('JSON 다운로드 실패:', e);
     showToast('❌ 실패: ' + e.message);
   }
+}
+
+// ══════════════════════════════════════
+// 🖼️ 사진 갤러리 (Phase 2-K) — 개체 사진 + 커뮤니티 사진 (linked_gecko_id) 모음
+// ══════════════════════════════════════
+async function openGeckoPhotoGallery(id) {
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+
+  // 1) 사진 출처 수집
+  const photos = []; // { url, source, label, date }
+  if (g.photo && !g.photo.startsWith('data:')) {
+    photos.push({ url: g.photo, source: 'profile', label: '🦎 프로필 사진', date: g.created_at || '' });
+  }
+  // 커뮤니티 글에서 이 개체로 연결된 사진들
+  try {
+    const { data: linkedPosts } = await _supabase
+      .from('posts')
+      .select('id, title, photo, cat, created_at')
+      .eq('linked_gecko_id', String(id))
+      .not('photo', 'is', null)
+      .order('created_at', { ascending: false });
+    (linkedPosts || []).forEach(p => {
+      if (p.photo && !p.photo.startsWith('data:')) {
+        const catLabels = { sale: '🏷️ 분양', qna: '❓ QnA', info: '✍️ 끄적', celebrate: '🎉 축하' };
+        photos.push({
+          url: p.photo,
+          source: 'post',
+          label: (catLabels[p.cat] || '💬') + ' ' + (p.title || ''),
+          date: p.created_at || '',
+          postId: p.id,
+        });
+      }
+    });
+  } catch(e) { console.warn('[gallery posts]', e); }
+
+  // 다이얼로그
+  const exist = document.getElementById('gecko-gallery-overlay');
+  if (exist) exist.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'gecko-gallery-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99998;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)');
+
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  const gridHtml = photos.length > 0
+    ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        ${photos.map((p, i) => `
+          <div onclick="_openLightbox('gecko-gallery-overlay', ${i})" data-gallery-idx="${i}" style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--sf2);border:1px solid var(--br);cursor:pointer;touch-action:manipulation">
+            <img src="${escapeHtml(p.url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">
+            <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.65));padding:14px 6px 4px;font-size:9px;color:#fff;font-weight:600;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.label).slice(0, 16)}</div>
+          </div>
+        `).join('')}
+      </div>`
+    : _renderEmptyState({
+        icon: '🖼️',
+        title: '아직 사진이 없어요',
+        sub: '개체 등록 시 사진을 추가하거나\n커뮤니티 글에 이 개체를 연결해 보세요',
+        hint: '💡 연결된 글의 사진이 자동으로 모여요',
+      });
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:18px 18px 22px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.25)">
+      <div style="width:36px;height:4px;background:var(--br);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:16px;font-weight:900;color:var(--tx);display:flex;align-items:center;gap:8px">
+          🖼️ ${escapeHtml(g.name)} 사진
+          <span style="font-size:11px;color:var(--tx3);font-weight:600;background:var(--sf2);padding:2px 8px;border-radius:8px">${photos.length}장</span>
+        </div>
+        <button onclick="document.getElementById('gecko-gallery-overlay').remove()" style="background:var(--sf2);border:1px solid var(--br);width:30px;height:30px;border-radius:50%;font-size:14px;color:var(--tx2);cursor:pointer;font-family:inherit">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px">
+        ${gridHtml}
+      </div>
+    </div>
+  `;
+  overlay._photos = photos;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ══════════════════════════════════════
+// 🔍 라이트박스 (Phase 3-C) — 사진 풀스크린 + 좌우 스와이프
+// ══════════════════════════════════════
+function _openLightbox(sourceOverlayId, startIdx) {
+  const source = document.getElementById(sourceOverlayId);
+  const photos = source && source._photos ? source._photos : [];
+  if (!photos.length) return;
+  let idx = Math.max(0, Math.min(startIdx || 0, photos.length - 1));
+
+  const exist = document.getElementById('photo-lightbox-overlay');
+  if (exist) exist.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'photo-lightbox-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:pan-y');
+
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function render() {
+    const p = photos[idx] || {};
+    overlay.innerHTML = `
+      <div style="position:absolute;top:0;left:0;right:0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;color:#fff;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2">
+        <div style="font-size:12px;font-weight:600;opacity:.9">${idx + 1} / ${photos.length}</div>
+        <button onclick="document.getElementById('photo-lightbox-overlay').remove()" aria-label="닫기" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;font-family:inherit">✕</button>
+      </div>
+      <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:60px 12px">
+        <img src="${escapeHtml(p.url)}" alt="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px"/>
+      </div>
+      <div style="position:absolute;bottom:0;left:0;right:0;padding:18px;text-align:center;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.7));z-index:2">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">${escapeHtml(p.label || '')}</div>
+        <div style="font-size:11px;opacity:.7">${escapeHtml((p.date || '').slice(0, 10))}</div>
+      </div>
+      ${photos.length > 1 ? `
+        <button onclick="event.stopPropagation();_lightboxNav(-1)" aria-label="이전" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;font-family:inherit">‹</button>
+        <button onclick="event.stopPropagation();_lightboxNav(1)" aria-label="다음" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;font-family:inherit">›</button>
+      ` : ''}
+    `;
+  }
+  overlay._photos = photos;
+  overlay._idx = idx;
+  overlay._render = render;
+  render();
+
+  // 배경 탭으로 닫기 (이미지 자체는 X)
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  // 좌우 스와이프
+  let sx = 0;
+  overlay.addEventListener('touchstart', (e) => { sx = e.touches[0]?.clientX || 0; }, { passive: true });
+  overlay.addEventListener('touchend', (e) => {
+    const ex = e.changedTouches[0]?.clientX || 0;
+    const dx = ex - sx;
+    if (Math.abs(dx) > 50) {
+      _lightboxNav(dx > 0 ? -1 : 1);
+    }
+  }, { passive: true });
+  // ESC 닫기
+  const escHandler = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+
+  document.body.appendChild(overlay);
+}
+
+function _lightboxNav(delta) {
+  const overlay = document.getElementById('photo-lightbox-overlay');
+  if (!overlay || !overlay._photos) return;
+  const len = overlay._photos.length;
+  overlay._idx = (overlay._idx + delta + len) % len;
+  if (typeof overlay._render === 'function') overlay._render();
 }
 
 // ══════════════════════════════════════
