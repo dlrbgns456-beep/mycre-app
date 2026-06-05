@@ -10866,12 +10866,10 @@ async function _showSharedGeckoPage(geckoId, ownerId) {
   content.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3)">로딩 중...</div>';
 
   try {
-    const { data: g, error } = await _supabase
-      .from('geckos')
-      .select('name, morph, sex, dob, weight, dad, mom, photo, status')
-      .eq('id', geckoId)
-      .eq('user_id', ownerId)
-      .maybeSingle();
+    // geckos 는 본인만 조회 가능 → 공유 카드는 안전 컬럼만 반환하는 RPC 사용
+    const { data: rows, error } = await _supabase
+      .rpc('get_shared_gecko', { p_gecko_id: geckoId, p_owner_id: ownerId });
+    const g = rows && rows[0];
 
     if (error || !g) {
       content.innerHTML = `
@@ -15563,10 +15561,16 @@ async function openVerificationSheet() {
   openSheet('sheet-verification');
   // 현재 인증 상태 로드
   try {
-    const { data } = await _supabase.from('profiles')
-      .select('is_phone_verified, is_biz_verified, biz_number, phone_number')
+    const { data: prof } = await _supabase.from('profiles')
+      .select('is_phone_verified, is_biz_verified')
       .eq('id', _currentUser.id)
       .maybeSingle();
+    // 전화·사업자번호는 본인만 접근 가능한 profiles_private 에 분리 저장됨
+    const { data: priv } = await _supabase.from('profiles_private')
+      .select('phone_number, biz_number')
+      .eq('id', _currentUser.id)
+      .maybeSingle();
+    const data = { ...(prof || {}), ...(priv || {}) };
     const phoneStat = document.getElementById('verif-phone-status');
     const bizStat   = document.getElementById('verif-biz-status');
     const bizInput  = document.getElementById('verif-biz-number');
@@ -15612,8 +15616,11 @@ async function startPhoneVerification() {
     return;
   }
   try {
+    const { error: ePriv } = await _supabase.from('profiles_private')
+      .upsert({ id: _currentUser.id, phone_number: digits }, { onConflict: 'id' });
+    if (ePriv) throw ePriv;
     const { error } = await _supabase.from('profiles')
-      .update({ phone_number: digits, is_phone_verified: false })
+      .update({ is_phone_verified: false })
       .eq('id', _currentUser.id);
     if (error) throw error;
     // 운영팀 알림
@@ -15635,8 +15642,11 @@ async function submitBizNumber() {
   const digits = raw.replace(/\D/g, '');
   if (digits.length !== 10) { showToast('⚠️ 사업자번호는 숫자 10자리입니다'); return; }
   try {
+    const { error: ePriv } = await _supabase.from('profiles_private')
+      .upsert({ id: _currentUser.id, biz_number: digits }, { onConflict: 'id' });
+    if (ePriv) throw ePriv;
     const { error } = await _supabase.from('profiles')
-      .update({ biz_number: digits, is_biz_verified: false })
+      .update({ is_biz_verified: false })
       .eq('id', _currentUser.id);
     if (error) throw error;
     _notifyAdmin('biz_verification_request', '🏢 사업자 번호 검토 요청',
