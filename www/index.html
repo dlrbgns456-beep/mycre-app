@@ -509,10 +509,10 @@ input[type=file]{display:none}
 .gecko-card.gC::before{background:var(--blue)}
 .gecko-card:active{transform:scale(.985);background:var(--sf2)}
 .gecko-thumb{
-  width:52px;height:52px;border-radius:12px;
+  width:72px;height:72px;border-radius:14px;
   background:var(--sf2);border:1px solid var(--br);
   display:flex;align-items:center;justify-content:center;
-  font-size:22px;flex-shrink:0;overflow:hidden;
+  font-size:30px;flex-shrink:0;overflow:hidden;
 }
 .gecko-thumb img{width:100%;height:100%;object-fit:cover}
 .gecko-info{flex:1;min-width:0}
@@ -2722,6 +2722,7 @@ let state = {
   _usedPaidCredit: false, // 이번 스캔이 유료 크레딧 사용인지 플래그
   nextGeckoId: 1,
   nextPostId: 1,
+  eggCounts: {},          // 암컷 산란 누적 캐시 { geckoId: {fertile,infertile} }
 };
 
 // ══════════════════════════════
@@ -4575,7 +4576,7 @@ function showPage(p, pushHistory = true) {
   state.currentPage = p;
   try {
     if (p === 'home') renderHome();
-    else if (p === 'myge') renderGeckoList();
+    else if (p === 'myge') { renderGeckoList(); _loadEggCounts(); }
     else if (p === 'comm') renderPosts();
     else if (p === 'scan') resetScanPage();
     else if (p === 'more') updateCreditDisplays();
@@ -6416,6 +6417,29 @@ function openGeckoMoreFilter() {
   document.body.appendChild(overlay);
 }
 
+// 암컷 산란 누적 집계 (gecko_logs type='egg', value='유정란 N개') → state.eggCounts 캐시
+async function _loadEggCounts() {
+  if (!_currentUser) return;
+  try {
+    const { data } = await _supabase.from('gecko_logs')
+      .select('gecko_id, value')
+      .eq('user_id', _currentUser.id)
+      .eq('type', 'egg');
+    const counts = {};
+    (data || []).forEach(r => {
+      const gid = r.gecko_id;
+      const mt = String(r.value || '').match(/^(유정란|무정란)\s*(\d+)/);
+      if (!gid || !mt) return;
+      if (!counts[gid]) counts[gid] = { fertile: 0, infertile: 0 };
+      const n = parseInt(mt[2]) || 0;
+      if (mt[1] === '유정란') counts[gid].fertile += n;
+      else counts[gid].infertile += n;
+    });
+    state.eggCounts = counts;
+    renderGeckoList();
+  } catch (e) {}
+}
+
 function renderGeckoList() {
   const list = document.getElementById('gecko-list');
   const search = (document.getElementById('gecko-search')?.value || '').toLowerCase();
@@ -6537,7 +6561,17 @@ function renderGeckoList() {
     const statusTag = g.status === '브리딩중' ? `<span class="tag tag-pu">브리딩 중</span>` :
                      g.status === '분양예정' ? `<span class="tag tag-coral">분양 예정</span>` :
                      g.status === '격리중' ? `<span class="tag tag-amber">격리 중</span>` : '';
-    const cageTag = g.cage ? `<span class="tag tag-blue">케이지 ${g.cage.split(' ')[0]}</span>` : '';
+    // 케이지 → 몸무게 표시로 교체 (사용자 설정값)
+    const weightTag = (g.weight && parseFloat(g.weight) > 0) ? `<span class="tag tag-blue">⚖️ ${g.weight}g</span>` : '';
+    // 암컷: 유정란·무정란 누적 개수 (gecko_logs 집계 캐시)
+    let eggTag = '';
+    if (g.sex === '암컷') {
+      const ec = state.eggCounts && state.eggCounts[g.id];
+      if (ec && (ec.fertile || ec.infertile)) {
+        if (ec.fertile)   eggTag += `<span class="tag" style="background:var(--ac2);color:var(--ac)">🥚 유정란 ${ec.fertile}</span>`;
+        if (ec.infertile) eggTag += `<span class="tag" style="background:var(--am2);color:var(--am)">🥚 무정란 ${ec.infertile}</span>`;
+      }
+    }
     // 모프 또는 성별이 비어있으면 "정보 미완성" 태그 표시 (고속 등록 모드 후 수정 유도)
     const incomplete = !g.morph || g.sex === '미상';
     const incompleteTag = incomplete ? `<span class="tag tag-amber" style="font-weight:800">⚠️ 정보 미완성</span>` : '';
@@ -6556,7 +6590,7 @@ function renderGeckoList() {
         </div>
         <div class="gecko-morph">${g.morph || '📷 모프 미판별'}</div>
         ${g.dob ? `<div style="font-size:10px;color:var(--blue);background:var(--bl2);border-radius:6px;padding:2px 7px;display:inline-block;margin-top:3px;font-weight:700">${getAge(g.dob)} <span style="color:var(--tx3);font-weight:500;margin-left:3px">${g.dob.slice(2).replace(/-/g,'.')}</span></div>` : ''}
-        <div class="gecko-tags">${incompleteTag}${statusTag}${cageTag}</div>
+        <div class="gecko-tags">${incompleteTag}${statusTag}${weightTag}${eggTag}</div>
       </div>
       <div class="gecko-right">
         <div class="gecko-grade-badge" style="background:${gInfo.bg};color:${gInfo.color}">${grade}</div>
@@ -16160,6 +16194,7 @@ async function quickMarkEgg(geckoId, kind) {
   vibrateDevice('celebration');
   showToast(toastMsg);
   _updateRecordCount();
+  _loadEggCounts();   // 산란 누적 개수 갱신 → 카드 재렌더
   renderGeckoList();
   renderHome();
 }
