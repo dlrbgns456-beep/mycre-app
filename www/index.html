@@ -223,11 +223,83 @@ input[type=file]{display:none}
 .grade-c{background:var(--bl2);color:var(--blue)}
 .grade-badge{font-family:"DM Mono",monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px}
 
-/* ─── Empty State ─── */
-.empty-state{text-align:center;padding:60px 20px}
-.empty-icon{font-size:52px;margin-bottom:14px}
-.empty-title{font-size:17px;font-weight:700;margin-bottom:6px}
-.empty-sub{font-size:13px;color:var(--tx2);line-height:1.6}
+/* ─── Empty State (v2: 그라데이션 박스 + 부드러운 페이드인 일러스트) ─── */
+.empty-state{
+  text-align:center;
+  padding:48px 24px 56px;
+  margin:8px 14px;
+  background:linear-gradient(135deg,rgba(46,125,87,.06),rgba(46,125,87,.02));
+  border:1px dashed rgba(46,125,87,.25);
+  border-radius:18px;
+  animation:emptyFadeIn .4s ease;
+}
+@keyframes emptyFadeIn{
+  from{opacity:0;transform:translateY(4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.empty-icon{
+  font-size:48px;
+  margin-bottom:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:84px;height:84px;
+  background:var(--card);
+  border:1px solid var(--br);
+  border-radius:50%;
+  box-shadow:0 4px 14px rgba(0,0,0,.06);
+  animation:emptyBounce 2.4s ease-in-out infinite;
+}
+@keyframes emptyBounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-4px)}
+}
+.empty-title{font-size:16px;font-weight:800;margin-bottom:6px;color:var(--tx);line-height:1.4}
+.empty-sub{font-size:12.5px;color:var(--tx2);line-height:1.65;white-space:pre-line;margin-bottom:4px}
+.empty-action{
+  display:inline-block;
+  margin-top:18px;
+  padding:11px 24px;
+  background:linear-gradient(135deg,var(--ac),#38c947);
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  font-size:13px;
+  font-weight:800;
+  font-family:inherit;
+  cursor:pointer;
+  box-shadow:0 4px 14px rgba(46,125,87,.25);
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .15s ease;
+}
+.empty-action:active{transform:scale(.96)}
+.empty-action-secondary{
+  display:inline-block;
+  margin-top:10px;
+  padding:9px 18px;
+  background:transparent;
+  color:var(--tx2);
+  border:1px solid var(--br);
+  border-radius:10px;
+  font-size:12px;
+  font-weight:600;
+  font-family:inherit;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.empty-action-secondary:active{transform:scale(.96)}
+.empty-hint{
+  margin-top:14px;
+  font-size:11px;
+  color:var(--tx3);
+  line-height:1.6;
+  padding:9px 14px;
+  background:var(--sf2);
+  border-radius:10px;
+  display:inline-block;
+  max-width:280px;
+}
 
 /* ─── Scroll row ─── */
 .scroll-row{display:flex;gap:10px;overflow-x:auto;padding:0 18px;scrollbar-width:none}
@@ -4725,6 +4797,32 @@ async function saveProfile() {
 // TOAST
 // ══════════════════════════════
 let toastTimer;
+
+// ══════════════════════════════
+// 🌱 Empty State 통합 헬퍼 (CSS .empty-state 사용)
+// 옵션: { icon, title, sub, actionText?, actionFn?, secondaryText?, secondaryFn?, hint? }
+// ══════════════════════════════
+function _renderEmptyState(opts) {
+  opts = opts || {};
+  const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const icon = opts.icon || '✨';
+  const title = escapeHtml(opts.title || '');
+  const sub = escapeHtml(opts.sub || '');
+  const hint = opts.hint ? `<div class="empty-hint">${escapeHtml(opts.hint)}</div>` : '';
+  const action = (opts.actionText && opts.actionFn)
+    ? `<button class="empty-action" onclick="${opts.actionFn}">${escapeHtml(opts.actionText)}</button>`
+    : '';
+  const secondary = (opts.secondaryText && opts.secondaryFn)
+    ? `<br><button class="empty-action-secondary" onclick="${opts.secondaryFn}">${escapeHtml(opts.secondaryText)}</button>`
+    : '';
+  return `<div class="empty-state">
+    <div class="empty-icon">${icon}</div>
+    <div class="empty-title">${title}</div>
+    <div class="empty-sub">${sub}</div>
+    ${action}${secondary}
+    ${hint}
+  </div>`;
+}
 // ══════════════════════════════════════
 // 🧩 null-safe DOM 헬퍼 + 커스텀 다이얼로그 (PWA에서 브라우저 prompt/confirm 대체)
 // ══════════════════════════════════════
@@ -6116,12 +6214,20 @@ function renderGeckoList() {
 
   if (geckos.length === 0) {
     const isNoGecko = state.geckos.length === 0;
-    list.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">${isNoGecko ? '🦎' : '🔍'}</div>
-      <div class="empty-title">${isNoGecko ? '아직 등록된 크레가 없어요.' : '검색 결과가 없어요'}</div>
-      <div class="empty-sub">${isNoGecko ? '오늘 가장 자주 보는 친구부터\n기록해 볼까요?' : '다른 검색어를 사용해보세요'}</div>
-      ${isNoGecko ? `<button class="btn-primary" style="margin-top:18px;padding:12px 28px" onclick="openAddGecko()">+ 개체 등록</button>` : ''}
-    </div>`;
+    list.innerHTML = isNoGecko
+      ? _renderEmptyState({
+          icon: '🦎',
+          title: '아직 등록된 크레가 없어요',
+          sub: '오늘 가장 자주 보는 친구부터\n기록해 볼까요?',
+          actionText: '+ 개체 등록하기',
+          actionFn: 'openAddGecko()',
+          hint: '💡 사진과 모프만 입력해도 충분해요. 나머지는 나중에 채울 수 있어요',
+        })
+      : _renderEmptyState({
+          icon: '🔍',
+          title: '검색 결과가 없어요',
+          sub: '다른 검색어 또는 필터를 시도해보세요',
+        });
     return;
   }
 
@@ -7564,7 +7670,14 @@ async function renderPosts() {
   list.innerHTML = '';
   const all = state.posts;
   if (all.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">게시글이 없어요</div><div class="empty-sub">첫 번째 글을 작성해보세요!</div></div>`;
+    list.innerHTML = _renderEmptyState({
+      icon: '💬',
+      title: '커뮤니티가 조용하네요',
+      sub: '아직 게시글이 없어요.\n당신의 크레 이야기를 첫 번째로 들려주세요!',
+      actionText: '+ 첫 글 작성',
+      actionFn: 'openWritePost()',
+      hint: '🦎 자랑·질문·일상 무엇이든 환영',
+    });
     return;
   }
 
@@ -9166,9 +9279,7 @@ function printQR() {
         <button class="btn-primary" style="margin-top:8px" onclick="saveRecord()">기록 저장</button>
       </div>
       <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">기록 타임라인</div>
-      <div id="record-timeline" class="record-timeline">
-        <div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요</div>
-      </div>
+      <div id="record-timeline" class="record-timeline"></div>
     </div>
   </div>
 </div>
@@ -14501,7 +14612,15 @@ async function loadRecords(geckoId) {
   renderWeightChart(records.filter(r => r.type === 'weight'));
   renderShedChart(records.filter(r => r.type === 'shed'), geckoId);
   const timeline = document.getElementById('record-timeline');
-  if (records.length === 0) { timeline.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">아직 기록이 없어요. 위 버튼으로 첫 기록을 추가해보세요!</div>'; return; }
+  if (records.length === 0) {
+    timeline.innerHTML = _renderEmptyState({
+      icon: '📝',
+      title: '아직 기록이 없어요',
+      sub: '체중·급여·탈피를 꾸준히 기록하면\n성장 그래프가 자동으로 만들어져요',
+      hint: '💡 첫 기록은 ⚖️ 체중부터가 좋아요',
+    });
+    return;
+  }
   const tc = { weight:{emoji:'⚖️',label:'체중',color:'var(--ac)',bg:'var(--ac2)'}, feed:{emoji:'🍽️',label:'급여',color:'var(--am)',bg:'var(--am2)'}, shed:{emoji:'🦎',label:'탈피',color:'var(--blue)',bg:'var(--bl2)'}, health:{emoji:'💊',label:'건강',color:'var(--coral)',bg:'var(--co2)'}, memo:{emoji:'📝',label:'메모',color:'var(--pu)',bg:'var(--pu2)'}, egg:{emoji:'🥚',label:'산란',color:'#ff8fb1',bg:'rgba(255,143,177,.15)'} };
   timeline.innerHTML = records.map(r => {
     const c = tc[r.type] || tc.memo;
