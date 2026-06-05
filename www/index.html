@@ -1506,6 +1506,12 @@ input[type=file]{display:none}
     <input class="form-input" id="comm-search" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px" oninput="filterPosts()">
   </div>
 
+  <!-- 📸 스토리 row (24시간 자동 만료) -->
+  <div id="stories-row" style="display:none;padding:8px 14px 12px;border-bottom:1px solid var(--br2)">
+    <div style="display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px" id="stories-row-inner"></div>
+  </div>
+  <input type="file" id="story-file-input" accept="image/*" style="display:none" onchange="_handleStoryUpload(event)">
+
   <div id="post-list">
     <!-- populated by JS -->
   </div>
@@ -7910,6 +7916,250 @@ function setCommFilter(f) {
   renderPosts();
 }
 
+// ══════════════════════════════════════
+// 📸 스토리 (Phase C) — 24시간 자동 만료 사진/짧은 메모
+// 인스타 스토리 스타일: 가로 row + 풀스크린 뷰어 + 자동 진행
+// ══════════════════════════════════════
+let _storiesCache = []; // 최근 로드한 스토리 (그룹: user_id 기준)
+
+async function loadStories() {
+  if (!_currentUser) return;
+  try {
+    const { data } = await _supabase
+      .from('stories')
+      .select('id, user_id, photo_url, caption, created_at, expires_at, view_count')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false });
+    _storiesCache = data || [];
+    _renderStoriesRow();
+  } catch(e) {
+    console.warn('[stories load]', e);
+  }
+}
+
+function _renderStoriesRow() {
+  const row = document.getElementById('stories-row');
+  const inner = document.getElementById('stories-row-inner');
+  if (!row || !inner) return;
+
+  // 사용자별 그룹핑
+  const byUser = new Map();
+  _storiesCache.forEach(s => {
+    if (!byUser.has(s.user_id)) byUser.set(s.user_id, []);
+    byUser.get(s.user_id).push(s);
+  });
+
+  // 내 스토리는 맨 앞 (없어도 + 버튼)
+  const myStories = _currentUser ? (byUser.get(_currentUser.id) || []) : [];
+
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // 닉네임/아바타 캐시용 — profiles 조회
+  const userIds = [...byUser.keys()].filter(uid => uid !== _currentUser.id);
+  const nicknames = new Map();
+  const avatars = new Map();
+  if (userIds.length > 0) {
+    // 동기적이지 않으니 캐시 + 비동기 보강
+    state.posts.forEach(p => {
+      if (p.user_id && p.author) nicknames.set(p.user_id, p.author);
+      if (p.user_id && p.avatar) avatars.set(p.user_id, p.avatar);
+    });
+  }
+
+  // 내 스토리 카드 (+ 버튼)
+  const myAvatar = (_profile && _profile.name) ? _profile.name.charAt(0) : '🦎';
+  const myCard = `
+    <div onclick="${myStories.length > 0 ? `_openStoryViewer('${_currentUser.id}')` : `_pickStoryFile()`}" style="flex-shrink:0;width:68px;cursor:pointer;text-align:center;touch-action:manipulation">
+      <div style="position:relative;width:62px;height:62px;border-radius:50%;${myStories.length > 0 ? 'background:linear-gradient(135deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5);padding:2.5px' : 'background:var(--sf2);border:2px dashed var(--br)'};display:flex;align-items:center;justify-content:center;margin:0 auto 4px">
+        <div style="width:100%;height:100%;border-radius:50%;background:var(--card);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:20px;font-weight:800;color:var(--ac)">${escapeHtml(myAvatar)}</div>
+        <div onclick="event.stopPropagation();_pickStoryFile()" style="position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;border-radius:50%;background:var(--ac);border:2.5px solid var(--card);color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1">+</div>
+      </div>
+      <div style="font-size:10.5px;color:var(--tx2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">내 스토리</div>
+    </div>
+  `;
+
+  // 다른 사용자 스토리 카드들 (최신 순)
+  const others = [];
+  const seen = new Set([_currentUser.id]);
+  // 최신 스토리 가진 사용자 순으로 정렬
+  const sortedUsers = [...byUser.entries()].filter(([uid]) => !seen.has(uid)).sort((a, b) => {
+    const ta = new Date(a[1][0].created_at).getTime();
+    const tb = new Date(b[1][0].created_at).getTime();
+    return tb - ta;
+  });
+  sortedUsers.forEach(([uid, items]) => {
+    const nick = nicknames.get(uid) || '익명';
+    const av = avatars.get(uid) || nick.charAt(0);
+    others.push(`
+      <div onclick="_openStoryViewer('${uid}')" style="flex-shrink:0;width:68px;cursor:pointer;text-align:center;touch-action:manipulation">
+        <div style="width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5);padding:2.5px;display:flex;align-items:center;justify-content:center;margin:0 auto 4px">
+          <div style="width:100%;height:100%;border-radius:50%;background:var(--card);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:18px;font-weight:800;color:var(--ac)">${escapeHtml(av)}</div>
+        </div>
+        <div style="font-size:10.5px;color:var(--tx2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(nick)}</div>
+      </div>
+    `);
+  });
+
+  inner.innerHTML = myCard + others.join('');
+  row.style.display = 'block';
+}
+
+function _pickStoryFile() {
+  const input = document.getElementById('story-file-input');
+  if (input) input.click();
+}
+
+async function _handleStoryUpload(e) {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file || !_currentUser) return;
+  if (file.size > 20 * 1024 * 1024) { showToast('⚠️ 파일이 너무 커요 (20MB 초과)'); return; }
+  showToast('📸 스토리 업로드 중...');
+  try {
+    const dataUrl = await _resizeImageForGallery(file);
+    const check = await _validateGeckoPhoto(dataUrl);
+    if (!check.ok) { showToast('⚠️ ' + check.reason); return; }
+    const blob = await (await fetch(dataUrl)).blob();
+    const fileName = `${_currentUser.id}/story_${Date.now()}.jpg`;
+    const { error: upErr } = await _supabase.storage.from('gecko-photos').upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+    if (upErr) throw upErr;
+    const { data: urlData } = _supabase.storage.from('gecko-photos').getPublicUrl(fileName);
+    const photoUrl = urlData?.publicUrl;
+    if (!photoUrl) throw new Error('no public url');
+    // 선택적 caption
+    let caption = null;
+    try {
+      caption = await $prompt('스토리에 짧은 한 줄 메모를 남길 수 있어요 (선택)', '', '📸 스토리 캡션');
+    } catch(_) {}
+    const { error: insErr } = await _supabase.from('stories').insert({
+      user_id: _currentUser.id,
+      photo_url: photoUrl,
+      caption: caption || null,
+    });
+    if (insErr) throw insErr;
+    showToast('✅ 스토리 등록됨 · 24시간 후 자동 사라져요');
+    await loadStories();
+  } catch(err) {
+    console.warn('[story upload]', err);
+    showToast('⚠️ 스토리 업로드 실패');
+  }
+}
+
+let _storyViewerTimer = null;
+function _openStoryViewer(userId) {
+  const items = _storiesCache.filter(s => s.user_id === userId).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  if (items.length === 0) return;
+  const exist = document.getElementById('story-viewer-overlay');
+  if (exist) exist.remove();
+  if (_storyViewerTimer) { clearInterval(_storyViewerTimer); _storyViewerTimer = null; }
+
+  let idx = 0;
+  const isOwn = (userId === _currentUser?.id);
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  const overlay = document.createElement('div');
+  overlay.id = 'story-viewer-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:pan-y');
+
+  // 닉네임 추출 (state.posts 캐시에서)
+  let nick = isOwn ? '내 스토리' : '익명';
+  if (!isOwn) {
+    const p = state.posts.find(p => p.user_id === userId);
+    if (p && p.author) nick = p.author;
+  }
+
+  function render() {
+    const s = items[idx];
+    if (!s) { close(); return; }
+    const progress = items.map((_, i) => {
+      const w = i < idx ? 100 : i === idx ? 0 : 0;
+      const cls = i === idx ? 'story-prog-active' : '';
+      return `<div style="flex:1;height:3px;background:rgba(255,255,255,.25);border-radius:2px;overflow:hidden"><div class="${cls}" data-i="${i}" style="height:100%;background:#fff;width:${w}%;transition:width .2s linear"></div></div>`;
+    }).join('');
+    const deleteBtn = (isOwn || _isAdmin()) ? `<button onclick="_deleteCurrentStory(${s.id},'${escapeHtml(userId)}')" aria-label="삭제" style="background:rgba(255,107,107,.25);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:14px;cursor:pointer;font-family:inherit;margin-right:6px">🗑</button>` : '';
+
+    overlay.innerHTML = `
+      <div style="position:absolute;top:0;left:0;right:0;padding:10px 14px;z-index:3;background:linear-gradient(rgba(0,0,0,.7),transparent)">
+        <div style="display:flex;gap:3px;margin-bottom:10px">${progress}</div>
+        <div style="display:flex;align-items:center;color:#fff;gap:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">${escapeHtml(nick.charAt(0))}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(nick)}</div>
+            <div style="font-size:10px;opacity:.7">${_timeAgo(s.created_at)}</div>
+          </div>
+          ${deleteBtn}
+          <button onclick="document.getElementById('story-viewer-overlay').remove();if(window._storyViewerTimer){clearInterval(window._storyViewerTimer);window._storyViewerTimer=null}" aria-label="닫기" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;font-family:inherit">✕</button>
+        </div>
+      </div>
+      <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:60px 8px 80px">
+        <img src="${escapeHtml(s.photo_url)}" style="max-width:100%;max-height:100%;object-fit:contain"/>
+      </div>
+      ${s.caption ? `<div style="position:absolute;bottom:0;left:0;right:0;padding:18px 22px 28px;color:#fff;text-align:center;font-size:14px;font-weight:600;background:linear-gradient(transparent,rgba(0,0,0,.8))">${escapeHtml(s.caption)}</div>` : ''}
+      <button onclick="event.stopPropagation();_storyNav(-1)" style="position:absolute;left:0;top:0;bottom:0;width:30%;background:transparent;border:none;cursor:pointer;z-index:2"></button>
+      <button onclick="event.stopPropagation();_storyNav(1)" style="position:absolute;right:0;top:0;bottom:0;width:30%;background:transparent;border:none;cursor:pointer;z-index:2"></button>
+    `;
+
+    // 진행 애니메이션 (5초)
+    setTimeout(() => {
+      const bar = overlay.querySelector(`[data-i="${idx}"]`);
+      if (bar) { bar.style.transition = 'width 5s linear'; bar.style.width = '100%'; }
+    }, 20);
+
+    // 5초 후 자동 진행
+    if (_storyViewerTimer) clearInterval(_storyViewerTimer);
+    _storyViewerTimer = setTimeout(() => _storyNav(1), 5100);
+    window._storyViewerTimer = _storyViewerTimer;
+  }
+
+  function close() {
+    overlay.remove();
+    if (_storyViewerTimer) { clearTimeout(_storyViewerTimer); _storyViewerTimer = null; }
+  }
+
+  window._storyNav = function(delta) {
+    if (_storyViewerTimer) { clearTimeout(_storyViewerTimer); _storyViewerTimer = null; }
+    const next = idx + delta;
+    if (next < 0) {
+      // 이전 사용자 스토리로? — 단순화: 무시
+      idx = 0;
+      render();
+      return;
+    }
+    if (next >= items.length) { close(); return; }
+    idx = next;
+    render();
+  };
+
+  // 좌우 스와이프
+  let sx = 0;
+  overlay.addEventListener('touchstart', (e) => { sx = e.touches[0]?.clientX || 0; }, { passive: true });
+  overlay.addEventListener('touchend', (e) => {
+    const ex = e.changedTouches[0]?.clientX || 0;
+    const dx = ex - sx;
+    if (Math.abs(dx) > 50) _storyNav(dx > 0 ? -1 : 1);
+  }, { passive: true });
+
+  document.body.appendChild(overlay);
+  render();
+}
+
+async function _deleteCurrentStory(storyId, userId) {
+  if (!_currentUser) return;
+  const ok = await $confirm('이 스토리를 삭제할까요?', '🗑 스토리 삭제');
+  if (!ok) return;
+  try {
+    const { error } = await _supabase.from('stories').delete().eq('id', storyId);
+    if (error) throw error;
+    showToast('🗑 삭제됨');
+    document.getElementById('story-viewer-overlay')?.remove();
+    if (window._storyViewerTimer) { clearTimeout(window._storyViewerTimer); window._storyViewerTimer = null; }
+    await loadStories();
+  } catch(e) {
+    console.warn('[delete story]', e);
+    showToast('⚠️ 삭제 실패');
+  }
+}
+
 // 무한 스크롤 페이지 상태
 const POSTS_PAGE_SIZE = 50;
 let _postsPage = 0;       // 마지막으로 로드한 페이지 인덱스
@@ -8001,6 +8251,8 @@ async function renderPosts() {
   }
   // 무한 스크롤 sentinel 설치
   _installPostsInfiniteScroll();
+  // 스토리 row 로드 (백그라운드)
+  loadStories();
 }
 
 // 무한 스크롤 sentinel + IntersectionObserver
