@@ -1577,7 +1577,20 @@ input[type=file]{display:none}
   </div>
   <div class="divider"></div>
 
-  <!-- 알림 (맨 위) -->
+  <!-- 사육 통계 (맨 위) -->
+  <div class="more-section">
+    <div class="more-section-label">📊 사육 통계</div>
+    <div class="more-item" onclick="openGeckoStats()">
+      <div class="more-icon" style="background:var(--ac2);color:var(--ac)">📊</div>
+      <div class="more-item-info">
+        <div class="more-item-title">개체 통계 보기</div>
+        <div class="more-item-sub">총 개체수·모프 분포·평균 체중·기록 횟수</div>
+      </div>
+      <div class="more-item-arrow">›</div>
+    </div>
+  </div>
+
+  <!-- 알림 -->
   <div class="more-section">
     <div class="more-section-label">알림</div>
     <div class="more-item" onclick="openNotifSettings()">
@@ -11509,6 +11522,146 @@ async function _downloadMyDataJSON() {
     console.error('JSON 다운로드 실패:', e);
     showToast('❌ 실패: ' + e.message);
   }
+}
+
+// ══════════════════════════════════════
+// 📊 개체 통계 (Phase 3-H) — 모프 분포 / 평균 체중 / 연령 / 기록 횟수
+// ══════════════════════════════════════
+async function openGeckoStats() {
+  if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
+  showToast('📊 통계 집계 중...');
+
+  // 데이터 수집
+  const geckos = state.geckos || [];
+  const total = geckos.length;
+  const female = geckos.filter(g => g.sex === '암컷').length;
+  const male = geckos.filter(g => g.sex === '수컷').length;
+  const unknownSex = total - female - male;
+
+  // 모프 분포
+  const morphCount = {};
+  geckos.forEach(g => { if (g.morph) morphCount[g.morph] = (morphCount[g.morph] || 0) + 1; });
+  const morphTop = Object.entries(morphCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const unmorphed = geckos.filter(g => !g.morph).length;
+
+  // 체중 통계
+  const weights = geckos.map(g => parseFloat(g.weight)).filter(v => v > 0);
+  const avgWeight = weights.length ? (weights.reduce((s, v) => s + v, 0) / weights.length) : 0;
+  const maxWeight = weights.length ? Math.max(...weights) : 0;
+  const minWeight = weights.length ? Math.min(...weights) : 0;
+
+  // 연령 통계 (개월)
+  const ages = [];
+  geckos.forEach(g => {
+    if (!g.dob || g.dob.length < 8) return;
+    const y = parseInt(g.dob.slice(0, 4)), m = parseInt(g.dob.slice(4, 6));
+    if (!y || !m) return;
+    const born = new Date(y, m - 1, 1);
+    const now = new Date();
+    const mo = (now.getFullYear() - born.getFullYear()) * 12 + (now.getMonth() - born.getMonth());
+    ages.push(mo);
+  });
+  const avgAge = ages.length ? Math.round(ages.reduce((s, v) => s + v, 0) / ages.length) : 0;
+
+  // 기록 횟수 (서버에서 전체 카운트)
+  let totalRecords = 0;
+  let typeCounts = { weight: 0, feed: 0, shed: 0, egg: 0, health: 0, memo: 0 };
+  let mostActiveGecko = null, mostActiveCount = 0;
+  try {
+    const { data: logs } = await _supabase.from('gecko_logs').select('type, gecko_id').eq('user_id', _currentUser.id).limit(2000);
+    (logs || []).forEach(l => {
+      totalRecords++;
+      if (typeCounts[l.type] != null) typeCounts[l.type]++;
+    });
+    // 가장 많은 기록을 가진 개체
+    const perGecko = {};
+    (logs || []).forEach(l => { perGecko[l.gecko_id] = (perGecko[l.gecko_id] || 0) + 1; });
+    Object.entries(perGecko).forEach(([gid, cnt]) => { if (cnt > mostActiveCount) { mostActiveCount = cnt; mostActiveGecko = geckos.find(g => String(g.id) === String(gid)); } });
+  } catch(e) { console.warn('[stats logs]', e); }
+
+  // 다이얼로그
+  const exist = document.getElementById('gecko-stats-overlay');
+  if (exist) exist.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'gecko-stats-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99998;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)');
+
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // 모프 막대 차트 (상대값)
+  const maxMorphCount = morphTop.length ? morphTop[0][1] : 1;
+  const morphBars = morphTop.length > 0
+    ? morphTop.map(([name, cnt]) => {
+        const pct = Math.round((cnt / maxMorphCount) * 100);
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><div style="font-size:12px;width:90px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(name)}</div><div style="flex:1;height:8px;background:var(--sf2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--ac),#38c947);border-radius:4px"></div></div><div style="font-size:11px;font-weight:800;color:var(--ac);min-width:24px;text-align:right">${cnt}</div></div>`;
+      }).join('') + (unmorphed > 0 ? `<div style="font-size:10px;color:var(--tx3);margin-top:6px">+ 모프 미판별 ${unmorphed}마리</div>` : '')
+    : '<div style="font-size:12px;color:var(--tx3);padding:8px 0">아직 모프 데이터가 없어요</div>';
+
+  const recordTypeLabels = { weight: '⚖️ 체중', feed: '🍽️ 급여', shed: '🦎 탈피', egg: '🥚 산란', health: '💊 건강', memo: '📝 메모' };
+  const recordChips = Object.entries(typeCounts)
+    .filter(([_, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([t, c]) => `<div style="display:inline-flex;align-items:center;gap:5px;background:var(--sf2);border:1px solid var(--br);border-radius:18px;padding:5px 10px;font-size:11px;color:var(--tx2);font-weight:700"><span>${recordTypeLabels[t]||t}</span><span style="color:var(--ac);font-weight:800">${c}</span></div>`)
+    .join('');
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:18px 18px 22px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.25)">
+      <div style="width:36px;height:4px;background:var(--br);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:17px;font-weight:900;color:var(--tx)">📊 사육 통계</div>
+        <button onclick="document.getElementById('gecko-stats-overlay').remove()" style="background:var(--sf2);border:1px solid var(--br);width:30px;height:30px;border-radius:50%;font-size:14px;color:var(--tx2);cursor:pointer;font-family:inherit">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px">
+
+        <!-- 전체 요약 -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+          <div style="background:var(--ac2);border:1px solid var(--ac);border-radius:12px;padding:12px 8px;text-align:center">
+            <div style="font-size:22px;font-weight:900;color:var(--ac);font-family:'Nunito',sans-serif">${total}</div>
+            <div style="font-size:10px;color:var(--tx3);margin-top:2px">총 개체</div>
+          </div>
+          <div style="background:rgba(255,143,177,.12);border:1px solid #ff8fb1;border-radius:12px;padding:12px 8px;text-align:center">
+            <div style="font-size:22px;font-weight:900;color:#ff8fb1;font-family:'Nunito',sans-serif">${female}</div>
+            <div style="font-size:10px;color:var(--tx3);margin-top:2px">♀ 암컷</div>
+          </div>
+          <div style="background:var(--bl2);border:1px solid var(--blue);border-radius:12px;padding:12px 8px;text-align:center">
+            <div style="font-size:22px;font-weight:900;color:var(--blue);font-family:'Nunito',sans-serif">${male}</div>
+            <div style="font-size:10px;color:var(--tx3);margin-top:2px">♂ 수컷</div>
+          </div>
+        </div>
+        ${unknownSex > 0 ? `<div style="font-size:11px;color:var(--tx3);margin-bottom:14px;text-align:center">성별 미상: ${unknownSex}마리</div>` : ''}
+
+        <!-- 모프 분포 -->
+        <div style="background:var(--sf);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px">
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:10px">🧬 모프 분포 (TOP ${morphTop.length})</div>
+          ${morphBars}
+        </div>
+
+        <!-- 평균 체중·연령 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div style="background:var(--sf);border:1px solid var(--br);border-radius:12px;padding:12px">
+            <div style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:6px">⚖️ 평균 체중</div>
+            <div style="font-size:20px;font-weight:900;color:var(--ac)">${avgWeight.toFixed(1)}<span style="font-size:10px;color:var(--tx3);font-weight:600;margin-left:2px">g</span></div>
+            <div style="font-size:10px;color:var(--tx3);margin-top:4px">최소 ${minWeight.toFixed(1)} · 최고 ${maxWeight.toFixed(1)}g</div>
+          </div>
+          <div style="background:var(--sf);border:1px solid var(--br);border-radius:12px;padding:12px">
+            <div style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:6px">🎂 평균 연령</div>
+            <div style="font-size:20px;font-weight:900;color:var(--blue)">${Math.floor(avgAge / 12)}<span style="font-size:10px;color:var(--tx3);font-weight:600;margin-left:2px">년</span> ${avgAge % 12}<span style="font-size:10px;color:var(--tx3);font-weight:600;margin-left:2px">개월</span></div>
+            <div style="font-size:10px;color:var(--tx3);margin-top:4px">${ages.length}마리 부화일 기준</div>
+          </div>
+        </div>
+
+        <!-- 기록 통계 -->
+        <div style="background:var(--sf);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px">
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);letter-spacing:1px;margin-bottom:10px">📋 사육 기록 (총 ${totalRecords}건)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${recordChips || '<div style="font-size:12px;color:var(--tx3)">기록이 없어요</div>'}</div>
+          ${mostActiveGecko ? `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--br);font-size:11px;color:var(--tx3)">🏆 가장 활발한 개체: <b style="color:var(--ac)">${escapeHtml(mostActiveGecko.name)}</b> (${mostActiveCount}건)</div>` : ''}
+        </div>
+
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 // ══════════════════════════════════════
