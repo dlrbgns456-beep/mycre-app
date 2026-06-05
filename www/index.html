@@ -6585,6 +6585,10 @@ function openGeckoDetail(id) {
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px;border-color:var(--ac);color:var(--ac)" onclick="closeSheetDirect('sheet-gecko-detail');setTimeout(()=>openLineageTree('${id}'),250)">
         🌳 혈통 트리 보기
       </button>
+      <!-- 카드 이미지 공유 (SNS 자랑/마케팅용) -->
+      <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px;border-color:var(--ac);color:#fff;background:linear-gradient(135deg,var(--ac),#38c947)" onclick="openGeckoShareCard('${id}')">
+        📸 카드 이미지로 공유
+      </button>
       <!-- 공유 링크 복사 (모든 등급) -->
       <button class="btn-outline" style="width:100%;margin-top:8px;font-size:13px;padding:11px" onclick="copyGeckoShareLink('${id}')">
         🔗 공유 링크 복사
@@ -11494,6 +11498,277 @@ async function _downloadMyDataJSON() {
     console.error('JSON 다운로드 실패:', e);
     showToast('❌ 실패: ' + e.message);
   }
+}
+
+// ══════════════════════════════════════
+// 📸 게코 카드 공유 (Phase 2-G) — Canvas로 카드 이미지 생성 + Web Share / 다운로드
+// 인스타그램 1080x1350 (4:5 세로) 비율, 사진 + 이름 + 모프 + 등급 + 나이/체중 + QR
+// ══════════════════════════════════════
+async function openGeckoShareCard(id) {
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  if (!g) { showToast('개체를 찾을 수 없어요'); return; }
+  showToast('🎨 카드 이미지 생성 중...');
+  try {
+    const dataUrl = await _generateGeckoCardImage(g);
+    if (!dataUrl) { showToast('⚠️ 이미지 생성 실패'); return; }
+    _showGeckoShareCardDialog(g, dataUrl);
+  } catch(e) {
+    console.error('[Share Card]', e);
+    showToast('⚠️ 카드 생성 중 오류: ' + (e?.message || ''));
+  }
+}
+
+// QR 코드를 임시 캔버스로 만들어서 dataURL 반환 (qrcode.js → div → canvas 추출)
+function _generateQRDataUrl(text, size) {
+  return new Promise((resolve) => {
+    if (typeof QRCode === 'undefined') { resolve(null); return; }
+    const tmp = document.createElement('div');
+    tmp.style.position = 'absolute';
+    tmp.style.left = '-9999px';
+    tmp.style.top = '-9999px';
+    document.body.appendChild(tmp);
+    try {
+      new QRCode(tmp, { text, width: size, height: size, colorDark: '#1A2B22', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      // qrcode.js는 canvas 또는 img 생성. 약간 지연 후 확인.
+      setTimeout(() => {
+        const cvs = tmp.querySelector('canvas');
+        const img = tmp.querySelector('img');
+        let result = null;
+        try { if (cvs) result = cvs.toDataURL('image/png'); } catch(_) {}
+        if (!result && img && img.src) result = img.src;
+        tmp.remove();
+        resolve(result);
+      }, 50);
+    } catch(e) {
+      tmp.remove();
+      resolve(null);
+    }
+  });
+}
+
+async function _generateGeckoCardImage(g) {
+  const W = 1080, H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 배경 (크림 → 연한 그린)
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#FFF9EF');
+  bgGrad.addColorStop(1, '#F0F5EE');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 사진 영역 (상단 1080x1080)
+  const photoH = 1080;
+  ctx.fillStyle = '#E6EBE3';
+  ctx.fillRect(0, 0, W, photoH);
+  if (g.photo) {
+    try {
+      const img = await new Promise((res, rej) => {
+        const im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = () => res(im);
+        im.onerror = rej;
+        im.src = g.photo;
+      });
+      // cover 비율 그리기
+      const ir = img.width / img.height;
+      const cr = W / photoH;
+      let sx = 0, sy = 0, sw = img.width, sh = img.height;
+      if (ir > cr) { sw = img.height * cr; sx = (img.width - sw) / 2; }
+      else { sh = img.width / cr; sy = (img.height - sh) / 2; }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, photoH);
+    } catch(e) {
+      // 사진 로드 실패 시 이모지 fallback
+      ctx.fillStyle = '#C5D0BE';
+      ctx.font = 'bold 200px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🦎', W / 2, photoH / 2);
+    }
+  } else {
+    ctx.fillStyle = '#C5D0BE';
+    ctx.font = 'bold 200px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🦎', W / 2, photoH / 2);
+  }
+
+  // 정보 영역 (하단 270px)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, photoH, W, H - photoH);
+  // 상단 미세한 그림자
+  const shadow = ctx.createLinearGradient(0, photoH, 0, photoH + 12);
+  shadow.addColorStop(0, 'rgba(0,0,0,.12)');
+  shadow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = shadow;
+  ctx.fillRect(0, photoH, W, 12);
+
+  // 등급 배지 (우상단)
+  const m = (typeof MORPHS !== 'undefined' && MORPHS[g.morph]) || {};
+  const grade = g.grade || m.grade || '';
+  const gradeColors = {
+    S: { bg: '#FFE99A', fg: '#8C6700' },
+    A: { bg: '#FFC8A6', fg: '#A04500' },
+    B: { bg: '#C7E2BE', fg: '#2E7D57' },
+    C: { bg: '#BCD8EF', fg: '#2E5A87' },
+  };
+  if (grade && gradeColors[grade]) {
+    const gc = gradeColors[grade];
+    ctx.fillStyle = gc.bg;
+    _roundRect(ctx, W - 50 - 110, photoH + 30, 110, 70, 16);
+    ctx.fill();
+    ctx.fillStyle = gc.fg;
+    ctx.font = '900 50px "Nunito", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(grade, W - 50 - 55, photoH + 65);
+  }
+
+  // 이름 (큰 글씨)
+  ctx.fillStyle = '#1A2B22';
+  ctx.font = '900 64px "Noto Sans KR", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  const name = g.name || '이름 없음';
+  ctx.fillText(name, 50, photoH + 32, W - 220);
+
+  // 모프
+  ctx.fillStyle = '#2E7D57';
+  ctx.font = 'bold 36px "Noto Sans KR", sans-serif';
+  ctx.fillText(g.morph || '모프 미판별', 50, photoH + 110);
+
+  // 메타 (나이 · 체중 · 성별)
+  const metaParts = [];
+  if (g.dob && typeof getAge === 'function') {
+    try { metaParts.push('🎂 ' + getAge(g.dob)); } catch(_) {}
+  }
+  if (g.weight) metaParts.push('⚖️ ' + g.weight + 'g');
+  if (g.sex && g.sex !== '미상') metaParts.push((g.sex === '암컷' ? '♀ ' : '♂ ') + g.sex);
+  ctx.fillStyle = '#5A6B5F';
+  ctx.font = '500 30px "Noto Sans KR", sans-serif';
+  ctx.fillText(metaParts.join('  ·  '), 50, photoH + 168);
+
+  // QR 코드 (우하단)
+  const qrSize = 140;
+  try {
+    const qrUrl = `https://byetmaru.com/?gecko=${g.id}&owner=${_currentUser ? _currentUser.id : ''}`;
+    const qrDataUrl = await _generateQRDataUrl(qrUrl, qrSize);
+    if (qrDataUrl) {
+      const qrImg = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = qrDataUrl; });
+      ctx.fillStyle = '#FFFFFF';
+      _roundRect(ctx, W - 50 - qrSize - 12, photoH + 220 - qrSize - 12, qrSize + 24, qrSize + 24, 14);
+      ctx.fill();
+      ctx.drawImage(qrImg, W - 50 - qrSize, photoH + 220 - qrSize);
+    }
+  } catch(_) {}
+
+  // 워터마크 (좌하단)
+  ctx.fillStyle = '#2E7D57';
+  ctx.font = '800 28px "Nunito", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('🦎  볏마루도감', 50, H - 38);
+  ctx.fillStyle = '#9AA89E';
+  ctx.font = '500 18px "Noto Sans KR", sans-serif';
+  ctx.fillText('byetmaru.com', 50, H - 14);
+
+  return canvas.toDataURL('image/png', 0.95);
+}
+
+function _roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// 카드 미리보기 + 공유/다운로드 다이얼로그
+function _showGeckoShareCardDialog(g, dataUrl) {
+  const exist = document.getElementById('gecko-share-card-overlay');
+  if (exist) exist.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'gecko-share-card-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(6px)');
+  const canShare = !!(navigator.share);
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:18px;padding:18px;max-width:380px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.4)">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:16px;font-weight:900;color:var(--ac)">📸 게코 카드</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:3px">SNS·메신저에 그대로 공유하거나 저장하세요</div>
+      </div>
+      <div style="text-align:center;margin-bottom:14px">
+        <img src="${dataUrl}" alt="card" style="max-width:100%;width:280px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#fff"/>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${canShare ? `<button type="button" onclick="_shareGeckoCard('${g.id}')" style="background:linear-gradient(135deg,var(--ac),#38c947);color:#fff;border:none;padding:13px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">📤 공유하기</button>` : ''}
+        <button type="button" onclick="_downloadGeckoCard('${g.id}')" style="background:var(--sf2);border:1.5px solid var(--br);color:var(--tx);padding:13px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">💾 이미지 저장</button>
+        <button type="button" onclick="document.getElementById('gecko-share-card-overlay').remove()" style="background:transparent;border:1px solid var(--br);color:var(--tx3);padding:11px;border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit">닫기</button>
+      </div>
+    </div>
+  `;
+  // 캐시: 생성된 dataUrl을 share/download 에서 재사용
+  overlay._cardDataUrl = dataUrl;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function _dataUrlToBlob(dataUrl) {
+  const arr = dataUrl.split(',');
+  const mime = (arr[0].match(/:(.*?);/) || [])[1] || 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8 = new Uint8Array(n);
+  while (n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], { type: mime });
+}
+
+async function _shareGeckoCard(id) {
+  const overlay = document.getElementById('gecko-share-card-overlay');
+  if (!overlay || !overlay._cardDataUrl) return;
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  const blob = _dataUrlToBlob(overlay._cardDataUrl);
+  const file = new File([blob], `${(g?.name||'gecko')}_byetmaru.png`, { type: 'image/png' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `${g?.name||'내 크레'} · 볏마루도감`,
+        text: `🦎 ${g?.name||'내 크레'} (${g?.morph||'모프 미판별'})`,
+      });
+    } else {
+      // 파일 공유 미지원 → 텍스트만
+      await navigator.share({
+        title: `${g?.name||'내 크레'} · 볏마루도감`,
+        text: `🦎 ${g?.name||'내 크레'} (${g?.morph||'모프 미판별'}) — https://byetmaru.com/?gecko=${id}&owner=${_currentUser?.id||''}`,
+      });
+    }
+  } catch(e) {
+    if (e?.name === 'AbortError') return; // 사용자가 취소
+    console.warn('[share]', e);
+    showToast('⚠️ 공유 실패 — 저장 버튼으로 다운로드해보세요');
+  }
+}
+
+function _downloadGeckoCard(id) {
+  const overlay = document.getElementById('gecko-share-card-overlay');
+  if (!overlay || !overlay._cardDataUrl) return;
+  const g = state.geckos.find(x => String(x.id) === String(id));
+  const a = document.createElement('a');
+  a.href = overlay._cardDataUrl;
+  a.download = `${(g?.name||'gecko').replace(/[^\w가-힣]/g,'')}_byetmaru.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  showToast('💾 이미지 저장됨');
 }
 
 // PDF — 새 창에 인쇄 전용 HTML 그려서 window.print() (저장 대화상자에서 PDF 선택 가능)
