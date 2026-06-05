@@ -7910,13 +7910,24 @@ function setCommFilter(f) {
   renderPosts();
 }
 
+// 무한 스크롤 페이지 상태
+const POSTS_PAGE_SIZE = 50;
+let _postsPage = 0;       // 마지막으로 로드한 페이지 인덱스
+let _postsHasMore = true; // 더 가져올 수 있는지
+let _postsLoading = false;
+let _postsObserver = null; // IntersectionObserver
+
 async function renderPosts() {
+  // 첫 페이지 — 상태 리셋
+  _postsPage = 0;
+  _postsHasMore = true;
+  _postsLoading = false;
   const list = document.getElementById('post-list');
   list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3);font-size:13px">불러오는 중...</div>';
 
   // DB에서 글 로드
   try {
-    let query = _supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
+    let query = _supabase.from('posts').select('*').order('created_at', { ascending: false }).range(0, POSTS_PAGE_SIZE - 1);
     if (state.commFilter !== 'all') query = query.eq('cat', state.commFilter);
     const { data, error } = await query;
     if (!error && data) {
@@ -7983,6 +7994,115 @@ async function renderPosts() {
   // 공지는 커뮤니티 목록에서 제외 + 차단한 유저 글 숨김
   const filtered = all.filter(p => p.cat !== 'notice' && !_isUserBlocked(p.user_id));
   filtered.forEach(p => list.appendChild(buildPostCard(p, false)));
+
+  // 첫 페이지가 page size 미만이면 더 없음 (한 번에 전부 받은 경우)
+  if (filtered.length < POSTS_PAGE_SIZE) {
+    _postsHasMore = false;
+  }
+  // 무한 스크롤 sentinel 설치
+  _installPostsInfiniteScroll();
+}
+
+// 무한 스크롤 sentinel + IntersectionObserver
+function _installPostsInfiniteScroll() {
+  const list = document.getElementById('post-list');
+  if (!list) return;
+  // 기존 sentinel 제거
+  const oldSentinel = document.getElementById('posts-sentinel');
+  if (oldSentinel) oldSentinel.remove();
+  if (_postsObserver) { try { _postsObserver.disconnect(); } catch(_) {} _postsObserver = null; }
+  // 더 없으면 '끝' 표시
+  if (!_postsHasMore) {
+    const end = document.createElement('div');
+    end.id = 'posts-sentinel';
+    end.style.cssText = 'text-align:center;padding:20px;color:var(--tx3);font-size:11px;font-family:"DM Mono",monospace;letter-spacing:1px';
+    end.textContent = state.posts.length > 0 ? '— END OF FEED —' : '';
+    list.appendChild(end);
+    return;
+  }
+  const sentinel = document.createElement('div');
+  sentinel.id = 'posts-sentinel';
+  sentinel.style.cssText = 'text-align:center;padding:20px;color:var(--tx3);font-size:12px;min-height:40px';
+  sentinel.innerHTML = `<div style="display:inline-flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border:2px solid var(--br);border-top-color:var(--ac);border-radius:50%;animation:spin .9s linear infinite"></div><span>더 불러오는 중...</span></div>`;
+  list.appendChild(sentinel);
+  _postsObserver = new IntersectionObserver((entries) => {
+    entries.forEach(en => { if (en.isIntersecting) _loadMorePosts(); });
+  }, { rootMargin: '300px' }); // 끝 도달 300px 전부터 미리 로드
+  _postsObserver.observe(sentinel);
+}
+
+async function _loadMorePosts() {
+  if (_postsLoading || !_postsHasMore) return;
+  _postsLoading = true;
+  const nextPage = _postsPage + 1;
+  const from = nextPage * POSTS_PAGE_SIZE;
+  const to = from + POSTS_PAGE_SIZE - 1;
+  try {
+    let query = _supabase.from('posts').select('*').order('created_at', { ascending: false }).range(from, to);
+    if (state.commFilter !== 'all') query = query.eq('cat', state.commFilter);
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) {
+      _postsHasMore = false;
+      _installPostsInfiniteScroll();
+      return;
+    }
+    // 추가 작성자 tier 조회
+    const userIds = [...new Set(data.map(r => r.user_id).filter(Boolean))];
+    const breederUserSet = new Set();
+    if (userIds.length > 0) {
+      try {
+        const { data: profiles } = await _supabase.from('profiles').select('id,tier').in('id', userIds);
+        if (profiles) profiles.forEach(pr => { if (pr.tier === 'breeder') breederUserSet.add(pr.id); });
+      } catch(_) {}
+    }
+    // 좋아요 상태
+    const likedSet = new Set();
+    if (_currentUser && data.length > 0) {
+      try {
+        const postIds = data.map(r => r.id);
+        const { data: likes } = await _supabase.from('post_likes').select('post_id').eq('user_id', _currentUser.id).in('post_id', postIds);
+        likes?.forEach(l => likedSet.add(l.post_id));
+      } catch(_) {}
+    }
+    const newPosts = data.map(row => {
+      const legacyLinked = !!(row.morph && row.photo && row.cat === 'sale');
+      const isVerified = row.is_verified === true || (row.is_verified === undefined && legacyLinked);
+      return {
+        ...row,
+        tags: row.tags || [],
+        time: _timeAgo(row.created_at),
+        isOwn: _currentUser && row.user_id === _currentUser.id,
+        authorIsPro: breederUserSet.has(row.user_id),
+        authorIsBreeder: breederUserSet.has(row.user_id),
+        is_verified: isVerified,
+        hasLinkedGecko: isVerified,
+        comments: row.comment_count || 0,
+        isLiked: likedSet.has(row.id),
+      };
+    });
+    // state.posts 누적 (중복 방지)
+    const existingIds = new Set(state.posts.map(p => String(p.id)));
+    const fresh = newPosts.filter(p => !existingIds.has(String(p.id)));
+    state.posts = state.posts.concat(fresh);
+    // 카드 렌더 (sentinel 앞에 삽입)
+    const list = document.getElementById('post-list');
+    const sentinel = document.getElementById('posts-sentinel');
+    fresh.forEach(p => {
+      if (p.cat !== 'notice' && !_isUserBlocked(p.user_id)) {
+        const card = buildPostCard(p, false);
+        if (sentinel) list.insertBefore(card, sentinel); else list.appendChild(card);
+      }
+    });
+    _postsPage = nextPage;
+    if (data.length < POSTS_PAGE_SIZE) {
+      _postsHasMore = false;
+      _installPostsInfiniteScroll();
+    }
+  } catch(e) {
+    console.warn('[loadMorePosts]', e);
+  } finally {
+    _postsLoading = false;
+  }
 }
 
 function _timeAgo(dateStr) {
