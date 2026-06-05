@@ -6443,6 +6443,8 @@ function renderGeckoList() {
     const card = document.createElement('div');
     card.className = `gecko-card g${grade}`;
     card.onclick = () => openGeckoDetail(g.id);
+    // Phase 3-E: 길게 누르면 빠른 메뉴
+    _attachLongPress(card, () => _showGeckoQuickMenu(g.id));
     card.innerHTML = `
       <div class="gecko-thumb">${g.photo ? `<img src="${g.photo}">` : '🦎'}</div>
       <div class="gecko-info">
@@ -11507,6 +11509,87 @@ async function _downloadMyDataJSON() {
     console.error('JSON 다운로드 실패:', e);
     showToast('❌ 실패: ' + e.message);
   }
+}
+
+// ══════════════════════════════════════
+// 🤏 길게 누르기 (Phase 3-E) — 개체 카드/리스트 항목 등에 longpress 메뉴
+// ══════════════════════════════════════
+function _attachLongPress(el, onLongPress, delay) {
+  if (!el || el._longPressBound) return;
+  el._longPressBound = true;
+  const D = delay || 500;
+  let timer = null;
+  let cancelled = false;
+  let sx = 0, sy = 0;
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } cancelled = true; };
+  el.addEventListener('touchstart', (e) => {
+    cancelled = false;
+    const t = e.touches[0]; if (!t) return;
+    sx = t.clientX; sy = t.clientY;
+    timer = setTimeout(() => {
+      if (cancelled) return;
+      // 햅틱
+      try { if (navigator.vibrate) navigator.vibrate(20); } catch(_) {}
+      onLongPress();
+    }, D);
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    const t = e.touches[0]; if (!t) return;
+    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) cancel();
+  }, { passive: true });
+  el.addEventListener('touchend', cancel, { passive: true });
+  el.addEventListener('touchcancel', cancel, { passive: true });
+  // PC: contextmenu
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    onLongPress();
+  });
+}
+
+function _showGeckoQuickMenu(geckoId) {
+  const g = state.geckos.find(x => String(x.id) === String(geckoId));
+  if (!g) return;
+  const exist = document.getElementById('gecko-quick-menu-overlay');
+  if (exist) exist.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'gecko-quick-menu-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99998;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:24px;animation:emptyFadeIn .2s ease');
+  const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safeId = String(geckoId).replace(/'/g, "\\'");
+  const close = `document.getElementById('gecko-quick-menu-overlay').remove()`;
+  const items = [
+    { icon: '👁', label: '상세 보기', fn: `${close};openGeckoDetail('${safeId}')` },
+    { icon: '✏️', label: '편집', fn: `${close};editGecko('${safeId}')` },
+    { icon: '📋', label: '기록 보기/추가', fn: `${close};openGeckoRecords('${safeId}')` },
+    { icon: '🖼️', label: '사진 갤러리', fn: `${close};openGeckoPhotoGallery('${safeId}')` },
+    { icon: '📸', label: '카드 이미지로 공유', fn: `${close};openGeckoShareCard('${safeId}')` },
+    { icon: '🔗', label: '공유 링크 복사', fn: `${close};copyGeckoShareLink('${safeId}')` },
+    { icon: '🗑️', label: '삭제', fn: `${close};confirmDeleteGeckoFromDetail('${safeId}')`, danger: true },
+  ];
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:18px;padding:16px;max-width:340px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.3)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--br)">
+        <div style="width:42px;height:42px;border-radius:10px;background:var(--sf2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+          ${g.photo ? `<img src="${escapeHtml(g.photo)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:24px">🦎</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(g.name)}</div>
+          <div style="font-size:11px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(g.morph || '모프 미판별')}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${items.map(it => `
+          <button type="button" onclick="${it.fn}" style="display:flex;align-items:center;gap:12px;background:transparent;border:none;padding:11px 10px;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;font-size:13.5px;color:${it.danger?'var(--coral)':'var(--tx)'};font-weight:600;touch-action:manipulation">
+            <span style="font-size:18px;width:24px;text-align:center">${it.icon}</span>
+            <span>${it.label}</span>
+          </button>
+        `).join('')}
+      </div>
+      <button type="button" onclick="${close}" style="width:100%;margin-top:8px;padding:10px;background:var(--sf2);border:1px solid var(--br);border-radius:10px;font-size:12px;color:var(--tx2);cursor:pointer;font-family:inherit">취소</button>
+    </div>
+  `;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 // ══════════════════════════════════════
