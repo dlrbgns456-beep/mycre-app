@@ -1458,7 +1458,7 @@ input[type=file]{display:none}
 
   <!-- Search + filter -->
   <div style="padding:10px 18px 6px;display:flex;gap:8px;align-items:center">
-    <input class="form-input" id="gecko-search" type="text" placeholder="🔍  이름 또는 모프 검색..." oninput="renderGeckoList()" style="flex:1">
+    <input class="form-input" id="gecko-search" type="text" placeholder="🔍  이름 또는 모프 검색..." oninput="_debInput('geckoSearch', renderGeckoList)" style="flex:1">
     <button type="button" id="btn-gecko-more-filter" onclick="openGeckoMoreFilter()" title="모프·연령·정렬" style="flex-shrink:0;background:var(--sf2);border:1.5px solid var(--br);border-radius:12px;padding:11px 12px;color:var(--tx2);font-size:13px;cursor:pointer;font-family:inherit;touch-action:manipulation">🎛️</button>
   </div>
   <div class="filter-row" id="gecko-filter-row">
@@ -1503,7 +1503,7 @@ input[type=file]{display:none}
   </div>
 
   <div style="padding:0 18px 8px">
-    <input class="form-input" id="comm-search" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px" oninput="filterPosts()">
+    <input class="form-input" id="comm-search" type="text" placeholder="🔍  게시글 검색..." style="font-size:13px" oninput="_debInput('commSearch', filterPosts)">
   </div>
 
   <!-- 📸 스토리 row (24시간 자동 만료) -->
@@ -2105,7 +2105,7 @@ input[type=file]{display:none}
           placeholder="모프 검색... (예: 릴리화이트)"
           onfocus="showMorphInline()"
           onclick="showMorphInline()"
-          oninput="filterMorphInline()"
+          oninput="_debInput('morphInline', filterMorphInline, 120)"
           style="width:100%;background:var(--bg);border:1.5px solid var(--br);border-radius:12px;padding:11px 13px;color:var(--tx);font-family:'Noto Sans KR',sans-serif;font-size:14px;transition:border-color .15s;box-sizing:border-box">
         <div id="morph-inline-dropdown" style="display:none;position:relative;left:0;right:0;margin-top:6px;background:var(--sf);border:1.5px solid var(--br);border-radius:14px;max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;box-shadow:0 8px 30px rgba(0,0,0,.5);touch-action:pan-y;overscroll-behavior:contain">
           <!-- sticky 닫기 헤더 — 드롭다운 열린 채로 페이지 스크롤 불가 문제 해결 -->
@@ -2724,6 +2724,13 @@ let state = {
   nextPostId: 1,
   eggCounts: {},          // 암컷 산란 누적 캐시 { geckoId: {fertile,infertile} }
 };
+
+// 타이핑 중 무거운 재렌더로 한글 입력이 한 글자씩 밀리는 현상 방지 (debounce)
+const _inputDebTimers = {};
+function _debInput(key, fn, ms) {
+  clearTimeout(_inputDebTimers[key]);
+  _inputDebTimers[key] = setTimeout(fn, ms == null ? 180 : ms);
+}
 
 // ══════════════════════════════
 // 멤버십 — 단일 무료 티어 (PRO 삭제됨)
