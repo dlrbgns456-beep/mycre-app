@@ -9081,6 +9081,45 @@ async function startTrade(postId, sellerId) {
   } catch(e) { showToast('❌ ' + e.message); }
 }
 
+// 댓글/대댓글 한 칸 렌더 (threadTopId = 답글이 달릴 최상위 댓글 id)
+function _renderCommentNode(c, threadTopId, isReply) {
+  const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => String(s ?? ''));
+  const safeAuthor = (c.author || '').replace(/'/g, '');
+  const mine = _currentUser && c.user_id === _currentUser.id;
+  let actions = '';
+  if (_currentUser) {
+    actions += `<button onclick="toggleReplyBox(${threadTopId},'${safeAuthor}')" style="background:none;border:none;font-size:10px;color:var(--ac);cursor:pointer;padding:0;font-weight:700">답글</button>`;
+  }
+  if (mine) {
+    actions += `<button onclick="deleteComment(${c.id})" style="background:none;border:none;font-size:11px;color:var(--coral);cursor:pointer;padding:0">삭제</button>`;
+  } else if (_currentUser) {
+    actions += `<button onclick="reportComment(${c.id},'${safeAuthor}')" style="background:none;border:none;font-size:10px;color:var(--tx3);cursor:pointer;padding:0" title="댓글 신고">🚨</button><button onclick="blockUser('${c.user_id}','${safeAuthor}')" style="background:none;border:none;font-size:10px;color:var(--tx3);cursor:pointer;padding:0" title="사용자 차단">🚫</button>`;
+  }
+  return `
+    <div style="background:var(--sf2);border-radius:10px;padding:${isReply ? '8px 10px' : '10px 12px'};margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        ${isReply ? '<span style="font-size:11px;color:var(--tx3)">↳</span>' : ''}
+        <span style="font-size:12px;font-weight:700">${esc(c.author)}</span>
+        <span style="font-size:10px;color:var(--tx3);margin-left:auto">${_timeAgo(c.created_at)}</span>
+        ${actions}
+      </div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.5;word-break:break-word">${esc(c.body)}</div>
+    </div>`;
+}
+
+// 답글 입력칸 토글 (+ @멘션 자동 채움)
+function toggleReplyBox(topId, mentionName) {
+  const box = document.getElementById('reply-box-' + topId);
+  if (!box) return;
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  const input = document.getElementById('reply-input-' + topId);
+  if (input) {
+    if (mentionName && !input.value.trim()) input.value = '@' + mentionName + ' ';
+    input.focus();
+  }
+}
+
 async function loadComments(postId) {
   const list = document.getElementById('comments-list');
   if (!list) return;
@@ -9089,26 +9128,71 @@ async function loadComments(postId) {
     const { data, error } = await _supabase.from('comments').select('*')
       .eq('post_id', postId).order('created_at', { ascending: true });
     if (error) throw error;
+    const visible = (data || []).filter(c => !_isUserBlocked(c.user_id));
     const countEl = document.getElementById('comment-count');
-    if (countEl) countEl.textContent = data.length;
-    if (!data || data.length === 0) {
+    if (countEl) countEl.textContent = visible.length;
+    if (visible.length === 0) {
       list.innerHTML = '<div style="background:var(--sf2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--tx2)">궁금한 게 있으면 댓글로 물어보세요!</div>';
       return;
     }
-    list.innerHTML = data.filter(c => !_isUserBlocked(c.user_id)).map(c => `
-      <div style="background:var(--sf2);border-radius:10px;padding:10px 12px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="font-size:12px;font-weight:700">${c.author}</span>
-          <span style="font-size:10px;color:var(--tx3);margin-left:auto">${_timeAgo(c.created_at)}</span>
-          ${_currentUser && c.user_id === _currentUser.id
-            ? `<button onclick="deleteComment(${c.id})" style="background:none;border:none;font-size:11px;color:var(--coral);cursor:pointer;padding:0">삭제</button>`
-            : (_currentUser ? `<button onclick="reportComment(${c.id},'${(c.author||'').replace(/'/g,'')}')" style="background:none;border:none;font-size:10px;color:var(--tx3);cursor:pointer;padding:0" title="댓글 신고">🚨</button><button onclick="blockUser('${c.user_id}','${(c.author||'').replace(/'/g,'')}')" style="background:none;border:none;font-size:10px;color:var(--tx3);cursor:pointer;padding:0" title="사용자 차단">🚫</button>` : '')}
-        </div>
-        <div style="font-size:13px;color:var(--tx2);line-height:1.5">${c.body}</div>
-      </div>`).join('');
+    // 부모 댓글 + 대댓글 트리 구성 (1단계 중첩)
+    const tops = visible.filter(c => !c.parent_id);
+    const repliesBy = {};
+    visible.forEach(c => { if (c.parent_id) (repliesBy[c.parent_id] = repliesBy[c.parent_id] || []).push(c); });
+    list.innerHTML = tops.map(c => {
+      const replies = (repliesBy[c.id] || []).map(r => _renderCommentNode(r, c.id, true)).join('');
+      return `
+        <div style="margin-bottom:8px">
+          ${_renderCommentNode(c, c.id, false)}
+          ${replies ? `<div style="margin-left:16px;border-left:2px solid var(--br);padding-left:8px;margin-top:6px">${replies}</div>` : ''}
+          <div id="reply-box-${c.id}" style="display:none;gap:8px;margin:6px 0 0 16px">
+            <input id="reply-input-${c.id}" class="form-input" placeholder="답글 작성..." style="flex:1;font-size:12px">
+            <button class="btn-primary" style="width:auto;padding:8px 13px;border-radius:10px;font-size:12px" onclick="submitReply(${c.id})">등록</button>
+          </div>
+        </div>`;
+    }).join('');
   } catch(e) {
     list.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:8px">댓글을 불러올 수 없습니다.</div>';
   }
+}
+
+// 댓글/대댓글 공통 등록 (parentId 있으면 대댓글)
+async function _postComment(body, parentId) {
+  const authorName = _profile.name || '익명';
+  const payload = { post_id: _currentPostId, user_id: _currentUser.id, author: authorName, body };
+  if (parentId) payload.parent_id = parentId;
+  const { error } = await _supabase.from('comments').insert(payload);
+  if (error) throw error;
+
+  // ── 푸시 알림: 대댓글 → 부모 댓글 작성자 / 일반 댓글 → 글 작성자 (본인 제외) ──
+  try {
+    const session = (await _supabase.auth.getSession()).data.session;
+    if (!session) return;
+    let toUser = null, title = '', msg = '';
+    if (parentId) {
+      const { data: parent } = await _supabase.from('comments').select('user_id').eq('id', parentId).maybeSingle();
+      if (parent && parent.user_id && parent.user_id !== _currentUser.id) {
+        toUser = parent.user_id;
+        title = `볏마루도감 💬 ${authorName}님이 답글을 남겼어요`;
+        msg = '내 댓글에 답글이 달렸어요';
+      }
+    } else {
+      const { data: post } = await _supabase.from('posts').select('user_id, title').eq('id', _currentPostId).maybeSingle();
+      if (post && post.user_id && post.user_id !== _currentUser.id) {
+        toUser = post.user_id;
+        const titleSnippet = post.title ? `"${String(post.title).slice(0, 20)}"` : '';
+        title = `볏마루도감 💬 ${authorName}님이 댓글을 남겼어요`;
+        msg = titleSnippet ? `${titleSnippet} 글에 댓글이 달렸어요` : '커뮤니티에서 확인해 보세요';
+      }
+    }
+    if (toUser) {
+      fetch(SUPABASE_URL + '/functions/v1/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+        body: JSON.stringify({ user_id: toUser, title, body: msg, tag: 'comment', url: '/' }),
+      }).catch(() => {});
+    }
+  } catch(e) { console.warn('[comment notify] skip:', e?.message); }
 }
 
 async function submitComment() {
@@ -9123,50 +9207,35 @@ async function submitComment() {
   if (!body) return;
   input.disabled = true;
   try {
-    const authorName = _profile.name || '익명';
-    const { error } = await _supabase.from('comments').insert({
-      post_id: _currentPostId,
-      user_id: _currentUser.id,
-      author: authorName,
-      body: body,
-    });
-    if (error) throw error;
+    await _postComment(body, null);
     input.value = '';
     showToast('댓글이 등록되었어요 ✅');
     loadComments(_currentPostId);
-
-    // ── 글 작성자에게 푸시 알림 (본인 글 제외) ──
-    try {
-      const { data: post } = await _supabase
-        .from('posts')
-        .select('user_id, title')
-        .eq('id', _currentPostId)
-        .maybeSingle();
-      if (post && post.user_id && post.user_id !== _currentUser.id) {
-        const session = (await _supabase.auth.getSession()).data.session;
-        if (session) {
-          const titleSnippet = post.title ? `"${String(post.title).slice(0, 20)}"` : '';
-          fetch(SUPABASE_URL + '/functions/v1/send-push', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + session.access_token,
-            },
-            body: JSON.stringify({
-              user_id: post.user_id,
-              title: `볏마루도감 💬 ${authorName}님이 댓글을 남겼어요`,
-              body:  titleSnippet ? `${titleSnippet} 글에 댓글이 달렸어요` : '커뮤니티에서 확인해 보세요',
-              tag:   'comment',
-              url:   '/',
-            }),
-          }).catch(() => {});
-        }
-      }
-    } catch(e) { console.warn('[comment notify] skip:', e?.message); }
   } catch(e) {
     showToast('댓글 등록 실패: ' + e.message);
   }
   input.disabled = false;
+}
+
+async function submitReply(parentId) {
+  if (!_currentUser || !_currentPostId) return;
+  if (!_hasAgreedCommunityGuidelines()) {
+    showCommunityGuidelines(function() { submitReply(parentId); });
+    return;
+  }
+  const input = document.getElementById('reply-input-' + parentId);
+  if (!input) return;
+  const body = input.value.trim();
+  if (!body) return;
+  input.disabled = true;
+  try {
+    await _postComment(body, parentId);
+    showToast('답글이 등록되었어요 ✅');
+    loadComments(_currentPostId);
+  } catch(e) {
+    showToast('답글 등록 실패: ' + e.message);
+    input.disabled = false;
+  }
 }
 
 let _deleteCommentStep = {};
@@ -12125,7 +12194,7 @@ async function _confirmedDeleteAccount() {
 // 데이터 다운로드 — PDF(인쇄) + JSON(백업) 선택
 async function downloadMyData() {
   if (!_currentUser) { showToast('로그인이 필요합니다'); return; }
-  const choice = await $confirm('확인 = PDF 미리보기 창 열기\n취소 = JSON 백업 파일 다운로드', '📄 PDF로 인쇄·저장하시겠어요?');
+  const choice = await $confirm('확인 = PDF 리포트 다운로드\n취소 = JSON 백업 파일 다운로드', '📄 데이터를 어떤 형식으로 받을까요?');
   if (choice) {
     await _downloadMyDataPDF();
   } else {
@@ -13164,53 +13233,91 @@ async function _downloadMyDataPDF() {
       <td>${esc(b.memo || '')}</td>
     </tr>`).join('');
 
-  const win = window.open('', '_blank', 'width=900,height=700');
-  if (!win) { showToast('❌ 팝업이 차단됐어요. 팝업을 허용해주세요'); return; }
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>볏마루도감 내 데이터 리포트</title>
+  // 리포트 본문 HTML (오프스크린 렌더 → 캔버스 → PDF 파일)
+  const reportHTML = `
     <style>
-      @page { size: A4; margin: 14mm; }
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; color:#1A2B22; padding:0; margin:0; line-height:1.5; }
-      h1 { color:#2E7D57; border-bottom:2px solid #2E7D57; padding-bottom:8px; margin-top:0; }
-      h2 { color:#2E7D57; margin-top:28px; border-left:4px solid #2E7D57; padding-left:10px; }
-      h3 { font-size:14px; }
-      table { width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; }
-      th, td { border:1px solid #ddd; padding:6px 8px; text-align:left; vertical-align:top; word-break:break-word; }
-      th { background:#F2EDE3; font-weight:700; font-size:11px; }
-      td { font-size:11px; }
-      .meta { color:#666; font-size:11px; margin-bottom:20px; }
-      .empty { color:#999; font-style:italic; padding:8px 0; font-size:12px; }
-      .footer { margin-top:32px; padding-top:12px; border-top:1px solid #ddd; color:#666; font-size:10px; text-align:center; }
-      @media print { .no-print { display:none !important; } }
-    </style></head><body>
-    <div class="no-print" style="position:sticky;top:0;background:#2E7D57;color:#fff;padding:12px 16px;text-align:center;z-index:100">
-      <button onclick="window.print()" style="background:#fff;color:#2E7D57;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:14px">📄 PDF로 저장 / 인쇄</button>
-      <span style="margin-left:10px;font-size:12px">인쇄 대화상자에서 "대상 → PDF로 저장" 선택</span>
-    </div>
-    <div style="padding:20px 24px">
+      #_pdfrpt{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;color:#1A2B22;line-height:1.5;background:#fff;width:794px;padding:28px 32px;box-sizing:border-box}
+      #_pdfrpt h1{color:#2E7D57;border-bottom:2px solid #2E7D57;padding-bottom:8px;margin:0 0 12px;font-size:22px}
+      #_pdfrpt h2{color:#2E7D57;margin:26px 0 0;border-left:4px solid #2E7D57;padding-left:10px;font-size:16px}
+      #_pdfrpt h3{font-size:13px;margin:16px 0 4px;color:#2E7D57}
+      #_pdfrpt table{width:100%;border-collapse:collapse;margin-top:8px}
+      #_pdfrpt th,#_pdfrpt td{border:1px solid #ddd;padding:5px 7px;text-align:left;vertical-align:top;word-break:break-word;font-size:11px}
+      #_pdfrpt th{background:#F2EDE3;font-weight:700}
+      #_pdfrpt .meta{color:#555;font-size:11px;margin:6px 0 18px}
+      #_pdfrpt .empty{color:#999;font-style:italic;padding:8px 0;font-size:12px}
+      #_pdfrpt .footer{margin-top:30px;padding-top:12px;border-top:1px solid #ddd;color:#666;font-size:10px;text-align:center}
+    </style>
+    <div id="_pdfrpt">
       <h1>🦎 볏마루도감 내 데이터 리포트</h1>
       <div class="meta">
         <b>이용자:</b> ${esc(_currentUser.email || '')}<br>
         <b>내보낸 시각:</b> ${esc(today)}<br>
         <b>등록 개체:</b> ${geckos.length}마리 · <b>사육 기록:</b> ${logs.length}건 · <b>메이팅 기록:</b> ${breedings.length}건
       </div>
-
       <h2>🦎 내 개체 목록</h2>
       ${geckos.length ? `<table><thead><tr><th>이름</th><th>성별</th><th>모프</th><th>등급</th><th>생일</th><th>체중</th><th>상태</th><th>혈통 (부 × 모)</th></tr></thead><tbody>${geckoRows}</tbody></table>` : '<div class="empty">등록된 개체가 없어요.</div>'}
-
       <h2>📋 개체별 사육 기록</h2>
       ${geckoLogSections || '<div class="empty">사육 기록이 없어요.</div>'}
-
       <h2>🥚 메이팅 · 해칭 기록</h2>
       ${breedings.length ? `<table><thead><tr><th>교배일</th><th>조합</th><th>예상 산란</th><th>해칭 결과</th><th>메모</th></tr></thead><tbody>${breedingRows}</tbody></table>` : '<div class="empty">메이팅 기록이 없어요.</div>'}
+      <div class="footer">© 볏마루도감 · byetmaru.com · 개인 백업·기록용으로 생성되었습니다.</div>
+    </div>`;
 
-      <div class="footer">
-        © 볏마루도감 · byetmaru.com · 이 리포트는 개인 백업·기록용으로 생성되었습니다.
-      </div>
-    </div>
-    <script>setTimeout(()=>{try{window.print();}catch(e){}},500);<\/script>
-    </body></html>`);
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;background:#fff';
+  holder.innerHTML = reportHTML;
+  document.body.appendChild(holder);
+
+  try {
+    // 라이브러리 지연 로드 (jsdelivr — Supabase·QR과 동일 CDN)
+    await _loadScriptOnce('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    await _loadScriptOnce('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    const target = holder.querySelector('#_pdfrpt');
+    const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const pdf = new jsPDFCtor('p', 'mm', 'a4');
+    const pw = 210, ph = 297;
+    const imgH = canvas.height * pw / canvas.width;
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    let heightLeft = imgH, position = 0;
+    pdf.addImage(imgData, 'JPEG', 0, position, pw, imgH);
+    heightLeft -= ph;
+    while (heightLeft > 0) {
+      position -= ph;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, pw, imgH);
+      heightLeft -= ph;
+    }
+    pdf.save(`볏마루도감_리포트_${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast('✅ PDF 다운로드 완료');
+  } catch (e) {
+    console.error('PDF 생성 실패:', e);
+    // 폴백: 인쇄 창 (데스크톱 브라우저 / 라이브러리 로드 실패 시)
+    _printReportFallback(reportHTML);
+  } finally {
+    holder.remove();
+  }
+}
+
+// 외부 스크립트 1회 지연 로드
+function _loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if ([...document.scripts].some(s => s.src === src)) return resolve();
+    const el = document.createElement('script');
+    el.src = src; el.async = true;
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error('스크립트 로드 실패: ' + src));
+    document.head.appendChild(el);
+  });
+}
+
+// PDF 라이브러리 실패 시 폴백 — 인쇄 창 (데스크톱)
+function _printReportFallback(innerHTML) {
+  const win = window.open('', '_blank');
+  if (!win) { showToast('❌ PDF 생성 실패 · JSON 백업을 이용하거나 팝업을 허용해주세요'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>볏마루도감 리포트</title></head><body>${innerHTML}<scr` + `ipt>setTimeout(function(){try{window.print()}catch(e){}},400)<\/scr` + `ipt></body></html>`);
   win.document.close();
-  showToast('✅ PDF 미리보기 창 열림');
+  showToast('인쇄 창에서 "PDF로 저장"을 선택하세요');
 }
 
 // ══════════════════════════════
